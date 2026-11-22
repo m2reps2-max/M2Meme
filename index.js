@@ -9,6 +9,7 @@ const {MemeScanner}=require('./lib/scanner');
 const {buildExpertSnapshot,buildTokenSignals,MadeOnSolRadar}=require('./lib/kol-intel');
 const {resolveTelegramToken}=require('./lib/telegram-config');
 const {scoreWalletDiscovery}=require('./lib/wallet-discovery');
+const {buildWalletReputation}=require('./lib/wallet-reputation');
 const {COINS:HISTORICAL_COINS}=require('./lib/historical-benchmark');
 const {constantTimeEqual,validateHistoricalPayload,mergeHistoricalBenchmarks}=require('./lib/actions-ingest');
 const {resolveDashboardConfig}=require('./lib/dashboard-config');
@@ -82,6 +83,7 @@ app.get('/api/wallets',(_q,r)=>r.json({ok:true,wallets:scanner.state.wallets.map
 app.get('/api/intelligence/creators',(_q,r)=>r.json({ok:true,creators:scanner.creatorIntel(),fundingClusters:scanner.creatorFundingClusters()}));
 app.get('/api/intelligence/wallets',(_q,r)=>{const data=scanner.walletIntel();r.json({ok:true,wallets:data.wallets,clusters:data.clusters});});
 app.get('/api/intelligence/wallet-graph',(_q,r)=>r.json({ok:true,...scanner.walletGraphIntel()}));
+app.get('/api/intelligence/wallet-reputation',(_q,r)=>r.json({ok:true,...buildWalletReputation(scanner.state)}));
 app.get('/api/intelligence/experts',(_q,r)=>r.json({ok:true,...buildExpertSnapshot(scanner.state,scanner.state.tokens)}));
 app.get('/api/data-quality',(_q,r)=>r.json({ok:true,...scanner.dataQualitySummary()}));
 app.get('/api/backtest',(_q,r)=>r.json({ok:true,...scanner.backtest()}));
