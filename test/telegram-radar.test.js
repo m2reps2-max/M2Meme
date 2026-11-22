@@ -1,0 +1,55 @@
+'use strict';
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { TelegramRadar, extractPublicChannels, parseTelegramPage, tokenMention } = require('../lib/telegram-radar');
+
+test('extracts only public Telegram channel links from token metadata', () => {
+  const channels = extractPublicChannels({
+    socials: [{ type: 'telegram', url: 'https://t.me/s/MemeRadarOfficial' }],
+    links: [{ url: 'https://telegram.me/MemeRadarOfficial/123' }, { url: 'https://t.me/+privateInvite' }],
+    description: 'Join https://t.me/AnotherPublicChannel'
+  });
+  assert.deepEqual(channels, ['memeradarofficial', 'anotherpublicchannel']);
+});
+
+test('parses public Telegram channel messages and rejects malformed timestamps', () => {
+  const now = Date.now();
+  const html = '<div class="tgme_widget_message" data-post="TestChannel/123"><div class="tgme_widget_message_text js-message_text">$BONK is moving &amp; bullish</div><time datetime="' + new Date(now - 60000).toISOString() + '"></time></div>' +
+    '<div class="tgme_widget_message" data-post="TestChannel/124"><div class="tgme_widget_message_text">bad date</div><time datetime="not-a-date"></time></div>';
+  const posts = parseTelegramPage(html, 'TestChannel', now);
+  assert.equal(posts.length, 1);
+  assert.match(posts[0].text, /\$BONK is moving & bullish/);
+  assert.match(posts[0].link, /t\.me\/testchannel\/123/);
+});
+
+test('token matching prefers mint and rejects ambiguous short symbols', () => {
+  assert.equal(tokenMention('Mint123456789ABCDEFGHJKLMNPQRSTUVWXYZ', { mint: 'Mint123456789ABCDEFGHJKLMNPQRSTUVWXYZ', symbol: 'CAT' }), true);
+  assert.equal(tokenMention('CATCH is moving', { mint: 'SomeOtherMint123456789012345678901234', symbol: 'CAT' }), false);
+  assert.equal(tokenMention('$BONK is moving', { mint: 'SomeOtherMint123456789012345678901234', symbol: 'BONK' }), true);
+});
+
+test('Telegram radar uses public pages, caches channels and reports partial failures', async () => {
+  let calls = 0;
+  const radar = new TelegramRadar({ fetchImpl: async url => {
+    calls++;
+    assert.match(String(url), /t\.me\/s\/memeradarofficial/);
+    return { ok: true, text: async () => '<div data-post="MemeRadarOfficial/1"><div class="tgme_widget_message_text">$BONK rising</div><time datetime="' + new Date().toISOString() + '"></time></div>' };
+  } });
+  const token = { mint: 'SomeOtherMint123456789012345678901234', symbol: 'BONK', socials: [{ url: 'https://t.me/MemeRadarOfficial' }] };
+  const result = await radar.searchToken(token);
+  assert.equal(result.available, true);
+  assert.equal(result.mentions1h, 1);
+  assert.equal(result.uniqueChannels24h, 1);
+  await radar.searchToken(token);
+  assert.equal(calls, 1);
+  assert.equal(radar.status().connected, true);
+});
+
+test('Telegram radar reports no global search when a token has no public channel link', async () => {
+  let calls = 0;
+  const radar = new TelegramRadar({ fetchImpl: async () => { calls++; throw new Error('must not fetch'); } });
+  const result = await radar.searchToken({ mint: 'SomeOtherMint123456789012345678901234', symbol: 'BONK' });
+  assert.equal(result.available, false);
+  assert.equal(result.channelsScanned, 0);
+  assert.equal(calls, 0);
+});
