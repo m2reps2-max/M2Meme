@@ -40,6 +40,6 @@ test('home shows only essential stats and keeps advanced modules out of sight',(
 
 test('advanced intelligence pages remain available internally and scanner navigation is preserved',()=>{
  for(const name of ['renderDetail','renderWalletIntel','renderCreators','renderWalletGraph','renderQuality','renderHistorical'])assert.match(js,new RegExp('function '+name+'\\('));
- assert.match(js,/scanner:()=>renderScanner\('scanner'\)/);
+ assert.ok(js.includes("scanner:()=>renderScanner('scanner')"));
  assert.match(js,/analysis:renderDetail/);
 });
