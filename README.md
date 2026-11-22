@@ -19,12 +19,14 @@ Dashboard privé de recherche de meme coins Solana. Le projet utilise des source
 | Liens de sites et réseaux sociaux | Métadonnées DexScreener | Rien |
 | Découverte de nouveaux pools sur plusieurs DEX Solana | GeckoTerminal Public API (`/networks/solana/new_pools`) | Rien |
 | Mentions et sentiment communautaire indicatif | Flux RSS publics Reddit (`r/solana`, `r/memecoins`, `r/pumpfun`) | Rien |
-| Analyse des transactions récentes, concentration des acheteurs, bursts dans un même bloc et fenêtre de lancement si disponible | GeckoTerminal pool trades (jusqu'à 300 trades / 24h) | Rien |
+| Analyse des transactions récentes, diversité acheteurs, concentration, bursts dans un même bloc et fenêtre de lancement si disponible | GeckoTerminal pool trades (jusqu'à 300 transactions observées) | Rien |
+| Ajustement limité du score avec qualité des transactions et signal social public | Module local candidate-intel, données GeckoTerminal + Reddit RSS | Rien |
+| Enrichissement automatique du meilleur candidat GeckoTerminal et d'un créateur observé à la fois | Quotas publics maîtrisés, une analyse de pool par cycle et un financement créateur toutes les 15 minutes au maximum | Rien |
 | Alertes Telegram | Telegram Bot API | Bot token + chat ID facultatifs |
 | Dashboard et historique | Express + stockage JSON local | Variables d'accès + stockage persistant FadeHost |
 
 **Limites importantes :**
-- GeckoTerminal ajoute les nouveaux pools indexés sur plusieurs DEX Solana (jusqu'à 20 par page publique et fenêtre récente), mais ne détecte pas les tokens encore sur une bonding curve sans pool. PumpPortal ajoute les créations/migrations Pump.fun. Raydium LaunchLab, Meteora DBC, Moonshot, LetsBonk et autres launchpads ne sont donc visibles qu'après qu'un pool est indexé par GeckoTerminal ou DexScreener, pas au moment exact de leur création.
+- GeckoTerminal ajoute les nouveaux pools indexés sur plusieurs DEX Solana (jusqu'à 40 pools sur deux pages publiques et fenêtre récente), mais ne détecte pas les tokens encore sur une bonding curve sans pool. PumpPortal ajoute les créations/migrations Pump.fun. Raydium LaunchLab, Meteora DBC, Moonshot, LetsBonk et autres launchpads ne sont donc visibles qu'après qu'un pool est indexé par GeckoTerminal ou DexScreener, pas au moment exact de leur création.
 - Le RPC public Solana est partagé et soumis à des limites de débit. Si FadeHost ou d'autres utilisateurs envoient trop de requêtes, certaines vérifications peuvent échouer temporairement. On peut renseigner un autre endpoint RPC public/gratuit dans `SOLANA_RPC_URL`, sans garantie de disponibilité.
 - Les contrôles on-chain donnent des observations : ils ne prouvent pas que la liquidité est verrouillée, qu'un token est vendable ou qu'un contrat est sûr.
 - La concentration des détenteurs agrège les comptes SPL par wallet propriétaire sur les 20 plus gros comptes renvoyés par le RPC, puis calcule top 1 / top 5 / top 10 wallets. La concentration brute des 10 comptes est également affichée. C'est plus fiable qu'un simple classement de comptes, mais ce n'est pas une cartographie complète des bénéficiaires : les wallets liés entre eux ne sont pas fusionnés, et les comptes de pool ou de contrats peuvent apparaître dans le classement.
@@ -34,6 +36,12 @@ Dashboard privé de recherche de meme coins Solana. Le projet utilise des source
 - Les scores sont des indicateurs heuristiques, pas des probabilités de hausse ni des conseils d'achat. Les signaux de momentum et les variations de liquidité ne deviennent exploitables qu'après plusieurs observations espacées; au premier scan, l'historique est incomplet.
 - Les mesures de volume/liquidité et FDV/liquidité sont des ratios descriptifs, pas des preuves de liquidité réellement retirable. Les données DexScreener peuvent être retardées ou incomplètes.
 - Les bundles, snipers et liens de financement entre wallets ne sont pas prouvés automatiquement. Les flux PumpPortal de créations/migrations sont gratuits; ses flux détaillés d'achats/ventes sont payants et ne sont volontairement pas activés. Les signaux de concentration et de pression vendeuse sont des heuristiques, pas des preuves de manipulation.
+
+## Scoring enrichi et collecte automatique
+
+Le score principal conserve ses facteurs de marché, de momentum, de liquidité, de sécurité, de wallets suivis et de timing. Un ajustement complémentaire plafonné à +/- 6 points utilise uniquement les données réellement disponibles : qualité de l'échantillon de transactions GeckoTerminal et signal social Reddit public. Ces sous-scores ne gonflent pas le pourcentage de couverture des données. En l'absence de données, aucun facteur n'est inventé. La fiche token expose le score de base, l'ajustement et les raisons observées.
+
+Le scanner enrichit automatiquement un pool GeckoTerminal candidat par cycle, en respectant un espacement d'au moins 15 secondes entre les appels de transactions, et examine au maximum un financement de créateur observé toutes les 15 minutes. Ces vérifications restent limitées par les quotas RPC/API publics et peuvent être indisponibles. Un même bloc ou un financeur commun est un indice à examiner, jamais une preuve de manipulation ou d'identité commune.
 
 ## Découverte multi-DEX gratuite
 
