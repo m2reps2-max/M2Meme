@@ -15,7 +15,7 @@ Dashboard privé de recherche de meme coins Solana. Le projet utilise des source
 | Deuxième avis de sécurité (wallets liés, volume artificiel, historique du déployeur, risques Token-2022, liquidité) | GL1TCH public API, sans clé | Rien |
 | Concentration des 10 plus gros détenteurs, avec agrégation des comptes appartenant au même wallet (sur les 20 plus gros comptes renvoyés) | RPC public Solana (`getMultipleAccounts`) | Rien |
 | Recherche du premier financeur direct des wallets créateurs Pump.fun et détection de financeurs communs | RPC public Solana (`getSignaturesForAddress`, `getTransaction`) | Rien |
-| Suivi des wallets manuels, acheteurs précoces et créateurs Pump.fun observés | RPC public Solana : jusqu’à 10 manuels, 5 acheteurs précoces et 5 créateurs; 5/3/2 transactions récentes selon le rôle, toutes les 10 minutes | Rien |
+| Suivi des wallets manuels, acheteurs précoces et créateurs Pump.fun observés | RPC public Solana : pagination persistante par curseur, jusqu’à 20 signatures par wallet et par cycle de surveillance de 10 minutes; la collecte reprend à l’endroit atteint | Rien |
 | Surveillance des sorties des créateurs | Soldes SPL avant/après transaction + entrées SOL/USDC/USDT dans la même transaction | Rien |
 | Distinction vente probable / transfert | Sortie du token accompagnée d’une entrée de quote asset = swap-like; sortie seule = mouvement non confirmé | Rien |
 | Découverte automatique d'acheteurs précoces | Acheteurs ayant réalisé au moins 2 achats et 150 USD cumulés dans les 5 premières minutes du pool, uniquement si cette fenêtre est entièrement couverte et si le token a un score indicatif ≥60 et aucun blocage de risque critique | Rien |
