@@ -28,7 +28,25 @@ function fingerprint(){return crypto.createHash('sha256').update(CODE).digest('h
 function session(){const now=Date.now(),p=Buffer.from(JSON.stringify({v:1,code:fingerprint(),iat:now,exp:now+TEN_YEARS,nonce:crypto.randomBytes(12).toString('hex')})).toString('base64url');return p+'.'+sign(p);}
 function valid(t){if(typeof t!=='string'||t.length>2048)return false;const i=t.lastIndexOf('.');if(i<1||!equal(sign(t.slice(0,i)),t.slice(i+1)))return false;try{const p=JSON.parse(Buffer.from(t.slice(0,i),'base64url').toString());return p.v===1&&p.code===fingerprint()&&Number.isFinite(p.iat)&&p.iat<=Date.now()+60000&&Number.isFinite(p.exp)&&p.exp>Date.now()&&p.exp-p.iat<=TEN_YEARS+1000;}catch{return false;}}
 function auth(req,res,next){if(!valid(req.cookies[COOKIE]))return res.status(401).json({error:'Authentification requise'});next();}
-function origin(req,res,next){const o=req.get('origin');if(o){try{if(new URL(o).host!==req.get('host'))return res.status(403).json({error:'Origine refusée'});}catch{return res.status(403).json({error:'Origine invalide'});}}if(req.get('sec-fetch-site')==='cross-site')return res.status(403).json({error:'Requête cross-site refusée'});next();}
+function origin(req,res,next){
+ const supplied=req.get('origin');
+ if(supplied){
+  try{
+   const requestOrigin=new URL(supplied).origin;
+   const allowedOrigins=new Set();
+   if(CONFIG.dashboardUrl)allowedOrigins.add(new URL(CONFIG.dashboardUrl).origin);
+   // FadeHost terminates HTTPS before forwarding to Node. The internal Host
+   // header can therefore differ from the public origin used by the browser.
+   const forwardedHost=String(req.get('x-forwarded-host')||'').split(',')[0].trim();
+   const forwardedProto=String(req.get('x-forwarded-proto')||req.protocol||'').split(',')[0].trim();
+   const publicHost=forwardedHost||req.get('host');
+   if(publicHost&&forwardedProto)allowedOrigins.add(forwardedProto+'://'+publicHost);
+   if(!allowedOrigins.has(requestOrigin))return res.status(403).json({error:'Origine refusée'});
+  }catch{return res.status(403).json({error:'Origine invalide'});}
+ }
+ if(req.get('sec-fetch-site')==='cross-site')return res.status(403).json({error:'Requête cross-site refusée'});
+ next();
+}
 function loginLimit(req,res,next){const key=String(req.ip||'unknown'),now=Date.now();if(now-lastLoginCleanup>60000||fails.size>2000){for(const [ip,row] of fails)if(row.until<=now)fails.delete(ip);lastLoginCleanup=now;}if(fails.size>=5000&&!fails.has(key))return res.status(429).json({error:'Trop de tentatives. Réessaie plus tard.'});let x=fails.get(key)||{n:0,until:now+900000};if(x.until<now)x={n:0,until:now+900000};if(x.n>=8)return res.status(429).json({error:'Trop de tentatives. Réessaie plus tard.'});req.bad=()=>{x.n++;fails.set(key,x);};req.good=()=>fails.delete(key);next();}
 const TELEGRAM_TOKEN=resolveTelegramToken(process.env);
 let bot=null;if(TELEGRAM_TOKEN){bot=new Bot(TELEGRAM_TOKEN);const kb=()=>URL?new InlineKeyboard().url('Ouvrir MEME RADAR',URL):null;bot.command('start',ctx=>ctx.reply('Bienvenue sur MEME RADAR.',kb()?{reply_markup:kb()}:undefined));bot.command('dashboard',ctx=>ctx.reply(URL?'Ouvre ton dashboard privé : '+URL:'Configure DASHBOARD_URL pour recevoir le lien du dashboard.'));bot.command('help',ctx=>ctx.reply('Commandes : /start /dashboard /scan /opportunities /help. Recherche uniquement, aucun achat automatique.'));}

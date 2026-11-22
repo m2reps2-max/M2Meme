@@ -140,3 +140,22 @@ test('dashboard UI action endpoints exist on the server',()=>{
  const server=fs.readFileSync(path.join(root,'index.js'),'utf8');
  for(const route of ["app.post('/api/scan'","app.post('/api/watchlist'","app.delete('/api/watchlist/:mint'","app.post('/api/wallets'","app.delete('/api/wallets/:address'","app.get('/api/token/:mint'","app.post('/api/logout'"])assert.ok(server.includes(route),route);
 });
+
+
+test('API origin guard accepts the configured public dashboard origin behind FadeHost proxy',()=>{
+ const server=fs.readFileSync(path.join(root,'index.js'),'utf8');
+ assert.match(server,/new URL\(CONFIG\.dashboardUrl\)\.origin/);
+ assert.match(server,/x-forwarded-host/);
+ assert.match(server,/x-forwarded-proto/);
+ assert.match(server,/sec-fetch-site/);
+ assert.doesNotMatch(server,/new URL\(o\)\.host!==req\.get\('host'\)/);
+});
+
+
+test('empty shortlist explains its rejection causes without relaxing selection rules',()=>{
+ assert.match(js,/p\.diagnostics\|\|\{\}/);
+ assert.match(js,/blockedOrUnknownRisk/);
+ assert.match(js,/missingMarketTimestamp/);
+ assert.match(js,/staleMarketOver15m/);
+ assert.match(selection,/securityComprehensive===true/);
+});
