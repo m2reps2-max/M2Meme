@@ -1,7 +1,7 @@
 'use strict';
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const {replayHistoricalCandles,getHistoricalBenchmark,resolveSearchMint,DOCUMENTED_CASE_STUDIES}=require('../lib/historical-benchmark');
+const {replayHistoricalCandles,getHistoricalBenchmark,resolveSearchMint,DOCUMENTED_CASE_STUDIES,COINS}=require('../lib/historical-benchmark');
 
 test('historical replay reports terminal return and peak-to-trough drawdown',()=>{
  const base=Date.UTC(2026,0,1)/1000;
@@ -61,7 +61,7 @@ test('benchmark token resolution requires exact token metadata and never matches
 });
 
 test('documented rug case studies are sourced and never counted as quantitative OHLCV replays',()=>{
- assert.equal(DOCUMENTED_CASE_STUDIES.length,2);
+ assert.equal(DOCUMENTED_CASE_STUDIES.length,4);
  const shar=DOCUMENTED_CASE_STUDIES.find(x=>x.symbol==='SHAR');
  const tws=DOCUMENTED_CASE_STUDIES.find(x=>x.symbol==='TWS');
  assert.equal(shar.reportedDrawdownPct,-96.3);
@@ -90,4 +90,21 @@ test('historical alert performance is aggregated with equal weight per token in 
  assert.equal(bust.alerts.averageTokenReturnPct,-60);
  assert.equal(bust.alerts.averageTokenLoss20Pct,100);
  assert.match(result.limitations,/poids égal par token/i);
+});
+
+test('verified HAWK and LIBRA crash tokens use exact Solana mints and enter the OHLCV benchmark',()=>{
+ const hawk=COINS.find(x=>x.symbol==='HAWK');
+ const libra=COINS.find(x=>x.symbol==='LIBRA');
+ const hawkCase=DOCUMENTED_CASE_STUDIES.find(x=>x.symbol==='HAWK');
+ const libraCase=DOCUMENTED_CASE_STUDIES.find(x=>x.symbol==='LIBRA');
+ assert.equal(hawk.mint,'HawkTLJEv6UMWynWGAqC9He41eAs4ERAhdGQhwh9Nc34');
+ assert.equal(libra.mint,'Bo9jh3wsmcC2AjakLWzNmKJ3SgtZmXEcSaW7L2FAvUsU');
+ assert.equal(hawkCase.mint,hawk.mint);
+ assert.equal(libraCase.mint,libra.mint);
+ assert.equal(hawkCase.quantitativeReplay,true);
+ assert.equal(libraCase.quantitativeReplay,true);
+ assert.equal(hawkCase.reportedDrawdownPct,-91);
+ assert.equal(libraCase.reportedDrawdownPct,-89);
+ assert.match(hawkCase.mintSourceUrl,/solscan\.io/);
+ assert.match(libraCase.evidenceUrl,/trmlabs\.com/);
 });
