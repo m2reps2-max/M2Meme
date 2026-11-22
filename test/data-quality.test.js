@@ -5,10 +5,10 @@ const {tokenDataQuality,dataQualitySummary}=require('../lib/data-quality');
 
 test('data quality distinguishes missing data from strong signals',()=>{
  const result=tokenDataQuality({mint:'m',symbol:'T',history:[]},1000000);
- assert.equal(result.completenessPct,10);
+ assert.equal(result.completenessPct,0);
  assert.equal(result.quality,'low');
  assert.ok(result.issues.some(x=>x.key==='security'&&x.severity==='missing'));
- assert.equal(result.freshnessPct,null);
+ assert.equal(result.freshnessPct,0);
 });
 
 test('fresh market and on-chain observations increase completeness and freshness',()=>{
