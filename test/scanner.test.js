@@ -210,7 +210,7 @@ test('alerts require fresh market data and downgrade delayed signals',async()=>{
  const s=make(),now=Date.now();
  s.activeAlertThreshold=()=>({threshold:78});
  s.earlyBuyerExitIntel=()=>({alert:false,wallets:0,soldSharePct:0});
- const makeToken=(mint,at,critical=false)=>({mint,symbol:mint.toUpperCase(),pairAddress:'pair-'+mint,liquidityUsd:12000,history:[{at}],analysis:{score:90,coverage:90,hardBlocked:critical,flags:critical?[{level:'critical',message:'critical flag'}]:[]}});
+ const makeToken=(mint,at,critical=false)=>({mint,symbol:mint.toUpperCase(),pairAddress:'pair-'+mint,liquidityUsd:12000,history:[{at}],analysis:{score:90,coverage:90,factors:{security:80},hardBlocked:critical,flags:critical?[{level:'critical',message:'critical flag'}]:[]}});
  s.state.tokens={
   fresh:makeToken('fresh',now-60_000),
   delayed:makeToken('delayed',now-8*60_000),
@@ -352,4 +352,27 @@ test('la freeze authority reste un blocage critique indépendant des données ho
  const a=s.score({txns:{h1:{buys:30,sells:10}},volume:{h1:8000,h24:30000},liquidityUsd:12000,ageHours:2,security:{checkedAt:new Date().toISOString(),data:{freezeAuthorityActive:true,mintAuthorityActive:false,top10HolderPercent:null,ownerConcentrationAvailable:false}}});
  assert.equal(a.hardBlocked,true);
  assert.ok(a.flags.some(x=>x.code==='FREEZE_AUTHORITY'&&x.level==='critical'));
+});
+
+
+test('une couverture élevée sans facteur sécurité ne peut pas produire un candidat fort',()=>{
+ const s=make();
+ const token={txns:{h1:{buys:100,sells:10}},volume:{h1:10000,h24:50000},liquidityUsd:20000,fdv:100000,ageHours:1,history:[{at:1,liquidityUsd:15000,priceUsd:.01,buys1h:10,sells1h:10},{at:2,liquidityUsd:20000,priceUsd:.012,buys1h:100,sells1h:10}]};
+ const a=s.score(token);
+ assert.ok(a.coverage>=70);
+ assert.equal(a.readiness,'partial');
+ assert.equal(a.confidence,'medium');
+ assert.notEqual(a.classification,'strong_candidate');
+});
+
+test('une opportunité Telegram exige une sécurité vérifiée; sinon le signal reste watch',async()=>{
+ const s=make(),now=Date.now();
+ s.activeAlertThreshold=()=>({threshold:78});
+ s.earlyBuyerExitIntel=()=>({alert:false,wallets:0,soldSharePct:0});
+ s.state.tokens={
+  unverified:{mint:'unverified',symbol:'UNV',pairAddress:'pair-unverified',liquidityUsd:12000,history:[{at:now}],analysis:{score:95,coverage:90,factors:{activity:95},flags:[],hardBlocked:false}}
+ };
+ await s.alerts();
+ assert.equal(s.state.tokens.unverified.signalLevel,'watch');
+ assert.equal(s.state.alerts[0].level,'watch');
 });
