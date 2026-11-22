@@ -91,7 +91,13 @@ function renderMore(){
  const items=[['backtest','↗','Résultats','Voir si les signaux du bot ont été pertinents'],['alerts','♧','Alertes','Retrouver les alertes envoyées'],['settings','⚙','Paramètres','Vérifier les réglages et les connexions']];
  view.innerHTML='<div class="section-heading"><div><h2>Plus</h2><p class="muted">Les trois pages utiles en dehors du scanner.</p></div></div><div class="simple-menu">'+items.map(x=>'<button class="panel simple-menu-item" data-go="'+x[0]+'"><span class="module-icon">'+x[1]+'</span><span><b>'+x[2]+'</b><small>'+x[3]+'</small></span><span class="module-state">→</span></button>').join('')+'</div>';
 }
-function renderSettings(){view.innerHTML='<h2>Paramètres & intégrations</h2><p>Aucun fournisseur payant ni aucune clé API payante. Configure seulement les variables indiquées ci-dessous dans FadeHost.</p><div class="env-list">'+['DASHBOARD_ACCESS_CODE','DASHBOARD_SESSION_SECRET','DASHBOARD_URL','BOT_TOKEN','TELEGRAM_CHAT_ID','SOLANA_RPC_URL (facultatif)','ALERT_MIN_SCORE','SCAN_INTERVAL_MS','MIN_LIQUIDITY_USD'].map(x=>'<div><b>'+x+'</b></div>').join('')+'</div>'+sourceCards()+'<p class="footnote">Trading automatique désactivé. Aucune clé privée ni signature de transaction utilisée.</p>';}
+function renderSettings(){
+ const sources=Object.values(state.overview.sources||{});
+ const connected=sources.filter(x=>x.connected).length;
+ const total=sources.length;
+ const telegram=state.overview.sources?.telegram;
+ view.innerHTML='<div class="section-heading"><div><h2>Paramètres</h2><p class="muted">État général du bot. Les réglages techniques restent dans FadeHost.</p></div></div><div class="simple-status"><article class="panel stat"><span>Scanner</span><strong>'+pill(state.overview.scannerRunning?'Actif':'À vérifier',state.overview.scannerRunning?'good':'warn')+'</strong></article><article class="panel stat"><span>Telegram</span><strong>'+pill(telegram?.connected?'Connecté':telegram?.configured?'Configuré':'Non configuré',telegram?.connected?'good':'warn')+'</strong></article><article class="panel stat"><span>Sources de données</span><strong>'+connected+' / '+total+'</strong></article></div><p class="footnote">Aucun achat automatique n’est effectué. Les clés et paramètres techniques ne sont jamais modifiés depuis cette page.</p>';
+}
 function render(page=state.page){
  state.page=page;title.textContent=labels[page]||labels.overview;
  nav.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.view===page));
