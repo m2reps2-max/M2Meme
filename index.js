@@ -40,6 +40,7 @@ app.get('/api/wallets',(_q,r)=>r.json({ok:true,wallets:scanner.state.wallets.map
 app.get('/api/intelligence/creators',(_q,r)=>r.json({ok:true,creators:scanner.creatorIntel()}));
 app.get('/api/intelligence/wallets',(_q,r)=>r.json({ok:true,wallets:scanner.walletIntel()}));
 app.get('/api/backtest',(_q,r)=>r.json({ok:true,...scanner.backtest()}));
+app.get('/api/learning',(_q,r)=>r.json({ok:true,...scanner.learningSummary()}));
 app.get('/api/backtest/historical',(_q,r)=>r.json({ok:true,...scanner.getHistoricalBenchmark()}));
 let lastHistoricalRun=0;
 app.post('/api/backtest/historical/run',async(_q,r)=>{if(Date.now()-lastHistoricalRun<10000)return r.status(429).json({error:'Attends quelques secondes avant le prochain token historique.'});lastHistoricalRun=Date.now();try{r.json({ok:true,...await scanner.runHistoricalBenchmark()});}catch(e){r.status(502).json({error:e.message});}});
