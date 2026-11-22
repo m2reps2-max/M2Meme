@@ -59,3 +59,9 @@ test('un objet volume vide ne compte pas comme données de marché complètes',(
  const result=tokenDataQuality({mint:'empty-volume',priceUsd:1,liquidityUsd:10000,volume:{},history:[]},1000000);
  assert.equal(result.checks.find(x=>x.key==='market').available,false);
 });
+
+
+test('un volume horaire seul ne valide pas la mesure de marché 24h requise par le score',()=>{
+ const result=tokenDataQuality({mint:'hourly-only',priceUsd:1,liquidityUsd:10000,volume:{h1:500},history:[]},1000000);
+ assert.equal(result.checks.find(x=>x.key==='market').available,false);
+});
