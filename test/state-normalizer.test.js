@@ -37,3 +37,27 @@ test('global forecast retention is bounded across all tracked tokens',()=>{
  assert.equal(limitForecastHistory(tokens,6),6);
  assert.deepEqual(Object.values(tokens).map(x=>x.forecasts.length),[2,2,2]);
 });
+
+test('mutating normalization reuses token objects and the token map to avoid startup duplication',()=>{
+ const token={symbol:'AAA',sources:['dex',null],history:[{at:1},null],forecasts:[{at:1},null],smartMoney:{hits:'2',wallets:['walletA',null]}};
+ const tokens={mintA:token};
+ const input={version:3,tokens,alerts:[],watchlist:[],wallets:[],autoWallets:[],walletTrades:[],walletActivity:{},walletCursors:{},walletLatestCursors:{},walletPendingSignatures:{},walletMonitoringGaps:{},sources:{}};
+ const state=normalizeState(input,{mutate:true});
+ assert.equal(state,input);
+ assert.equal(state.tokens,tokens);
+ assert.equal(state.tokens.mintA,token);
+ assert.deepEqual(token.sources,['dex']);
+ assert.deepEqual(token.history,[{at:1}]);
+ assert.deepEqual(token.forecasts,[{at:1}]);
+ assert.deepEqual(token.smartMoney.wallets,['walletA']);
+});
+
+test('mutating normalization restores missing defaults without replacing existing values',()=>{
+ const input={tokens:{},lastScanAt:'2026-11-22T00:00:00.000Z'};
+ const state=normalizeState(input,{mutate:true});
+ assert.equal(state,input);
+ assert.equal(state.lastScanAt,'2026-11-22T00:00:00.000Z');
+ assert.deepEqual(state.alerts,[]);
+ assert.deepEqual(state.walletTrades,[]);
+ assert.equal(state.version,3);
+});
