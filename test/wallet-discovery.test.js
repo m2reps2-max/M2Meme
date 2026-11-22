@@ -50,8 +50,8 @@ test('legacy saved candidates receive a conservative score without losing their 
 });
 
 test('candidate list is bounded and ranked by discovery evidence',()=>{
- const buyers=Array.from({length:20},(_,i)=>buyer('wallet-'+i,2+i,150+i*200));
+ const buyers=Array.from({length:60},(_,i)=>buyer('wallet-'+i,2+i,150+i*200));
  const result=recordEarlyBuyerCandidates([],token('mint-a','AAA'),buyers,at);
- assert.equal(result.wallets.length,15);
+ assert.equal(result.wallets.length,50);
  assert.ok(result.wallets[0].discoveryScore>=result.wallets.at(-1).discoveryScore);
 });
