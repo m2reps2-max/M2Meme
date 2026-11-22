@@ -56,9 +56,9 @@ test('wallet reputation page exposes point-in-time backtest and outcomes against
 });
 
 test('Radar shortlist is capped at five best and five watch candidates with strict data gates',()=>{
- assert.match(js,/\.slice\(0,5\)/);
- assert.ok(js.includes('coverage||0)>=80'));
- assert.ok(js.includes('liquidityUsd||0)>=10000'));
+ assert.match(selection,/\.slice\(0,5\)/);
+ assert.match(selection,/coverage\\?\\.\\|\\|0\\)?>?=80|coverage\\?\\.\\|\\|0\\)\\)>=80/);
+ assert.match(selection,/liquidityUsd\\?\\.\\|\\|0\\)\\)>=10000/);
  assert.match(js,/analysis\?\.risk!=='high'/);
  assert.match(js,/Aucun candidat assez solide/);
  assert.match(js,/pré-marchés à 5 % ne sont pas présentés comme des opportunités/);
