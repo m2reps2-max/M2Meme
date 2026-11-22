@@ -235,3 +235,18 @@ Les contrôles de sécurité RPC exposent maintenant, en plus des concentrations
 **Limite importante :** ce n'est pas une analyse de tous les détenteurs. Les métriques Gini/HHI sont des indicateurs partiels calculés sur les 20 comptes renvoyés par le RPC; les comptes inconnus sont traités comme des unités séparées pour ne pas les fusionner arbitrairement. Les pools, lockers, bonding curves et comptes d'infrastructure ne sont pas automatiquement identifiés ou exclus.
 
 La page Wallet Intelligence calcule aussi un indice historique indicatif par wallet à partir du rendement du token environ une heure après le premier achat observable pour chaque token. Plusieurs achats du même wallet sur le même token ne comptent qu'une fois. Le score reste masqué avant cinq tokens évalués et est rétréci vers 50 lorsque l'échantillon est faible. Il ne représente pas le PnL réel du wallet : taille des positions, prix exact au bloc, frais, slippage et ventes exécutées ne sont pas connus. Il ne modifie pas automatiquement le score des tokens.
+
+
+## Intelligence des 50 experts KOL et de leurs portefeuilles
+
+Une source facultative ajoute un classement dynamique de 50 wallets KOL Solana, les achats/ventes détectés et une reconstruction prudente des positions observées :
+
+- Fournisseur : [MadeOnSol API](https://madeonsol.com/api-docs), endpoints KOL leaderboard et trade feed.
+- Clé gratuite facultative : [madeonsol.com/developer](https://madeonsol.com/developer). La documentation annonce 200 appels/jour sur le plan gratuit, sans paiement requis.
+- Ajouter `MADEONSOL_API_KEY` dans les variables d'environnement FadeHost. Sans cette clé, MEME RADAR continue de fonctionner normalement et le module reste désactivé.
+- Rafraîchissement prévu : flux KOL toutes les 15 minutes et classements PnL / early-entry toutes les 12 heures, soit environ 100 appels/jour au maximum nominal.
+- Les classements combinent rentabilité observée et précocité d'entrée; ils ne se basent pas sur le nombre d'abonnés.
+- Les portefeuilles affichés sont des positions reconstruites à partir des transactions du flux depuis l'activation. L'historique est incomplet : transferts, swaps non couverts et transactions antérieures peuvent manquer. Le tableau ne prétend donc pas représenter l'intégralité des avoirs on-chain ni un PnL exact.
+- Les étiquettes KOL et les liens sociaux sont des attributions du fournisseur, pas une preuve d'identité personnelle. Les achats/ventes sont des événements publics on-chain; aucune copie automatique ni transaction n'est exécutée.
+
+Le plan gratuit permet le suivi du flux et des classements. Les endpoints de portefeuille universel et certaines données avancées sont réservés aux plans supérieurs; MEME RADAR n'en dépend pas.
