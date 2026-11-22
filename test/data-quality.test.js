@@ -8,7 +8,7 @@ test('data quality distinguishes missing data from strong signals',()=>{
  assert.equal(result.completenessPct,0);
  assert.equal(result.quality,'low');
  assert.ok(result.issues.some(x=>x.key==='security'&&x.severity==='missing'));
- assert.equal(result.freshnessPct,0);
+ assert.equal(result.freshnessPct,null,'sans horodatage exploitable, la fraîcheur est inconnue et non nulle');
 });
 
 test('fresh market and on-chain observations increase completeness and freshness',()=>{
@@ -25,4 +25,20 @@ test('summary reports tracked tokens and bounded quality categories',()=>{
  assert.equal(result.summary.tokens,2);
  assert.equal(result.tokens.length,2);
  assert.equal(result.summary.low,2);
+ assert.equal(result.summary.freshnessCoverageTokens,0);
+ assert.equal(result.summary.freshnessCoveragePct,0);
+ assert.equal(result.summary.averageFreshnessPct,null);
+});
+
+test('missing or future timestamps do not dilute average freshness or appear fresh',()=>{
+ const now=5_000_000;
+ const measured={mint:'measured',priceUsd:1,liquidityUsd:100,volume:{h1:1},history:[{at:now-60000}],security:{checkedAt:new Date(now-60000).toISOString(),data:{}},launchSource:'pumpportal'};
+ const unknown={mint:'unknown',history:[{priceUsd:1}],security:{data:{}}};
+ const future={mint:'future',priceUsd:1,liquidityUsd:100,volume:{h1:1},history:[{at:now+3600000}],security:{checkedAt:new Date(now+3600000).toISOString(),data:{}}};
+ const summary=dataQualitySummary.call({state:{tokens:{measured,unknown,future}}},now);
+ assert.equal(summary.summary.freshnessCoverageTokens,1);
+ assert.equal(summary.summary.freshnessCoveragePct,33.3);
+ assert.equal(summary.summary.averageFreshnessPct,100);
+ assert.equal(tokenDataQuality(future,now).freshnessPct,null);
+ assert.ok(tokenDataQuality(unknown,now).issues.some(x=>x.severity==='unknown_timestamp'));
 });
