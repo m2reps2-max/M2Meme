@@ -89,11 +89,11 @@ test('default Telegram radar is configured for 50 unique public-channel candidat
   assert.equal(DISCOVERY_SEEDS.length, 50);
   assert.equal(new Set(DISCOVERY_SEEDS.map(x => x.toLowerCase())).size, 50);
   assert.equal(MAX_DISCOVERY_CHANNELS, 50);
-  assert.equal(DISCOVERY_BATCH_SIZE, 8);
+  assert.equal(DISCOVERY_BATCH_SIZE, 2);
   assert.deepEqual(DISCOVERY_SEEDS.slice(0, 5), ['solearlytrending', 'solwhaletrending', 'soltrenchtrending', 'spydefi', 'arcanegems']);
 });
 
-test('default discovery scans up to eight configured channels per cycle', async () => {
+test('default discovery scans up to two configured channels per cycle', async () => {
   const calls = [];
   const radar = new TelegramRadar({
     fetchImpl: async url => {
@@ -102,11 +102,11 @@ test('default discovery scans up to eight configured channels per cycle', async 
     }
   });
   const result = await radar.discoverPublicChannels();
-  assert.equal(result.scanned, 8);
+  assert.equal(result.scanned, 2);
   assert.equal(result.discoveredChannels, 50);
-  assert.equal(calls.length, 8);
+  assert.equal(calls.length, 2);
   assert.equal(radar.status().discovery.configuredChannels, 50);
-  assert.equal(radar.status().discovery.batchSize, 8);
+  assert.equal(radar.status().discovery.batchSize, 2);
 });
 
 test('Telegram public page rejects an oversized HTML response',async()=>{
