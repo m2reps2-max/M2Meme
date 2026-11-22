@@ -83,9 +83,11 @@ test('candidate cards distinguish partial security evidence from verified securi
  assert.match(js,/Risque moyen/);
  assert.match(js,/Sécurité vérifiée/);
 });
-test('dashboard assets use a fresh cache version for the curated shortlist',()=>{
- assert.match(html,/styles\.css\?v=curated-v3/);
- assert.match(html,/dashboard\.js\?v=curated-v3/);
+test('dashboard assets share one cache version so deployed UI fixes are loaded together',()=>{
+ const version=html.match(/dashboard\\.js\\?v=([^"]+)/)?.[1];
+ assert.ok(version);
+ assert.match(html,new RegExp('styles\\\\.css\\\\?v='+version));
+ assert.match(html,new RegExp('live\\\\.css\\\\?v='+version));
 });
 
 test('dashboard loads a server-side shortlist instead of selecting from the first 200 score-sorted tokens',()=>{
@@ -110,4 +112,31 @@ test('HTML closing-tag helper is shared by all dashboard renderers',()=>{
  assert.doesNotMatch(js.slice(candidate,overview),/const closeTag=name=>/);
  assert.match(js.slice(overview,scanner),/closeTag\('div'\)/);
  assert.match(js.slice(scanner,js.indexOf('function refreshTable')),/closeTag\('div'\)/);
+});
+
+test('every dashboard button action is connected to a delegated handler',()=>{
+ for(const attr of ['data-token','data-watch','data-go','data-remove-wallet'])assert.ok(js.includes("hasAttribute('"+attr+"')"),attr);
+ for(const id of ['refresh-tokens','retry-dashboard'])assert.ok(js.includes("target.id==='"+id+"'"),id);
+ assert.match(js,/view\\.addEventListener\\('submit'/);
+ assert.match(js,/#logout/);
+ assert.match(js,/nav\\.addEventListener\\('click'/);
+});
+test('dashboard actions provide pending state and report failures instead of silently failing',()=>{
+ assert.match(js,/async function runButtonAction\\(/);
+ assert.match(js,/button\\.disabled=true/);
+ assert.match(js,/setAttribute\\('aria-busy','true'\\)/);
+ assert.match(js,/Action impossible/);
+ assert.match(js,/async function removeWallet\\(/);
+ assert.match(js,/async function toggleWatch\\(/);
+});
+test('opening token details preserves the enriched token response without a full dashboard reload',()=>{
+ const start=js.indexOf('async function openToken(');
+ const end=js.indexOf('async function scan(',start);
+ const source=js.slice(start,end);
+ assert.match(source,/state\\.selected=data\\.token/);
+ assert.doesNotMatch(source,/await load\\(/);
+});
+test('dashboard UI action endpoints exist on the server',()=>{
+ const server=fs.readFileSync(path.join(root,'index.js'),'utf8');
+ for(const route of ["app.post('/api/scan'","app.post('/api/watchlist'","app.delete('/api/watchlist/:mint'","app.post('/api/wallets'","app.delete('/api/wallets/:address'","app.get('/api/token/:mint'","app.post('/api/logout'"])assert.ok(server.includes(route),route);
 });
