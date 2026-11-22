@@ -111,3 +111,51 @@ test('HTML closing-tag helper is shared by all dashboard renderers',()=>{
  assert.match(js.slice(overview,scanner),/closeTag\('div'\)/);
  assert.match(js.slice(scanner,js.indexOf('function refreshTable')),/closeTag\('div'\)/);
 });
+
+
+test('all dynamic dashboard click actions have delegated handlers',()=>{
+ const start=js.indexOf("view.addEventListener('click',async e=>{");
+ const end=js.indexOf("view.addEventListener('input'",start);
+ assert.ok(start>=0&&end>start);
+ const handler=js.slice(start,end);
+ for(const selector of ['#retry-render','#refresh-tokens','[data-token]','[data-watch]','[data-go]','[data-remove-wallet]'])assert.ok(handler.includes(selector),selector+' must be handled');
+});
+
+test('every More-menu destination resolves to a renderer and remains navigable',()=>{
+ const start=js.indexOf('function renderMore(){');
+ const end=js.indexOf('function renderSettings(){',start);
+ const menu=js.slice(start,end);
+ for(const page of ['experts','backtest','alerts','settings']){
+  assert.ok(menu.includes("['"+page+"'"));
+  assert.ok(js.includes(page+':'));
+ }
+});
+
+test('async dashboard actions report errors instead of silently failing',()=>{
+ assert.match(js,/function notify\(message,kind='neutral'\)/);
+ assert.match(js,/notify\(error\.message\|\|?'Impossible de retirer ce wallet\./);
+ assert.match(js,/notify\(error\.message\|\|?'Impossible d’ajouter ce wallet\./);
+ assert.match(js,/La déconnexion a échoué/);
+ assert.doesNotMatch(js,/alert\(/);
+});
+
+test('scan and wallet form prevent duplicate submissions and expose pending state',()=>{
+ assert.match(js,/scanInProgress/);
+ assert.match(js,/aria-busy/);
+ assert.match(js,/Ajout…/);
+ assert.match(js,/Scan en cours…/);
+});
+
+test('render errors provide a real manual retry instead of a false automatic retry promise',()=>{
+ assert.match(js,/id="retry-render"/);
+ assert.match(js,/Affichage impossible/);
+ assert.doesNotMatch(js,/Nouvelle tentative automatique dans 30 secondes/);
+});
+
+test('opening token details does not reload every secondary intelligence endpoint',()=>{
+ const start=js.indexOf('async function openToken(');
+ const end=js.indexOf('async function scan(',start);
+ assert.ok(start>=0&&end>start);
+ assert.match(js.slice(start,end),/load\(\{full:false\}\)/);
+ assert.match(js.slice(start,end),/state\.selected=\{\.\.\.latest,\.\.\.state\.selected\}/);
+});
