@@ -17,7 +17,7 @@ function provenHistory(wallet,prefix,otherMint=mint){
  ];
 }
 test('does not create a token score when fewer than two proven wallets buy',()=>{
- const rows=[...provenHistory(a,'a'),trade(a,'buy','target-a','2026-11-22T00:10:00Z',10,{asset:'SOL',amount:.1})];
+ const rows=[...provenHistory(a,'a',mint2),trade(a,'buy','target-a','2026-11-22T00:10:00Z',10,{asset:'SOL',amount:.1})];
  const signal=buildWalletTokenSignals(state(rows),Date.parse('2026-11-22T00:11:00Z'))[mint];
  assert.equal(signal.qualified,false);assert.equal(signal.score,null);
 });
