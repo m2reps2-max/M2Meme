@@ -1,6 +1,6 @@
 'use strict';
 const $=s=>document.querySelector(s), view=$('#view'), nav=$('#nav'), title=$('#page-title');
-const state={overview:{},selection:{best:[],observe:[],eligible:0},tokens:[],alerts:[],watchlist:[],wallets:[],autoWallets:[],creators:[],creatorFundingClusters:[],walletIntel:[],walletClusters:[],experts:{},walletGraph:null,walletReputation:null,walletSignalBacktest:null,dataQuality:null,launches:[],backtest:null,historical:null,learning:null,selectionPerformance:null,selected:null,page:'overview',sort:'score',search:'',loadErrors:[]};
+const state={overview:{},selection:{best:[],observe:[],eligible:0},tokens:[],alerts:[],watchlist:[],wallets:[],autoWallets:[],creators:[],creatorFundingClusters:[],walletIntel:[],walletClusters:[],experts:{},walletGraph:null,walletReputation:null,walletSignalBacktest:null,dataQuality:null,launches:[],backtest:null,historical:null,learning:null,selectionPerformance:null,selected:null,page:'overview',sort:'score',search:'',loadErrors:[],scanInProgress:false};
 const labels={overview:'Accueil',scanner:'Sélection',opportunities:'Opportunités',watchlist:'Favoris',analysis:'Détails du token',smart:'Wallets suivis',security:'Sécurité',social:'Liens du token',alerts:'Alertes',settings:'Réglages',creators:'Créateurs',backtest:'Résultats',smartIntel:'Activité des wallets',walletGraph:'Graphe wallets',quality:'Qualité des données',more:'Plus',launches:'Nouveaux lancements',experts:'Experts & portefeuilles'};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const date=v=>v?new Date(v).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'—';
@@ -128,16 +128,27 @@ function renderSettings(){
 }
 function render(page=state.page){
  state.page=page;title.textContent=labels[page]||labels.overview;
- nav.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.view===page));
+ nav.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.view===page||(b.dataset.view==='more'&&!['overview','scanner','watchlist'].includes(page))));
  try{
   ({overview:renderOverview,scanner:()=>renderScanner('scanner'),opportunities:()=>renderScanner('opportunities'),watchlist:renderWatchlist,analysis:renderDetail,smart:renderSmart,security:renderSecurity,social:renderSocial,creators:renderCreators,backtest:renderBacktest,historical:renderHistorical,smartIntel:renderWalletIntel,walletGraph:renderWalletGraph,quality:renderQuality,alerts:renderAlerts,settings:renderSettings,more:renderMore,experts:renderExperts}[page]||renderOverview)();
-  if(state.loadErrors.length)view.insertAdjacentHTML('afterbegin','<div class="notice"><b>Actualisation partielle</b><p>'+state.loadErrors.map(esc).join('<br>')+'</p><small>Nouvelle tentative automatique dans 30 secondes.</small></div>');
+  if(state.loadErrors.length)view.insertAdjacentHTML('afterbegin','<div class="notice"><b>Actualisation partielle</b><p>'+state.loadErrors.map(esc).join('<br>')+'</p><small>Les données indisponibles seront réessayées lors de la prochaine actualisation.</small></div>');
  }catch(error){
   console.error('[MEME RADAR UI]',error);
-  view.innerHTML='<div class="panel empty-panel"><div class="empty-icon">!</div><h2>Actualisation en cours</h2><p>'+esc(error.message||error)+'</p><small>Nouvelle tentative automatique dans 30 secondes.</small></div>';
+  view.innerHTML='<div class="panel empty-panel"><div class="empty-icon">!</div><h2>Affichage impossible</h2><p>'+esc(error.message||error)+'</p><button class="primary" id="retry-render" type="button">Réessayer l’affichage</button></div>';
  }
 }
 let dashboardLoadPromise=null;
+let toastTimer=null;
+function notify(message,kind='neutral'){
+ let node=$('#dashboard-toast');
+ if(!node){node=document.createElement('div');node.id='dashboard-toast';node.className='dashboard-toast';document.body.appendChild(node);}
+ node.textContent=String(message||'Action terminée');
+ node.dataset.kind=kind;
+ node.setAttribute('role',kind==='bad'?'alert':'status');
+ node.hidden=false;
+ if(toastTimer)clearTimeout(toastTimer);
+ toastTimer=setTimeout(()=>{node.hidden=true;},4500);
+}
 function setSyncStatus(label,kind='neutral'){
  const badge=$('#sync-status');
  if(!badge)return;
@@ -192,13 +203,90 @@ async function load(options={}){
  try{return await dashboardLoadPromise;}
  finally{dashboardLoadPromise=null;}
 }
-async function openToken(mint,social=false){try{const d=await api('/api/token/'+encodeURIComponent(mint));state.selected=d.token;if(social){const s=await api('/api/token/'+encodeURIComponent(mint)+'?social=true');state.selected=s.token;state.selected.socialData=s.social;}await load();state.selected=state.tokens.find(t=>t.mint===mint)||state.selected;render('analysis');}catch(e){alert(e.message);}}
-async function scan(){const b=$('#run-scan')||$('#refresh-tokens');if(b){b.disabled=true;b.textContent='Scan…';}try{await api('/api/scan',{method:'POST',body:'{}'});await load();}catch(e){alert(e.message);}finally{const x=$('#run-scan')||$('#refresh-tokens');if(x){x.disabled=false;x.textContent='Actualiser';}}}
+async function openToken(mint,social=false){
+ if(!mint){notify('Adresse du token manquante.','bad');return;}
+ try{
+  setSyncStatus('Chargement du token…','neutral');
+  const d=await api('/api/token/'+encodeURIComponent(mint));
+  if(!d.token)throw new Error('Le serveur n’a pas retourné les détails de ce token.');
+  state.selected=d.token;
+  if(social){const s=await api('/api/token/'+encodeURIComponent(mint)+'?social=true');state.selected={...state.selected,...s.token,socialData:s.social};}
+  await load({full:false});
+  const latest=state.tokens.find(t=>t.mint===mint);
+  if(latest)state.selected={...latest,...state.selected};
+  render('analysis');
+  setSyncStatus('Token chargé','good');
+ }catch(e){setSyncStatus('Erreur de chargement','bad');notify(e.message||'Impossible de charger ce token.','bad');}
+}
+async function scan(button=null){
+ if(state.scanInProgress){notify('Un scan est déjà en cours.','neutral');return;}
+ state.scanInProgress=true;
+ const original=button?.textContent||'Actualiser';
+ const active=button||$('#run-scan')||$('#refresh-tokens');
+ if(active){active.disabled=true;active.textContent='Scan en cours…';active.setAttribute('aria-busy','true');}
+ setSyncStatus('Scan en cours…','neutral');
+ try{
+  const result=await api('/api/scan',{method:'POST',body:'{}'});
+  await load();
+  notify('Actualisation terminée. Les données du scanner sont à jour.','good');
+  setSyncStatus(state.overview.scannerRunning?'Scanner actif':'Scan terminé','good');
+  return result;
+ }catch(e){
+  setSyncStatus('Échec du scan','bad');
+  notify(e.message||'Le scan a échoué.','bad');
+ }finally{
+  state.scanInProgress=false;
+  const current=$('#run-scan')||$('#refresh-tokens');
+  if(current){current.disabled=false;current.removeAttribute('aria-busy');current.textContent='Actualiser';}
+  if(active&&!active.isConnected){active.disabled=false;active.removeAttribute('aria-busy');active.textContent=original;}
+ }
+}
 nav.addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b)render(b.dataset.view);});
-view.addEventListener('click',async e=>{if(e.target.closest('#refresh-tokens'))return scan();const t=e.target.closest('[data-token]');if(t)return openToken(t.dataset.token);const w=e.target.closest('[data-watch]');if(w){try{if(state.watchlist.includes(w.dataset.watch))await api('/api/watchlist/'+encodeURIComponent(w.dataset.watch),{method:'DELETE'});else await api('/api/watchlist',{method:'POST',body:JSON.stringify({mint:w.dataset.watch})});await load();}catch(x){alert(x.message);}return;}const go=e.target.closest('[data-go]');if(go)return render(go.dataset.go);const rm=e.target.closest('[data-remove-wallet]');if(rm){await api('/api/wallets/'+encodeURIComponent(rm.dataset.removeWallet),{method:'DELETE'});await load();}});
+view.addEventListener('click',async e=>{
+ const target=e.target instanceof Element?e.target:null;
+ if(!target)return;
+ if(target.closest('#retry-render')){render(state.page);return;}
+ const refresh=target.closest('#refresh-tokens');if(refresh){await scan(refresh);return;}
+ const token=target.closest('[data-token]');if(token){await openToken(token.dataset.token);return;}
+ const watch=target.closest('[data-watch]');
+ if(watch){
+  try{
+   const mint=watch.dataset.watch;
+   if(state.watchlist.includes(mint))await api('/api/watchlist/'+encodeURIComponent(mint),{method:'DELETE'});
+   else await api('/api/watchlist',{method:'POST',body:JSON.stringify({mint})});
+   await load({full:false});
+   notify(state.watchlist.includes(mint)?'Token ajouté aux favoris.':'Token retiré des favoris.','good');
+  }catch(error){notify(error.message||'Impossible de modifier les favoris.','bad');}
+  return;
+ }
+ const go=target.closest('[data-go]');if(go){render(go.dataset.go);return;}
+ const remove=target.closest('[data-remove-wallet]');
+ if(remove){
+  const button=remove;button.disabled=true;button.setAttribute('aria-busy','true');
+  try{
+   await api('/api/wallets/'+encodeURIComponent(button.dataset.removeWallet),{method:'DELETE'});
+   const data=await api('/api/wallets');state.wallets=data.wallets||[];state.autoWallets=data.autoWallets||[];
+   render(state.page);notify('Wallet retiré de la surveillance.','good');
+  }catch(error){button.disabled=false;button.removeAttribute('aria-busy');notify(error.message||'Impossible de retirer ce wallet.','bad');}
+ }
+});
 view.addEventListener('input',e=>{if(e.target.id==='search-token'){state.search=e.target.value;refreshTable();}});view.addEventListener('change',e=>{if(e.target.id==='sort-token'){state.sort=e.target.value;refreshTable();}});
-view.addEventListener('submit',async e=>{if(e.target.id==='wallet-form'){e.preventDefault();const f=e.target;try{await api('/api/wallets',{method:'POST',body:JSON.stringify({address:f.address.value.trim(),label:f.label.value.trim()})});await load();}catch(x){alert(x.message);}}});
-$('#logout').addEventListener('click',async()=>{await fetch('/api/logout',{method:'POST'});location.replace('/login');});
+view.addEventListener('submit',async e=>{
+ if(e.target.id!=='wallet-form')return;
+ e.preventDefault();const form=e.target,button=form.querySelector('button[type="submit"],button:not([type])');
+ if(button){button.disabled=true;button.setAttribute('aria-busy','true');button.textContent='Ajout…';}
+ try{
+  await api('/api/wallets',{method:'POST',body:JSON.stringify({address:form.address.value.trim(),label:form.label.value.trim()})});
+  const data=await api('/api/wallets');state.wallets=data.wallets||[];state.autoWallets=data.autoWallets||[];
+  form.reset();render(state.page);notify('Wallet ajouté à la surveillance.','good');
+ }catch(error){notify(error.message||'Impossible d’ajouter ce wallet.','bad');}
+ finally{if(button&&button.isConnected){button.disabled=false;button.removeAttribute('aria-busy');button.textContent='Ajouter';}}
+});
+$('#logout').addEventListener('click',async()=>{
+ const button=$('#logout');if(button){button.disabled=true;button.setAttribute('aria-busy','true');}
+ try{await api('/api/logout',{method:'POST'});location.replace('/login');}
+ catch(error){notify(error.message||'La déconnexion a échoué.','bad');if(button){button.disabled=false;button.removeAttribute('aria-busy');}}
+});
 
 let dashboardRefreshTimer=null;
 let dashboardBooted=false;
@@ -210,6 +298,6 @@ async function bootDashboard(){
  dashboardRefreshTimer=setInterval(()=>{if(!document.hidden)load({full:false}).catch(error=>console.warn('[MEME RADAR refresh]',error));},30000);
 }
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&dashboardBooted)load({full:false}).catch(error=>console.warn('[MEME RADAR resume]',error));});
-view.addEventListener('click',e=>{if(e.target.closest('#retry-dashboard')){dashboardBooted=false;bootDashboard();}});
+view.addEventListener('click',e=>{const target=e.target instanceof Element?e.target:null;if(target?.closest('#retry-dashboard')){dashboardBooted=false;bootDashboard();}});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bootDashboard,{once:true});
 else bootDashboard();
