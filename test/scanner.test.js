@@ -264,3 +264,24 @@ test('readiness remains false until the first scan has completed',()=>{
  scanner.running=false;
  assert.equal(scanner.healthSummary().checks.scanner.ok,false);
 });
+
+test('background tasks do not overlap scans or each other',async()=>{
+ const scanner=make();
+ scanner.running=true;
+ scanner.scanning=true;
+ let called=0;
+ const duringScan=await scanner.runBackgroundTask('test',async()=>{called++;});
+ assert.equal(duringScan.skipped,true);
+ assert.equal(called,0);
+ scanner.scanning=false;
+ scanner.backgroundTaskRunning='other';
+ const duringBackground=await scanner.runBackgroundTask('test',async()=>{called++;});
+ assert.equal(duringBackground.skipped,true);
+ assert.equal(called,0);
+ scanner.backgroundTaskRunning=null;
+ const result=await scanner.runBackgroundTask('test',async()=>{called++;return 42;});
+ assert.equal(result,42);
+ assert.equal(called,1);
+ assert.equal(scanner.backgroundTaskRunning,null);
+ scanner.stop();
+});

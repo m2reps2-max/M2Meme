@@ -120,3 +120,9 @@ test('early buyer window stays incomplete until five minutes have elapsed since 
  assert.equal(result.earlyWindow.reason,'five_minute_window_not_elapsed');
  assert.equal(result.earlyBuyers.length,0);
 });
+
+test('GeckoTerminal rejects oversized response bodies before JSON parsing',async()=>{
+ const {fetchNewPools}=require('../lib/gecko-discovery');
+ const response={ok:true,headers:{get:()=> '100'},body:new ReadableStream({start(controller){controller.enqueue(new TextEncoder().encode(' '.repeat(100)));controller.close();}})};
+ await assert.rejects(()=>fetchNewPools({fetchImpl:async()=>response,maxBytes:32}),/trop volumineuse/);
+});
