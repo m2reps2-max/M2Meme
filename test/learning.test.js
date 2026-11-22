@@ -57,3 +57,22 @@ test('new forecast records discovery source and preserves unknown age',()=>{
  assert.equal(token.forecasts[0].source,'GeckoTerminal pool');
  assert.equal(token.forecasts[0].launchAgeHours,null);
 });
+
+test('out-of-sample calibration separates mints and counts one first forecast per token',()=>{
+ const tokens={};
+ for(let i=0;i<100;i++){
+  const mint='MintCalibration'+String(i).padStart(4,'0');
+  tokens[mint]={mint,forecasts:[
+   {at:i+1,score:80,source:'test',outcomes:{'1h':{returnPct:20,label:'win'}}},
+   {at:i+2,score:90,source:'test',outcomes:{'1h':{returnPct:-25,label:'loss'}}}
+  ]};
+ }
+ const result=learningSummary.call({state:{tokens}}).outOfSample;
+ assert.equal(result.uniqueResolvedTokens,100);
+ assert.equal(result.training.tokens+result.validation.tokens,100);
+ assert.ok(result.training.tokens>=70&&result.training.tokens<=90);
+ assert.ok(result.validation.tokens>=10&&result.validation.tokens<=30);
+ assert.equal(result.selectedThreshold,60);
+ assert.equal(result.holdoutAtSelectedThreshold.tokens,result.validation.tokens);
+ assert.equal(result.holdoutAtSelectedThreshold.positive15Pct,100);
+});
