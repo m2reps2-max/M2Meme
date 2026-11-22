@@ -6,7 +6,7 @@ const helmet=require('helmet');
 const cookieParser=require('cookie-parser');
 const {Bot,InlineKeyboard}=require('grammy');
 const {MemeScanner}=require('./lib/scanner');
-const {buildExpertSnapshot,MadeOnSolRadar}=require('./lib/kol-intel');
+const {buildExpertSnapshot,buildTokenSignals,MadeOnSolRadar}=require('./lib/kol-intel');
 const {resolveTelegramToken}=require('./lib/telegram-config');
 const {scoreWalletDiscovery}=require('./lib/wallet-discovery');
 const {COINS:HISTORICAL_COINS}=require('./lib/historical-benchmark');
@@ -36,7 +36,13 @@ let expertTimer=null,expertStartupTimer=null,lastManual=0;
 async function refreshExperts(){
  try{
   const result=await scanner.runBackgroundTask('experts',()=>expertRadar.refresh(),195);
-  if(result?.configured){scanner.save();if(result.errors?.length)console.warn('[expert radar]',result.errors.join(' | '));}
+  if(result?.configured){
+   for(const trade of result.newTrades||[])scanner.upsert({tokenAddress:trade.mint,name:trade.name||trade.symbol||'KOL discovery',symbol:trade.symbol||'—'},'kol_expert_trade');
+   const signals=buildTokenSignals(scanner.state);
+   for(const token of Object.values(scanner.state.tokens))if(token.kolIntel&&!signals[token.mint])delete token.kolIntel;
+   for(const [mint,signal] of Object.entries(signals)){const token=scanner.state.tokens[mint];if(token)token.kolIntel=signal;}
+   scanner.save();if(result.errors?.length)console.warn('[expert radar]',result.errors.join(' | '));
+  }
   return result;
  }catch(error){console.warn('[expert radar]',String(error.message||error).slice(0,180));return {error:error.message};}
 }
