@@ -39,3 +39,21 @@ test('les prévisions enregistrent le maximum favorable et le drawdown',()=>{
  assert.equal(outcome.maxFavorablePct,30);
  assert.equal(outcome.maxAdversePct,-20);
 });
+
+test('learning segments one-hour outcomes by discovery source and launch age',()=>{
+ const result=learningSummary.call({state:{tokens:{
+  a:{mint:'a',forecasts:[{score:80,source:'Pump.fun',launchAgeHours:0.02,outcomes:{'1h':{label:'win',returnPct:20}}}]},
+  b:{mint:'b',forecasts:[{score:60,source:'GeckoTerminal pool',launchAgeHours:0.2,outcomes:{'1h':{label:'loss',returnPct:-25}}}]}
+ }}});
+ assert.equal(result.cohorts.bySource['Pump.fun'].winRate1hPct,100);
+ assert.equal(result.cohorts.bySource['GeckoTerminal pool'].lossRate1hPct,100);
+ assert.equal(result.cohorts.byLaunchAge['0–5 min'].resolved,1);
+ assert.equal(result.cohorts.byLaunchAge['5–30 min'].resolved,1);
+});
+
+test('new forecast records discovery source and preserves unknown age',()=>{
+ const token={mint:'mint',geckoPoolAddress:'pool',forecasts:[]};
+ recordForecast(token,{priceUsd:1,liquidityUsd:2000,volume1h:100,volume24h:500,buys1h:4,sells1h:2,fdv:10000,score:70,coverage:80,classification:'watch',risk:'unknown',flags:[],at:1000000});
+ assert.equal(token.forecasts[0].source,'GeckoTerminal pool');
+ assert.equal(token.forecasts[0].launchAgeHours,null);
+});
