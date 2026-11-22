@@ -6,9 +6,9 @@ Dashboard privé de recherche de meme coins Solana. Le projet utilise uniquement
 
 | Fonction | Source | Configuration |
 |---|---|---|
-| Découverte de tokens | DexScreener (profils récents et tokens boostés) | Rien |
+| Découverte de tokens | DexScreener (profils récents et tokens boostés) + PumpPortal (créations Pump.fun et migrations en direct) | Rien |
 | Prix, liquidité, volume, transactions, âge de la paire | DexScreener | Rien |
-| Momentum acheteurs/vendeurs et accélération entre scans | DexScreener + historique local | Rien |
+| Momentum acheteurs/vendeurs, pression 5 min et divergences prix/volume | DexScreener + historique local | Rien |
 | Qualité de liquidité, ratio volume/liquidité, FDV/liquidité | DexScreener + historique local | Rien |
 | Drapeaux de risque : pression vendeuse, chute de liquidité, pool très peu liquide | DexScreener + RPC public | Rien |
 | Contrôles de mint/freeze authority | RPC public Solana | Rien |
@@ -20,16 +20,35 @@ Dashboard privé de recherche de meme coins Solana. Le projet utilise uniquement
 | Dashboard et historique | Express + stockage JSON local | Variables d'accès + stockage persistant FadeHost |
 
 **Limites importantes :**
-- DexScreener ne recense pas instantanément tous les tokens créés sur Solana. La découverte dépend de ses flux publics (profils et boosts), ce n'est pas un flux exhaustif de chaque lancement.
+- DexScreener ne recense pas instantanément tous les tokens créés sur Solana. Le flux PumpPortal ajoute les créations et migrations Pump.fun en direct, mais ne couvre pas tous les launchpads ni tous les DEX.
 - Le RPC public Solana est partagé et soumis à des limites de débit. Si FadeHost ou d'autres utilisateurs envoient trop de requêtes, certaines vérifications peuvent échouer temporairement. On peut renseigner un autre endpoint RPC public/gratuit dans `SOLANA_RPC_URL`, sans garantie de disponibilité.
 - Les contrôles on-chain donnent des observations : ils ne prouvent pas que la liquidité est verrouillée, qu'un token est vendable ou qu'un contrat est sûr.
 - La concentration des détenteurs agrège les comptes SPL par wallet propriétaire sur les 20 plus gros comptes renvoyés par le RPC, puis calcule top 1 / top 5 / top 10 wallets. La concentration brute des 10 comptes est également affichée. C'est plus fiable qu'un simple classement de comptes, mais ce n'est pas une cartographie complète des bénéficiaires : les wallets liés entre eux ne sont pas fusionnés, et les comptes de pool ou de contrats peuvent apparaître dans le classement.
-- Smart Money suit uniquement les adresses que tu ajoutes. Ce n'est pas une liste automatique de traders rentables et les transactions récentes ne prouvent pas qu'un wallet est performant.
-- Pas de mesure des mentions X, des tendances sociales ou des narratifs : ces fonctions nécessitent des données non disponibles dans cette version gratuite.
+- Le suivi détaillé des transactions et du comportement des wallets reste limité aux adresses ajoutées manuellement. La performance affichée compare le comportement du token après un achat observé; ce n'est pas le PnL réel du wallet. Les clusters ne concernent que les wallets surveillés et ne prouvent pas qu'ils sont liés.
+- Aucun compteur de mentions X, d'engagement ou de tendance sociale n'est disponible gratuitement de façon suffisamment fiable. Le tableau des narratifs est une classification locale par mots-clés des noms/symboles des tokens récemment lancés, pas une mesure de popularité.
 - L'analyse des détenteurs utilise uniquement les 20 plus gros comptes renvoyés par le RPC public. Elle ne détecte pas les liens indirects entre wallets (même personne, financement commun, bundles) et ne doit pas être interprétée comme une preuve d'identité. Les liens sociaux publics restent visibles.
 - Les scores sont des indicateurs heuristiques, pas des probabilités de hausse ni des conseils d'achat. Les signaux de momentum et les variations de liquidité ne deviennent exploitables qu'après plusieurs observations espacées; au premier scan, l'historique est incomplet.
 - Les mesures de volume/liquidité et FDV/liquidité sont des ratios descriptifs, pas des preuves de liquidité réellement retirable. Les données DexScreener peuvent être retardées ou incomplètes.
-- La détection de bundles, de wallets liés, de snipers, de créateurs multi-wallets et de rentabilité historique de wallets n'est pas incluse dans cette version : ces analyses nécessitent des données de transactions plus profondes et une attribution fiable, qu'un simple RPC public ne garantit pas.
+- Les bundles, snipers et liens de financement entre wallets ne sont pas prouvés automatiquement. Les flux PumpPortal de créations/migrations sont gratuits; ses flux détaillés d'achats/ventes sont payants et ne sont volontairement pas activés. Les signaux de concentration et de pression vendeuse sont des heuristiques, pas des preuves de manipulation.
+
+## Détection précoce et microstructure
+
+MEME RADAR ouvre désormais une connexion WebSocket unique à PumpPortal et s'abonne uniquement aux flux `subscribeNewToken` et `subscribeMigration`, indiqués comme gratuits par la documentation PumpPortal. Les créations enregistrent le mint, le nom, le symbole, le wallet créateur observé, l'horodatage, l'achat initial et les informations de bonding curve lorsque la source les fournit. Les migrations sont attachées au même token. En cas de coupure, reconnexion avec temporisation exponentielle. Les tokens nouvellement découverts sont automatiquement ajoutés aux recherches DexScreener suivantes pour récupérer leur marché dès qu'une paire est indexée.
+
+Le score de momentum intègre aussi les transactions, le ratio acheteurs/vendeurs, le volume relatif et la variation de prix sur cinq minutes quand DexScreener fournit ces champs. Des alertes dédiées signalent la pression vendeuse, les pics de volume sur faible liquidité, les divergences prix/volume et les chutes rapides. Les drapeaux critiques empêchent l'envoi d'une alerte d'opportunité.
+
+**Limites et coût :** la création et la migration PumpPortal sont annoncées gratuites. Les flux de trades par token ou par compte sont payants (0,01 SOL par 10 000 événements selon la documentation actuelle) et ne sont pas utilisés. Les données PumpPortal sont limitées à son écosystème; ce n'est pas un flux universel de toutes les créations Solana. Documentation : [PumpPortal Real-time Data](https://pumpportal.fun/data-api/real-time/).
+
+## Intelligence créateur, wallets et narratifs
+
+- Les créations Pump.fun fournissent un wallet créateur observé; MEME RADAR regroupe les tokens par cette adresse et compare leurs prévisions résolues à 1h. Pour les anciens tokens, l'autorité mint/freeze reste seulement un proxy.
+- Pour les wallets suivis manuellement, les achats peuvent être rapprochés des prévisions ultérieures du token. Le rendement affiché est un indicateur de ce qui est arrivé au token après l'achat, pas un PnL réalisé du wallet.
+- Les achats rapprochés par au moins trois wallets surveillés sont signalés comme cluster d'activité. Cela ne prouve pas que ces adresses appartiennent à la même personne ou participent à un bundle.
+- Les narratifs sont classés localement à partir de mots-clés dans les noms, symboles et descriptions des tokens découverts sur 1h/24h. Aucune mention X, audience, sentiment ou engagement n'est collecté.
+
+## Prévisions et faux signaux
+
+Les prévisions conservent désormais les excursions maximales favorables et défavorables observées pendant leur suivi, en plus du rendement au point de résolution. Le tableau Résultats affiche aussi, parmi les signaux avec score d'au moins 65, la part qui a subi une forte perte ou une forte baisse de liquidité à 1h. Ce chiffre est un proxy de faux signaux risqués; il ne constitue pas une preuve qu'un token a fait rug pull. Les résultats ne sont pas des performances de trading exécuté.
 
 ## Deuxième avis de sécurité gratuit (GL1TCH)
 
@@ -95,5 +114,5 @@ Commandes : `/start`, `/dashboard`, `/scan`, `/opportunities`, `/help`. Les aler
 - Le code d'accès est vérifié côté serveur.
 - La session utilise un cookie HttpOnly signé, avec une durée navigateur de 10 ans. Le navigateur peut toujours supprimer ses cookies.
 - Les sessions persistent au redémarrage si `DASHBOARD_SESSION_SECRET` reste identique.
-- Le scanner crée `data/store.json` automatiquement. Le dossier `data/` doit être persistant sur FadeHost.
+- Le scanner crée `data/store.json` automatiquement, écrit de façon atomique et conserve une copie `data/store.json.bak` du dernier état valide. En cas de fichier principal illisible au redémarrage, la copie est utilisée automatiquement. Le dossier `data/` doit être persistant sur FadeHost.
 - Les variables secrètes doivent rester dans le panneau FadeHost, jamais dans le dépôt GitHub.
