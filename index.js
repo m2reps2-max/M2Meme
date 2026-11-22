@@ -16,7 +16,7 @@ const {port:PORT,accessCode:CODE,sessionSecret:SECRET,dashboardUrl:URL,productio
 const COOKIE='meme_radar_session',TEN_YEARS=10*365*24*60*60*1000;
 const app=express();app.disable('x-powered-by');app.set('trust proxy',1);
 app.use(helmet({contentSecurityPolicy:{directives:{defaultSrc:["'self'"],scriptSrc:["'self'"],styleSrc:["'self'"],imgSrc:["'self'",'data:','https:'],connectSrc:["'self'"],objectSrc:["'none'"],frameAncestors:["'none'"]}}}));
-app.use('/internal/actions/historical-benchmark',express.raw({type:'application/json',limit:'2mb'}));app.use(express.json({limit:'24kb'}));app.use(cookieParser());
+app.use('/internal/actions/historical-benchmark',express.raw({type:'application/json',limit:'5mb'}));app.use(express.json({limit:'24kb'}));app.use(cookieParser());
 const fails=new Map();
 let lastLoginCleanup=0;
 function equal(a,b){const x=Buffer.from(String(a)),y=Buffer.from(String(b));return x.length===y.length&&crypto.timingSafeEqual(x,y);}
