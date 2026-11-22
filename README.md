@@ -175,3 +175,6 @@ Le graphe analyse les achats observés par mint et par slot, ainsi que les rafal
 ### Comparaison des alertes par cohorte historique
 
 Le benchmark agrège maintenant les résultats des alertes à poids égal par token dans chaque cohorte (cycle winners, survivants, boom-bust, long-tail et forte volatilité). Il affiche, à 1/3/7 jours, le rendement moyen par token, la proportion moyenne de tokens ayant atteint +15%, la proportion ayant touché -20% et l'écart moyen entre alertes et tous les signaux du même token. Cette agrégation évite qu'un token avec davantage de bougies domine les statistiques. Les signaux quotidiens et leurs fenêtres futures se chevauchent : ils ne sont pas indépendants. Les cohortes restent un échantillon de cas connus et ne constituent pas un univers exhaustif ni un backtest de lancement à lancement.
+
+
+Le benchmark inclut désormais les mints vérifiés de HAWK (lancement du 4 décembre 2024) et LIBRA (14 février 2025) dans les cohortes quantitatives GeckoTerminal. Les cas SHARPEI et TWS restent uniquement documentaires tant qu'une adresse de mint historique fiable n'est pas établie. Les drawdowns publiés sont des chiffres rapportés par les sources, pas des calculs de notre replay.
