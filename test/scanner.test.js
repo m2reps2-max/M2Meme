@@ -12,7 +12,7 @@ test('une forte baisse de liquidité est signalée',()=>{const s=make();const t=
 
 test('une concentration extrême sur un seul wallet est signalée',()=>{
  const s=make();
- const a=s.score({txns:{h1:{buys:30,sells:10}},volume:{h1:8000,h24:30000},liquidityUsd:12000,ageHours:2,security:{checkedAt:new Date().toISOString(),data:{freezeAuthorityActive:false,mintAuthorityActive:false,top10HolderPercent:42,top1OwnerPercent:38,top5OwnerPercent:61}}});
+ const a=s.score({txns:{h1:{buys:30,sells:10}},volume:{h1:8000,h24:30000},liquidityUsd:12000,ageHours:2,security:{checkedAt:new Date().toISOString(),data:{freezeAuthorityActive:false,mintAuthorityActive:false,top10HolderPercent:42,top1OwnerPercent:38,top5OwnerPercent:61,ownerConcentrationAvailable:true}}});
  assert.ok(a.flags.some(x=>x.code==='TOP1_WALLET_CONCENTRATION'&&x.level==='critical'));
  assert.equal(a.hardBlocked,true,'un drapeau critique doit exclure le token des opportunités');
  assert.ok(a.flags.some(x=>x.code==='TOP5_WALLET_CONCENTRATION'));
@@ -304,4 +304,26 @@ test('un token avec un pool mais peu de facteurs est signalé comme analyse inco
  assert.equal(a.readiness,'insufficient_data');
  assert.equal(a.marketLinked,true);
  assert.ok(a.missingFactors.includes('security'));
+});
+
+
+test('une concentration des comptes inconnue ne bloque pas le token et ne donne pas une sécurité complète',()=>{
+ const s=make();
+ const a=s.score({txns:{h1:{buys:20,sells:10}},volume:{h1:5000,h24:20000},liquidityUsd:10000,ageHours:2,security:{checkedAt:new Date().toISOString(),data:{freezeAuthorityActive:false,mintAuthorityActive:false,top10HolderPercent:null,top10AccountPercent:95,ownerConcentrationAvailable:false}}});
+ assert.equal(a.hardBlocked,false);
+ assert.equal(a.factors.security,undefined);
+ assert.ok(a.flags.some(x=>x.code==='TOP10_ACCOUNT_CONCENTRATION_UNVERIFIED'));
+});
+
+test('le momentum reste inconnu sans historique comparatif ni signal microstructure',()=>{
+ const s=make();
+ const a=s.score({txns:{h1:{buys:90,sells:10}},volume:{h1:10000,h24:50000},liquidityUsd:20000,fdv:100000,ageHours:1});
+ assert.equal(a.factors.momentum,undefined);
+ assert.equal(a.factors.activity!==undefined,true);
+});
+
+test('la qualité de liquidité ne reçoit pas une note avec un seul sous-indicateur',()=>{
+ const s=make();
+ const a=s.score({liquidityUsd:20000,ageHours:1,volume:{h1:1000}});
+ assert.equal(a.factors.liquidityQuality,undefined);
 });
