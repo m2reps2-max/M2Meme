@@ -192,13 +192,87 @@ async function load(options={}){
  try{return await dashboardLoadPromise;}
  finally{dashboardLoadPromise=null;}
 }
-async function openToken(mint,social=false){try{const d=await api('/api/token/'+encodeURIComponent(mint));state.selected=d.token;if(social){const s=await api('/api/token/'+encodeURIComponent(mint)+'?social=true');state.selected=s.token;state.selected.socialData=s.social;}await load();state.selected=state.tokens.find(t=>t.mint===mint)||state.selected;render('analysis');}catch(e){alert(e.message);}}
-async function scan(){const b=$('#run-scan')||$('#refresh-tokens');if(b){b.disabled=true;b.textContent='Scan…';}try{await api('/api/scan',{method:'POST',body:'{}'});await load();}catch(e){alert(e.message);}finally{const x=$('#run-scan')||$('#refresh-tokens');if(x){x.disabled=false;x.textContent='Actualiser';}}}
-nav.addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b)render(b.dataset.view);});
-view.addEventListener('click',async e=>{if(e.target.closest('#refresh-tokens'))return scan();const t=e.target.closest('[data-token]');if(t)return openToken(t.dataset.token);const w=e.target.closest('[data-watch]');if(w){try{if(state.watchlist.includes(w.dataset.watch))await api('/api/watchlist/'+encodeURIComponent(w.dataset.watch),{method:'DELETE'});else await api('/api/watchlist',{method:'POST',body:JSON.stringify({mint:w.dataset.watch})});await load();}catch(x){alert(x.message);}return;}const go=e.target.closest('[data-go]');if(go)return render(go.dataset.go);const rm=e.target.closest('[data-remove-wallet]');if(rm){await api('/api/wallets/'+encodeURIComponent(rm.dataset.removeWallet),{method:'DELETE'});await load();}});
-view.addEventListener('input',e=>{if(e.target.id==='search-token'){state.search=e.target.value;refreshTable();}});view.addEventListener('change',e=>{if(e.target.id==='sort-token'){state.sort=e.target.value;refreshTable();}});
-view.addEventListener('submit',async e=>{if(e.target.id==='wallet-form'){e.preventDefault();const f=e.target;try{await api('/api/wallets',{method:'POST',body:JSON.stringify({address:f.address.value.trim(),label:f.label.value.trim()})});await load();}catch(x){alert(x.message);}}});
-$('#logout').addEventListener('click',async()=>{await fetch('/api/logout',{method:'POST'});location.replace('/login');});
+async function runButtonAction(button,busyLabel,action){
+ if(button?.disabled)return;
+ const originalLabel=button?.textContent||'';
+ if(button){button.disabled=true;button.setAttribute('aria-busy','true');if(busyLabel)button.textContent=busyLabel;}
+ setSyncStatus(busyLabel||'Action en cours…','neutral');
+ try{await action();}
+ catch(error){console.error('[MEME RADAR action]',error);setSyncStatus('Action impossible','bad');alert(error?.message||'Cette action a échoué. Réessaie.');}
+ finally{if(button?.isConnected){button.disabled=false;button.removeAttribute('aria-busy');button.textContent=originalLabel;}}
+}
+async function refreshWalletData(){
+ const data=await api('/api/wallets');
+ state.wallets=data.wallets||[];
+ state.autoWallets=data.autoWallets||[];
+}
+async function openToken(mint,social=false,button=null){
+ return runButtonAction(button,'Ouverture…',async()=>{
+  const suffix=social?'?social=true':'';
+  const data=await api('/api/token/'+encodeURIComponent(mint)+suffix);
+  state.selected=data.token;
+  if(social)state.selected.socialData=data.social;
+  render('analysis');
+ });
+}
+async function scan(button=$('#refresh-tokens')){
+ return runButtonAction(button,'Scan…',async()=>{
+  await api('/api/scan',{method:'POST',body:'{}'});
+  await load({full:false});
+  setSyncStatus('Scan terminé','good');
+ });
+}
+async function toggleWatch(mint,button){
+ return runButtonAction(button,'Mise à jour…',async()=>{
+  const removing=state.watchlist.includes(mint);
+  const data=removing
+   ?await api('/api/watchlist/'+encodeURIComponent(mint),{method:'DELETE'})
+   :await api('/api/watchlist',{method:'POST',body:JSON.stringify({mint})});
+  state.watchlist=data.watchlist||state.watchlist;
+  await load({full:false});
+  setSyncStatus(removing?'Retiré des favoris':'Ajouté aux favoris','good');
+ });
+}
+async function removeWallet(address,button){
+ return runButtonAction(button,'Suppression…',async()=>{
+  await api('/api/wallets/'+encodeURIComponent(address),{method:'DELETE'});
+  await refreshWalletData();
+  render(state.page);
+  setSyncStatus('Wallet supprimé','good');
+ });
+}
+nav.addEventListener('click',e=>{const target=e.target.closest?.('[data-view]');if(target)render(target.dataset.view);});
+view.addEventListener('click',async e=>{
+ const target=e.target.closest?.('button');
+ if(!target)return;
+ if(target.id==='refresh-tokens')return scan(target);
+ if(target.id==='retry-dashboard'){dashboardBooted=false;return bootDashboard();}
+ if(target.hasAttribute('data-token'))return openToken(target.dataset.token,false,target);
+ if(target.hasAttribute('data-watch'))return toggleWatch(target.dataset.watch,target);
+ if(target.hasAttribute('data-go'))return render(target.dataset.go);
+ if(target.hasAttribute('data-remove-wallet'))return removeWallet(target.dataset.removeWallet,target);
+});
+view.addEventListener('input',e=>{if(e.target.id==='search-token'){state.search=e.target.value;refreshTable();}});
+view.addEventListener('change',e=>{if(e.target.id==='sort-token'){state.sort=e.target.value;refreshTable();}});
+view.addEventListener('submit',async e=>{
+ if(e.target.id!=='wallet-form')return;
+ e.preventDefault();
+ const form=e.target;
+ const button=e.submitter||form.querySelector('button[type="submit"],button:not([type])');
+ await runButtonAction(button,'Ajout…',async()=>{
+  await api('/api/wallets',{method:'POST',body:JSON.stringify({address:form.elements.address.value.trim(),label:form.elements.label.value.trim()})});
+  await refreshWalletData();
+  render(state.page);
+  setSyncStatus('Wallet ajouté','good');
+ });
+});
+$('#logout').addEventListener('click',async e=>{
+ const button=e.currentTarget;
+ await runButtonAction(button,'Déconnexion…',async()=>{
+  await api('/api/logout',{method:'POST'});
+  location.replace('/login');
+ });
+});
 
 let dashboardRefreshTimer=null;
 let dashboardBooted=false;
