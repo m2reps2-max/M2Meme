@@ -99,7 +99,6 @@ view.addEventListener('click',async e=>{const t=e.target.closest('[data-token]')
 view.addEventListener('input',e=>{if(e.target.id==='search-token'){state.search=e.target.value;refreshTable();}});view.addEventListener('change',e=>{if(e.target.id==='sort-token'){state.sort=e.target.value;refreshTable();}});
 view.addEventListener('submit',async e=>{if(e.target.id==='wallet-form'){e.preventDefault();const f=e.target;try{await api('/api/wallets',{method:'POST',body:JSON.stringify({address:f.address.value.trim(),label:f.label.value.trim()})});await load();}catch(x){alert(x.message);}}});
 $('#logout').addEventListener('click',async()=>{await fetch('/api/logout',{method:'POST'});location.replace('/login');});render('overview');api('/api/me').then(load).catch(()=>location.replace('/login'));setInterval(()=>load().catch(()=>{}),30000);
-}
 function renderBacktest(){
  const l=state.learning||{},r=l.successRate||{},s=l.summary||{},fp=l.falsePositiveAnalysis||{},cohorts=l.cohorts||{},h=r.evaluated||0,rate=r.ratePct==null?'En apprentissage':r.ratePct+'%';
  view.innerHTML='<div class="section-heading"><div><h2>Résultats du bot</h2><p class="muted">Les prévisions sont confrontées aux observations réelles du marché après leur émission.</p></div></div>'
