@@ -190,7 +190,7 @@ test('le suivi wallet met en file les signatures récentes excédant vingt trans
 });
 
 test('la santé distingue serveur actif et sources de données dégradées',()=>{
- const scanner=make();scanner.running=true;
+ const scanner=make();scanner.running=true;scanner.state.lastScanAt=new Date().toISOString();
  scanner.status=()=>({
   dexscreener:{lastSuccess:new Date().toISOString(),error:null},
   geckoTerminal:{lastSuccess:null,error:'offline'},
