@@ -12,7 +12,7 @@ test('main dashboard navigation has only four simple sections',()=>{
  const views=[...nav.matchAll(/data-view="([^"]+)"/g)].map(x=>x[1]);
  assert.deepEqual(views,['overview','scanner','watchlist','more']);
  assert.match(nav,/Accueil/);
- assert.match(nav,/Scanner/);
+ assert.match(nav,/Sélection/);
  assert.match(nav,/Favoris/);
  assert.match(nav,/Plus/);
 });
@@ -32,9 +32,9 @@ test('home shows only essential stats and keeps advanced modules out of sight',(
  const end=js.indexOf('\nfunction renderScanner',start);
  assert.ok(start>=0&&end>start);
  const source=js.slice(start,end);
- assert.match(source,/Tokens suivis/);
- assert.match(source,/Mes favoris/);
- assert.match(source,/Alertes/);
+ assert.match(source,/Sélectionnés/);
+ assert.match(source,/Favoris/);
+ assert.match(source,/À surveiller/);
  assert.doesNotMatch(source,/sourceCards\(\)|Nouveaux lancements|Graphe wallets|Qualité des données|Wallets suivis/);
 });
 
@@ -52,4 +52,21 @@ test('wallet reputation page exposes point-in-time backtest and outcomes against
  assert.match(source,/averageReturnPct/);
  assert.match(source,/Helius/);
  assert.match(js,/api\/intelligence\/wallet-signal-backtest/);
+});
+
+test('Radar shortlist is capped at five best and five watch candidates with strict data gates',()=>{
+ assert.match(js,/\.slice\(0,5\)/);
+ assert.ok(js.includes('coverage||0)>=80'));
+ assert.ok(js.includes('liquidityUsd||0)>=10000'));
+ assert.match(js,/analysis\?\.risk!=='high'/);
+ assert.match(js,/Aucun candidat assez solide/);
+ assert.match(js,/pré-marchés à 5 % ne sont pas présentés comme des opportunités/);
+});
+test('scanner view no longer exposes the full token catalogue or coverage sort filters',()=>{
+ const start=js.indexOf('function renderScanner(){');
+ const end=js.indexOf('\nfunction refreshTable',start);
+ const source=js.slice(start,end);
+ assert.match(source,/Meilleurs candidats/);
+ assert.match(source,/À surveiller/);
+ assert.doesNotMatch(source,/filters\(\)|tokenTable\(/);
 });
