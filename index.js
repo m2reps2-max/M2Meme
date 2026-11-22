@@ -37,7 +37,7 @@ app.get('/api/alerts',(_q,r)=>r.json({ok:true,alerts:scanner.state.alerts.slice(
 app.get('/api/watchlist',(_q,r)=>r.json({ok:true,watchlist:scanner.state.watchlist}));
 app.post('/api/watchlist',(q,r)=>{try{r.json({ok:true,watchlist:scanner.addWatch(String(q.body?.mint||''))});}catch(e){r.status(400).json({error:e.message});}});
 app.delete('/api/watchlist/:mint',(q,r)=>r.json({ok:true,watchlist:scanner.removeWatch(q.params.mint)}));
-app.get('/api/wallets',(_q,r)=>r.json({ok:true,wallets:scanner.state.wallets.map(w=>({...w,activity:scanner.state.walletActivity[w.address]||null}))}));
+app.get('/api/wallets',(_q,r)=>r.json({ok:true,wallets:scanner.state.wallets.map(w=>({...w,activity:scanner.state.walletActivity[w.address]||null})),autoWallets:(scanner.state.autoWallets||[]).map(w=>({...w,activity:scanner.state.walletActivity[w.address]||null}))}));
 app.get('/api/intelligence/creators',(_q,r)=>r.json({ok:true,creators:scanner.creatorIntel(),fundingClusters:scanner.creatorFundingClusters()}));
 app.get('/api/intelligence/wallets',(_q,r)=>{const data=scanner.walletIntel();r.json({ok:true,wallets:data.wallets,clusters:data.clusters});});
 app.get('/api/backtest',(_q,r)=>r.json({ok:true,...scanner.backtest()}));
