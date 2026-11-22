@@ -6,7 +6,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "check": "node --check index.js && node --check lib/scanner.js && node --check lib/intelligence.js && node --check lib/historical-benchmark.js && node --check lib/learning.js && node --check public/dashboard.js && node --check lib/holder-intel.js && node --check lib/external-security.js",
+    "check": "node --check index.js && node --check lib/scanner.js && node --check lib/intelligence.js && node --check lib/historical-benchmark.js && node --check lib/learning.js && node --check public/dashboard.js && node --check lib/holder-intel.js && node --check lib/external-security.js && node --check lib/launch-stream.js && node --check lib/market-intel.js && node --check lib/narratives.js",
     "test": "node --test"
   },
   "engines": {
