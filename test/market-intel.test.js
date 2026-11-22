@@ -20,3 +20,9 @@ test('microstructure stays unknown when no five-minute signal exists',()=>{
  assert.equal(result.score,null);
  assert.equal(result.flags.length,0);
 });
+
+test('missing five-minute fields are not interpreted as zero activity',()=>{
+ const result=analyzeMicrostructure({volume:{h1:50000},txns:{h1:{buys:100,sells:20}}});
+ assert.equal(result.score,null);
+ assert.equal(result.metrics.relativeVolume5m,null);
+});
