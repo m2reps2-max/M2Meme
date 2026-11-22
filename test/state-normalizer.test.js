@@ -30,3 +30,10 @@ test('valid unknown token fields survive migration',()=>{
  const state=normalizeState({version:1,tokens:{mintA:{mint:'mintA',symbol:'AAA',customEvidence:{score:7}}}});
  assert.deepEqual(state.tokens.mintA.customEvidence,{score:7});
 });
+
+test('global forecast retention is bounded across all tracked tokens',()=>{
+ const {limitForecastHistory}=require('../lib/state-normalizer');
+ const tokens={a:{forecasts:Array.from({length:5},(_,i)=>({at:i}))},b:{forecasts:Array.from({length:5},(_,i)=>({at:i}))},c:{forecasts:Array.from({length:5},(_,i)=>({at:i}))}};
+ assert.equal(limitForecastHistory(tokens,6),6);
+ assert.deepEqual(Object.values(tokens).map(x=>x.forecasts.length),[2,2,2]);
+});
