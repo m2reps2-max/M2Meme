@@ -41,3 +41,15 @@ test('un fichier de données corrompu est récupéré depuis la sauvegarde valid
  assert.ok(recovered.state.tokens.first);
  assert.equal(recovered.state.tokens.second,undefined);
 });
+
+test('une migration sans événement de création est conservée sans inventer son âge',()=>{
+ const scanner=make();
+ const mint='So11111111111111111111111111111111111111112';
+ scanner.ingestMigration({mint,pool:'PoolAddress'});
+ const token=scanner.state.tokens[mint];
+ assert.equal(token.launchSource,'Pump.fun');
+ assert.equal(token.launchObservedVia,'migration_only');
+ assert.equal(token.migrated,true);
+ assert.equal(token.pumpCreatedAt,undefined);
+ assert.equal(token.migrationPool,'PoolAddress');
+});
