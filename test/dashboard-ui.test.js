@@ -70,3 +70,22 @@ test('scanner view no longer exposes the full token catalogue or coverage sort f
  assert.match(source,/À surveiller/);
  assert.doesNotMatch(source,/filters\(\)|tokenTable\(/);
 });
+
+test('top candidates require complete holder evidence and fully checked security',()=>{
+ const start=js.indexOf('function selectionPools(){');
+ const end=js.indexOf('\nfunction candidateCards',start);
+ const source=js.slice(start,end);
+ assert.match(source,/securityComprehensive===true/);
+ assert.match(source,/risk==='observations_only'/);
+ assert.match(source,/typeof t\.analysis\?\.factors\?\.\[k\]==='number'/);
+ assert.match(source,/risk!=='unknown'/);
+});
+test('candidate cards distinguish partial security evidence from verified security',()=>{
+ assert.match(js,/Preuves partielles/);
+ assert.match(js,/Risque moyen/);
+ assert.match(js,/Sécurité vérifiée/);
+});
+test('dashboard assets use a fresh cache version for the curated shortlist',()=>{
+ assert.match(html,/styles\.css\?v=curated-v2/);
+ assert.match(html,/dashboard\.js\?v=curated-v2/);
+});
