@@ -108,3 +108,8 @@ test('default discovery scans up to eight configured channels per cycle', async 
   assert.equal(radar.status().discovery.configuredChannels, 50);
   assert.equal(radar.status().discovery.batchSize, 8);
 });
+
+test('Telegram public page rejects an oversized HTML response',async()=>{
+ const radar=new TelegramRadar({seedChannels:['memeradarofficial'],fetchImpl:async()=>({ok:true,headers:{get:()=> '600000'},body:new ReadableStream({start(controller){controller.enqueue(new TextEncoder().encode('x'));controller.close();}})})});
+ await assert.rejects(()=>radar.channelPosts('memeradarofficial'),/trop volumineuse/);
+});
