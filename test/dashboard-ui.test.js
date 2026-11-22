@@ -48,7 +48,8 @@ test('wallet reputation page exposes point-in-time backtest and outcomes against
  const start=js.indexOf('function renderExperts(){');
  const end=js.indexOf('\nfunction renderMore(){',start);
  const source=js.slice(start,end);
- assert.match(source,/walletBacktestPanel/);
- assert.match(source,/firstObservedTokenBaseline/);
+ assert.match(source,/backtestPanel/);
+ assert.match(source,/averageReturnPct/);
+ assert.match(source,/Helius/);
  assert.match(js,/api\/intelligence\/wallet-signal-backtest/);
 });
