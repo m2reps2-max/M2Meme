@@ -329,11 +329,11 @@ test('la qualité de liquidité ne reçoit pas une note avec un seul sous-indica
 });
 
 
-test('un wallet simplement suivi ne compte pas comme acheteur précoce récurrent',()=>{
+test('seuls les acheteurs réellement observés dans une fenêtre initiale complète alimentent le facteur précoce',()=>{
  const s=make();
- const base={txns:{h1:{buys:20,sells:10}},volume:{h1:5000,h24:20000},liquidityUsd:10000,fdv:50000,ageHours:2};
- const tracked=s.score({...base,smartMoney:{hits:5,wallets:['manual-a','manual-b']}});
- assert.equal(tracked.factors.earlyBuyerSignal,undefined);
- const early=s.score({...base,smartMoney:{hits:5,wallets:['manual-a','manual-b'],earlyBuyerWallets:['early-a','early-b']}});
- assert.equal(early.factors.earlyBuyerSignal,70);
+ const base={txns:{h1:{buys:20,sells:10}},volume:{h1:5000,h24:20000},liquidityUsd:10000,fdv:50000,ageHours:2,smartMoney:{hits:5,wallets:['manual-a','manual-b']}};
+ const incomplete=s.score({...base,tradeIntel:{earlyWindow:{complete:false},earlyBuyers:[{wallet:'w1',buys:5,buyVolumeUsd:900}]}});
+ assert.equal(incomplete.factors.earlyBuyerSignal,undefined);
+ const complete=s.score({...base,tradeIntel:{earlyWindow:{complete:true},earlyBuyers:[{wallet:'w1',buys:3,buyVolumeUsd:300},{wallet:'w2',buys:2,buyVolumeUsd:200}]}});
+ assert.equal(complete.factors.earlyBuyerSignal,70);
 });
