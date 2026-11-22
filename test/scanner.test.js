@@ -24,6 +24,7 @@ test('un lancement Pump.fun conserve le créateur et son horodatage',()=>{
  scanner.ingestLaunch({mint,name:'Early Cat',symbol:'ECAT',traderPublicKey:'CreatorWallet111111111111111111111111111111',timestamp:Math.floor(Date.now()/1000),initialBuy:1.25,marketCapSol:30,signature:'sig'});
  const token=scanner.state.tokens[mint];
  assert.equal(token.launchSource,'Pump.fun');
+ assert.equal(token.launchCohort.source,'Pump.fun');
  assert.equal(token.creator,'CreatorWallet111111111111111111111111111111');
  assert.equal(token.creatorObservedAtLaunch,true);
  assert.equal(token.symbol,'ECAT');
