@@ -14,6 +14,7 @@ Dashboard privé de recherche de meme coins Solana. Le projet utilise des source
 | Contrôles de mint/freeze authority | RPC public Solana | Rien |
 | Deuxième avis de sécurité (wallets liés, volume artificiel, historique du déployeur, risques Token-2022, liquidité) | GL1TCH public API, sans clé | Rien |
 | Concentration des 10 plus gros détenteurs, avec agrégation des comptes appartenant au même wallet (sur les 20 plus gros comptes renvoyés) | RPC public Solana (`getMultipleAccounts`) | Rien |
+| Recherche du premier financeur direct des wallets créateurs Pump.fun et détection de financeurs communs | RPC public Solana (`getSignaturesForAddress`, `getTransaction`) | Rien |
 | Suivi de 10 wallets maximum | RPC public Solana, 5 transactions récentes par wallet, toutes les 10 minutes | Rien |
 | Liens de sites et réseaux sociaux | Métadonnées DexScreener | Rien |
 | Découverte de nouveaux pools sur plusieurs DEX Solana | GeckoTerminal Public API (`/networks/solana/new_pools`) | Rien |
@@ -54,7 +55,7 @@ Le score de momentum intègre aussi les transactions, le ratio acheteurs/vendeur
 
 ## Intelligence créateur, wallets et narratifs
 
-- Les créations Pump.fun fournissent un wallet créateur observé; MEME RADAR regroupe les tokens par cette adresse et compare leurs prévisions résolues à 1h. Pour les anciens tokens, l'autorité mint/freeze reste seulement un proxy.
+- Les créations Pump.fun fournissent un wallet créateur observé; MEME RADAR regroupe les tokens par cette adresse, compare leurs prévisions résolues à 1h et recherche périodiquement la transaction la plus ancienne parmi les 1 000 signatures accessibles pour identifier un transfert ou une création de compte qui l'a financé. Les créateurs partageant un financeur direct sont regroupés comme indice à vérifier. Le contrôle est limité à un créateur par cycle de sécurité (environ 10 minutes) pour respecter les quotas du RPC public. Si 1 000 signatures sont renvoyées, l'historique peut être tronqué et le premier financement réel peut être antérieur à l'échantillon. Un financeur commun peut être un exchange ou un service et ne prouve aucune coordination. Pour les anciens tokens sans provenance de création, l'autorité mint/freeze reste seulement un proxy.
 - Pour les wallets suivis manuellement, les achats peuvent être rapprochés des prévisions ultérieures du token. Le rendement affiché est un indicateur de ce qui est arrivé au token après l'achat, pas un PnL réalisé du wallet.
 - Les achats rapprochés par au moins trois wallets surveillés sont signalés comme cluster d'activité. Cela ne prouve pas que ces adresses appartiennent à la même personne ou participent à un bundle.
 - Les narratifs sont classés localement à partir de mots-clés dans les noms, symboles et descriptions des tokens découverts sur 1h/24h. Aucune mention X, audience, sentiment ou engagement n'est collecté.
