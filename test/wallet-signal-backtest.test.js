@@ -7,6 +7,7 @@ const b='FixmSpsB111111111111111111111111111111111111';
 const target='tca3tbFf111111111111111111111111111111111111';
 const past1='tca3tbFf222222222222222222222222222222222222';
 const past2='tca3tbFf333333333333333333333333333333333333';
+const baselineMint='tca3tbFf444444444444444444444444444444444444';
 function trade(wallet,mint,direction,signature,at,amount,quote){return {wallet,mint,direction,signature,at,tokenAmount:amount,swapConfirmed:true,...(direction==='buy'?{quoteSpent:{asset:'SOL',amount:quote}}:{quoteReceived:{asset:'SOL',amount:quote}})};}
 function reputationTrades(wallet,prefix){return [
  trade(wallet,past1,'buy',prefix+'b1','2026-11-22T00:01:00Z',100,1),
@@ -26,7 +27,7 @@ function fixture(){
    {at:at,priceUsd:1,outcomes:{'1h':{returnPct:25,label:'win',maxFavorablePct:40,maxAdversePct:-5}}},
    {at:at+900000,priceUsd:1.2,outcomes:{'1h':{returnPct:-25,label:'loss',maxFavorablePct:5,maxAdversePct:-30}}}
   ]},
-  [past1]:{mint:past1,forecasts:[{at:at,priceUsd:2,outcomes:{'1h':{returnPct:-30,label:'loss',maxFavorablePct:5,maxAdversePct:-40}}}]}
+  [baselineMint]:{mint:baselineMint,forecasts:[{at:at,priceUsd:2,outcomes:{'1h':{returnPct:-30,label:'loss',maxFavorablePct:5,maxAdversePct:-40}}}]}
  }};
 }
 test('reconstructs reputation only from confirmed trades at or before the signal timestamp',()=>{
