@@ -100,21 +100,45 @@ function render(page=state.page){
   view.innerHTML='<div class="panel empty-panel"><div class="empty-icon">!</div><h2>Actualisation en cours</h2><p>'+esc(error.message||error)+'</p><small>Nouvelle tentative automatique dans 30 secondes.</small></div>';
  }
 }
-async function load(){
- const jobs=[['Vue générale','/api/overview'],['Tokens','/api/tokens?limit=200'],['Alertes','/api/alerts'],['Watchlist','/api/watchlist'],['Wallets','/api/wallets'],['Créateurs','/api/intelligence/creators'],['Wallet intelligence','/api/intelligence/wallets'],['Backtest','/api/backtest'],['Benchmark historique','/api/backtest/historical'],['Apprentissage continu','/api/learning'],['Nouveaux lancements','/api/launches'],['Graphe wallets','/api/intelligence/wallet-graph'],['Qualité des données','/api/data-quality']];
- const results=await Promise.allSettled(jobs.map(([,url])=>api(url)));
- state.loadErrors=[];
- for(let i=0;i<results.length;i++){
-  const result=results[i],name=jobs[i][0];
-  if(result.status==='rejected'){state.loadErrors.push(name+': '+(result.reason?.message||'Erreur inconnue'));continue;}
-  const data=result.value;
-  if(i===0)state.overview=data;
-  if(i===1)state.tokens=data.tokens||[];
-  if(i===2)state.alerts=data.alerts||[];
-  if(i===3)state.watchlist=data.watchlist||[];
-  if(i===4){state.wallets=data.wallets||[];state.autoWallets=data.autoWallets||[];}if(i===5){state.creators=data.creators||[];state.creatorFundingClusters=data.fundingClusters||[];}if(i===6){state.walletIntel=data.wallets||[];state.walletClusters=data.clusters||[];}if(i===7)state.backtest=data;if(i===8)state.historical=data;if(i===9)state.learning=data;if(i===10)state.launches=data.tokens||[];if(i===11)state.walletGraph=data;if(i===12)state.dataQuality=data;
- }
- render(state.page);
+let dashboardLoadPromise=null;
+async function load(options={}){
+ if(dashboardLoadPromise)return dashboardLoadPromise;
+ const full=options.full!==false;
+ dashboardLoadPromise=(async()=>{
+  const coreJobs=[['Vue générale','/api/overview'],['Tokens','/api/tokens?limit=200'],['Alertes','/api/alerts'],['Watchlist','/api/watchlist']];
+  const coreResults=await Promise.allSettled(coreJobs.map(([,url])=>api(url)));
+  state.loadErrors=[];
+  for(let i=0;i<coreResults.length;i++){
+   const result=coreResults[i];
+   if(result.status==='rejected'){state.loadErrors.push(coreJobs[i][0]+': '+(result.reason?.message||'Erreur inconnue'));continue;}
+   const data=result.value;
+   if(i===0)state.overview=data;
+   if(i===1)state.tokens=data.tokens||[];
+   if(i===2)state.alerts=data.alerts||[];
+   if(i===3)state.watchlist=data.watchlist||[];
+  }
+  render(state.page);
+  if(!full)return;
+  const secondaryJobs=[['Wallets','/api/wallets'],['Créateurs','/api/intelligence/creators'],['Wallet intelligence','/api/intelligence/wallets'],['Backtest','/api/backtest'],['Benchmark historique','/api/backtest/historical'],['Apprentissage continu','/api/learning'],['Nouveaux lancements','/api/launches'],['Graphe wallets','/api/intelligence/wallet-graph'],['Qualité des données','/api/data-quality']];
+  const results=await Promise.allSettled(secondaryJobs.map(([,url])=>api(url)));
+  for(let i=0;i<results.length;i++){
+   const result=results[i];
+   if(result.status==='rejected'){state.loadErrors.push(secondaryJobs[i][0]+': '+(result.reason?.message||'Erreur inconnue'));continue;}
+   const data=result.value;
+   if(i===0){state.wallets=data.wallets||[];state.autoWallets=data.autoWallets||[];}
+   if(i===1){state.creators=data.creators||[];state.creatorFundingClusters=data.fundingClusters||[];}
+   if(i===2){state.walletIntel=data.wallets||[];state.walletClusters=data.clusters||[];}
+   if(i===3)state.backtest=data;
+   if(i===4)state.historical=data;
+   if(i===5)state.learning=data;
+   if(i===6)state.launches=data.tokens||[];
+   if(i===7)state.walletGraph=data;
+   if(i===8)state.dataQuality=data;
+  }
+  render(state.page);
+ })();
+ try{return await dashboardLoadPromise;}
+ finally{dashboardLoadPromise=null;}
 }
 async function openToken(mint,social=false){try{const d=await api('/api/token/'+encodeURIComponent(mint));state.selected=d.token;if(social){const s=await api('/api/token/'+encodeURIComponent(mint)+'?social=true');state.selected=s.token;state.selected.socialData=s.social;}await load();state.selected=state.tokens.find(t=>t.mint===mint)||state.selected;render('analysis');}catch(e){alert(e.message);}}
 async function scan(){const b=$('#run-scan')||$('#refresh-tokens');if(b){b.disabled=true;b.textContent='Scan…';}try{await api('/api/scan',{method:'POST',body:'{}'});await load();}catch(e){alert(e.message);}finally{const x=$('#run-scan')||$('#refresh-tokens');if(x){x.disabled=false;x.textContent='Actualiser';}}}
@@ -123,3 +147,17 @@ view.addEventListener('click',async e=>{const t=e.target.closest('[data-token]')
 view.addEventListener('input',e=>{if(e.target.id==='search-token'){state.search=e.target.value;refreshTable();}});view.addEventListener('change',e=>{if(e.target.id==='sort-token'){state.sort=e.target.value;refreshTable();}});
 view.addEventListener('submit',async e=>{if(e.target.id==='wallet-form'){e.preventDefault();const f=e.target;try{await api('/api/wallets',{method:'POST',body:JSON.stringify({address:f.address.value.trim(),label:f.label.value.trim()})});await load();}catch(x){alert(x.message);}}});
 $('#logout').addEventListener('click',async()=>{await fetch('/api/logout',{method:'POST'});location.replace('/login');});
+
+let dashboardRefreshTimer=null;
+let dashboardBooted=false;
+async function bootDashboard(){
+ if(dashboardBooted)return;
+ dashboardBooted=true;
+ view.innerHTML='<div class="panel empty-panel"><div class="empty-icon">◎</div><h2>Connexion au scanner</h2><p>Chargement des données et de l’état de surveillance…</p></div>';
+ try{await load();}catch(error){console.error('[MEME RADAR boot]',error);view.innerHTML='<div class="panel empty-panel"><h2>Connexion impossible</h2><p>'+esc(error.message||error)+'</p><button class="primary" id="retry-dashboard">Réessayer</button></div>';}
+ dashboardRefreshTimer=setInterval(()=>{if(!document.hidden)load({full:false}).catch(error=>console.warn('[MEME RADAR refresh]',error));},30000);
+}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&dashboardBooted)load({full:false}).catch(error=>console.warn('[MEME RADAR resume]',error));});
+view.addEventListener('click',e=>{if(e.target.closest('#retry-dashboard')){dashboardBooted=false;bootDashboard();}});
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bootDashboard,{once:true});
+else bootDashboard();
