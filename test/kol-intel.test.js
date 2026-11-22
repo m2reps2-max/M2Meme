@@ -1,7 +1,7 @@
 'use strict';
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const {normalizeLeaderboard,normalizeTrades,mergeLeaderboard,mergeTrades,portfolioFor,buildExpertSnapshot,MadeOnSolRadar}=require('../lib/kol-intel');
+const {normalizeLeaderboard,normalizeTrades,mergeLeaderboard,mergeTrades,portfolioFor,buildTokenSignals,buildExpertSnapshot,MadeOnSolRadar}=require('../lib/kol-intel');
 const walletA='CyaE1Vxv111111111111111111111111111111111111';
 const walletB='FixmSpsB111111111111111111111111111111111111';
 const mint='tca3tbFf111111111111111111111111111111111111';
@@ -47,6 +47,32 @@ test('portfolio does not invent current prices or treat unmatched sells as profi
   {wallet:walletA,mint,action:'sell',solAmount:1,tokenAmount:100,priceUsd:null,at:'2026-11-22T00:00:00Z'}
  ],{});
  assert.equal(result.openPositionCount,0);assert.equal(result.observedRealizedPnlSol,null);assert.equal(result.unmatchedSells,1);
+});
+
+
+test('win-rate ratios are converted to percentages',()=>{
+ const rows=normalizeLeaderboard({leaderboard:[{wallet:walletA,name:'Cented',win_rate:0.625}]});
+ assert.equal(rows[0].winRatePct,62.5);
+});
+
+test('token-level KOL signal counts distinct buyers and net flow over six hours',()=>{
+ const state={experts:[{wallet:walletA,name:'Cented',winRatePct:62.5},{wallet:walletB,name:'Marcell',winRatePct:55}],expertTrades:[
+  {wallet:walletA,mint,action:'buy',solAmount:2,at:'2026-11-22T00:00:00.000Z'},
+  {wallet:walletB,mint,action:'buy',solAmount:1,at:'2026-11-22T00:01:00.000Z'},
+  {wallet:walletA,mint,action:'sell',solAmount:.5,at:'2026-11-22T00:02:00.000Z'}
+ ]};
+ const signals=buildTokenSignals(state,Date.parse('2026-11-22T00:03:00.000Z'));
+ assert.equal(signals[mint].uniqueBuyers,2);assert.equal(signals[mint].netSol,2.5);assert.equal(signals[mint].signal,'multi_kol_interest');
+});
+
+test('provider errors trigger a 30-minute cooldown instead of burning the free quota',async()=>{
+ let now=Date.parse('2026-11-22T00:00:00Z'),calls=0;
+ const fetchImpl=async()=>{calls++;return {ok:false,status:429,statusText:'Too Many Requests',text:async()=>JSON.stringify({error:'rate limited'})};};
+ const state={sources:{},experts:[],expertTrades:[]};
+ const radar=new MadeOnSolRadar({state,apiKey:'msk_test_key',fetchImpl,now:()=>now});
+ await radar.refresh();const firstCalls=calls;assert.equal(firstCalls,3);
+ now+=5*60*1000;await radar.refresh();assert.equal(calls,firstCalls);
+ now+=26*60*1000;await radar.refresh();assert.equal(calls,firstCalls+3);
 });
 
 test('MadeOnSol poller stays inert without an API key',async()=>{
