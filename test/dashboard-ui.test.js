@@ -100,3 +100,14 @@ test('results page displays prospective shortlist cohorts separately from generi
  assert.match(js,/api\/selection-performance/);
  assert.match(js,/selectionPerformance=data/);
 });
+
+test('HTML closing-tag helper is shared by all dashboard renderers',()=>{
+ const declaration=js.indexOf('const closeTag=name=>');
+ const candidate=js.indexOf('function candidateCards(');
+ const overview=js.indexOf('function renderOverview(');
+ const scanner=js.indexOf('function renderScanner(');
+ assert.ok(declaration>=0&&declaration<candidate&&candidate<overview&&overview<scanner);
+ assert.doesNotMatch(js.slice(candidate,overview),/const closeTag=name=>/);
+ assert.match(js.slice(overview,scanner),/closeTag\('div'\)/);
+ assert.match(js.slice(scanner,js.indexOf('function refreshTable')),/closeTag\('div'\)/);
+});
