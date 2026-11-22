@@ -99,3 +99,22 @@ test('wallet intelligence includes automatically discovered early buyers with pr
  assert.equal(result.wallets[0].sourceSymbol,'AUTO');
  assert.equal(result.wallets[0].performance.matchedBuys,0);
 });
+
+test('wallet intelligence flags same-slot buying clusters without asserting common ownership',()=>{
+ const mint='ClusterMint11111111111111111111111111111111';
+ const addresses=['ClusterWalletA11111111111111111111111111','ClusterWalletB11111111111111111111111111','ClusterWalletC11111111111111111111111111'];
+ const state={wallets:addresses.map((address,i)=>({address,label:'W'+i})),walletTrades:addresses.map((wallet,i)=>({wallet,mint,direction:'buy',slot:98765,at:new Date(1000000+i*100).toISOString()})),walletActivity:{},tokens:{[mint]:{mint,history:[]}}};
+ const result=require('../lib/intelligence').walletIntel.call({state});
+ const cluster=result.clusters.find(x=>x.kind==='same_slot');
+ assert.equal(cluster.trackedWallets,3);
+ assert.match(cluster.warning,/pas preuve/i);
+});
+
+test('creator intelligence exposes confirmed swap-like outflow evidence separately from generic outflows',()=>{
+ const creator='CreatorSaleWallet111111111111111111111111111';
+ const state={tokens:{mint:{mint:'mint',creator,creatorObservedAtLaunch:true,creatorSaleEvents:[{at:'2026-11-22T10:00:00Z',tokenAmount:100,quoteReceived:{asset:'SOL',amount:2},signature:'sig'}],creatorOutflows:[{at:'2026-11-22T10:00:00Z',tokenAmount:120}]}}};
+ const result=require('../lib/intelligence').creatorIntel.call({state});
+ assert.equal(result[0].creatorSaleCount,1);
+ assert.equal(result[0].creatorOutflowCount,1);
+ assert.equal(result[0].creatorSwapEvidence[0].quoteReceived.amount,2);
+});
