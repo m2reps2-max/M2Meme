@@ -32,8 +32,8 @@ test('historical cohorts expose winner and drawdown groups without hiding incomp
 test('historical replay evaluates alerts at fixed 1d, 3d and 7d horizons without lookahead',()=>{
  const base=Date.UTC(2026,0,1)/1000;
  const candles=[];
- const closes=[1,1,1,1,1,1,1,1,1.1,1.2,1.15,1.3,1.4,1.25,1.5,1.6,1.7];
- for(let i=0;i<closes.length;i++)candles.push([base+i*86400,closes[i],closes[i]*1.05,closes[i]*.95,closes[i],i<8?100:500]);
+ const closes=[1,1,1,1,1,1,1,1,1.1,1.15,1.2,1.25,1.3,1.35,1.4,1.5,1.6];
+ for(let i=0;i<closes.length;i++)candles.push([base+i*86400,closes[i],closes[i]*1.05,closes[i]*.95,closes[i],i<8?100:10000]);
  const result=replayHistoricalCandles({symbol:'TEST',name:'Test'},candles);
  assert.ok(result.historicalSignalPerformance);
  assert.ok(result.historicalSignalPerformance['1d'].alerts.signals>0);
