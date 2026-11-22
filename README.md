@@ -142,7 +142,7 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 Ne partage jamais ces secrets dans une conversation et ne les commits pas sur GitHub.
 
 ### Facultatives
-- `BOT_TOKEN` : token obtenu auprès de @BotFather si tu veux le bot Telegram.
+- `TELEGRAM_BOT_TOKEN` : token obtenu auprès de @BotFather (variable recommandée). L'ancienne variable `BOT_TOKEN` reste acceptée.
 - `TELEGRAM_CHAT_ID` : identifiant du chat ou canal destinataire. Le bot doit avoir accès au chat.
 - `SOLANA_RPC_URL` : endpoint RPC Solana alternatif. Si vide, le projet utilise automatiquement `https://api.mainnet.solana.com`.
 - `PORT` : laisse la valeur attendue par FadeHost (souvent injectée automatiquement).
@@ -154,7 +154,7 @@ Ne partage jamais ces secrets dans une conversation et ne les commits pas sur Gi
 
 ## Telegram
 
-Commandes : `/start`, `/dashboard`, `/scan`, `/opportunities`, `/help`. Les alertes sont envoyées uniquement si `BOT_TOKEN` et `TELEGRAM_CHAT_ID` sont renseignés.
+Commandes : `/start`, `/dashboard`, `/scan`, `/opportunities`, `/help`. Le bot démarre en long polling au lancement du serveur si `TELEGRAM_BOT_TOKEN` (ou `BOT_TOKEN`) est renseigné. Les alertes sont envoyées uniquement si le token et `TELEGRAM_CHAT_ID` sont renseignés.
 
 ## Sécurité et données
 
