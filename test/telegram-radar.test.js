@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { TelegramRadar, extractPublicChannels, parseTelegramPage, tokenMention } = require('../lib/telegram-radar');
+const { TelegramRadar, extractPublicChannels, extractHeaderChannels, parseTelegramPage, tokenMention } = require('../lib/telegram-radar');
 
 test('extracts only public Telegram channel links from token metadata', () => {
   const channels = extractPublicChannels({
@@ -52,4 +52,34 @@ test('Telegram radar reports no global search when a token has no public channel
   assert.equal(result.available, false);
   assert.equal(result.channelsScanned, 0);
   assert.equal(calls, 0);
+});
+
+test('discovers related public channels from curated crypto sources and matches posts globally', async () => {
+  const calls = [];
+  const now = new Date().toISOString();
+  const radar = new TelegramRadar({
+    seedChannels: ['solearlytrending'],
+    fetchImpl: async url => {
+      calls.push(String(url));
+      return {
+        ok: true,
+        text: async () => '<header><a href="https://t.me/solearlytrending">@solearlytrending</a><a href="https://t.me/solwhaletrending">Whale</a></header>' +
+          '<div data-post="solearlytrending/1"><div class="tgme_widget_message_text">$BONK momentum is increasing</div><time datetime="' + now + '"></time></div>'
+      };
+    }
+  });
+  const result = await radar.discoverPublicChannels({ limit: 1 });
+  assert.equal(result.scanned, 1);
+  assert.ok(radar.discoveryChannels.includes('solwhaletrending'));
+  const matched = radar.matchDiscoveredToken({ mint: 'SomeOtherMint123456789012345678901234', symbol: 'BONK' });
+  assert.equal(matched.available, true);
+  assert.equal(matched.mentions1h, 1);
+  assert.equal(matched.uniqueChannels24h, 1);
+  assert.equal(calls.length, 1);
+});
+
+test('extracts only Telegram links from the public channel header', () => {
+  const html = '<header><a href="https://t.me/solwhaletrending">Whale</a></header>' +
+    '<div data-post="seedchannel/1"><a href="https://t.me/randomtokenchannel">Token</a></div>';
+  assert.deepEqual(extractHeaderChannels(html), ['solwhaletrending']);
 });

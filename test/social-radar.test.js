@@ -24,3 +24,23 @@ test('RSS links outside Reddit HTTPS are discarded', () => {
   const rows = parseFeed('<rss><channel><item><title>Moon Cat</title><link>javascript:alert(1)</link><pubDate>Sun, 22 Nov 2026 10:00:00 GMT</pubDate></item></channel></rss>', 'r/solana');
   assert.equal(rows[0].link, '');
 });
+
+test('Reddit RSS failures back off instead of hammering a discontinued endpoint', async () => {
+  let calls = 0;
+  const radar = new RedditRadar({ fetchImpl: async () => { calls++; return { ok: false, status: 410 }; } });
+  await assert.rejects(() => radar.refresh(), /Reddit RSS HTTP 410/);
+  const status = radar.status();
+  assert.equal(status.connected, false);
+  assert.equal(status.failureCount, 1);
+  assert.ok(status.nextRetryAt);
+  const retry = await radar.refresh();
+  assert.equal(retry.skipped, true);
+  assert.equal(retry.reason, 'backoff');
+  assert.equal(calls, 3);
+});
+
+test('Reddit source status requires a recent successful refresh', async () => {
+  const radar = new RedditRadar({ fetchImpl: async () => ({ ok: true, text: async () => '<rss><channel></channel></rss>' }) });
+  await radar.refresh();
+  assert.equal(radar.status().connected, true);
+});
