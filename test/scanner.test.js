@@ -14,6 +14,7 @@ test('une concentration extrême sur un seul wallet est signalée',()=>{
  const s=make();
  const a=s.score({txns:{h1:{buys:30,sells:10}},volume:{h1:8000,h24:30000},liquidityUsd:12000,ageHours:2,security:{checkedAt:new Date().toISOString(),data:{freezeAuthorityActive:false,mintAuthorityActive:false,top10HolderPercent:42,top1OwnerPercent:38,top5OwnerPercent:61}}});
  assert.ok(a.flags.some(x=>x.code==='TOP1_WALLET_CONCENTRATION'&&x.level==='critical'));
+ assert.equal(a.hardBlocked,true,'un drapeau critique doit exclure le token des opportunités');
  assert.ok(a.flags.some(x=>x.code==='TOP5_WALLET_CONCENTRATION'));
 });
 
