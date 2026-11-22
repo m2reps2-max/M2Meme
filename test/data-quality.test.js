@@ -42,3 +42,14 @@ test('missing or future timestamps do not dilute average freshness or appear fre
  assert.equal(tokenDataQuality(future,now).freshnessPct,null);
  assert.ok(tokenDataQuality(unknown,now).issues.some(x=>x.severity==='unknown_timestamp'));
 });
+
+
+test('data quality reports readiness stages and degraded public sources separately',()=>{
+ const summary=dataQualitySummary.call({state:{tokens:{launch:{mint:'launch'},pooled:{mint:'pooled',pairAddress:'pool',analysis:{coverage:35}},ready:{mint:'ready',pairAddress:'pool',analysis:{coverage:85}}},sources:{dexscreener:{ok:false,error:'HTTP 429'},geckoTerminal:{ok:true,at:new Date().toISOString()}}}},Date.now());
+ assert.equal(summary.summary.readinessCounts.awaiting_market,1);
+ assert.equal(summary.summary.readinessCounts.insufficient_data,1);
+ assert.equal(summary.summary.readinessCounts.complete,1);
+ assert.equal(summary.summary.degradedSources,1);
+ assert.equal(summary.sources.find(x=>x.key==='dexscreener').status,'degraded');
+ assert.equal(summary.sources.find(x=>x.key==='geckoTerminal').status,'connected');
+});
