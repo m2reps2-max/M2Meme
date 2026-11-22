@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { parseNewPools, analyzePoolTrades } = require('../lib/gecko-discovery');
+const { parseNewPools, analyzePoolTrades, mergeObservedTrades } = require('../lib/gecko-discovery');
 
 test('GeckoTerminal new pools resolves Solana base token and market fields', () => {
   const payload = {
@@ -58,4 +58,29 @@ test('trade analysis returns auditable bundle-like and five-second buyer cluster
   assert.equal(result.bundleCandidates[0].uniqueBuyers,3);
   assert.ok(result.burstCandidates.some(x=>x.uniqueBuyers>=3));
   assert.ok(result.flags.some(x=>x.code==='BUNDLE_LIKE_BURST'));
+});
+
+test('pool trade samples are persisted idempotently for wallet graph analysis',()=>{
+ const target=[];
+ const observed=[
+  {wallet:'walletA',direction:'buy',volumeUsd:100,at:'2026-11-22T10:00:00.000Z',slot:123,signature:'sigA'},
+  {wallet:'walletB',direction:'sell',volumeUsd:50,at:'2026-11-22T10:00:01.000Z',slot:123,signature:'sigB'}
+ ];
+ const first=mergeObservedTrades(target,'mintA',observed,5000);
+ assert.equal(first.added,2);
+ assert.equal(first.rows[0].source,'gecko_pool_sample');
+ assert.equal(first.rows[0].role,'gecko_sample');
+ assert.equal(first.rows[0].swapConfirmed,false);
+ const second=mergeObservedTrades(first.rows,'mintA',observed,5000);
+ assert.equal(second.added,0);
+ assert.equal(second.rows.length,2);
+ const otherMint=mergeObservedTrades(second.rows,'mintB',observed,5000);
+ assert.equal(otherMint.added,2);
+ assert.equal(otherMint.rows.length,4);
+});
+test('pool trade persistence enforces a bounded rolling history',()=>{
+ const existing=Array.from({length:4},(_,i)=>({wallet:'old'+i,mint:'old',signature:'old'+i,source:'gecko_pool_sample'}));
+ const result=mergeObservedTrades(existing,'new',[{wallet:'new',direction:'buy',volumeUsd:1,at:'2026-11-22T10:00:00Z',signature:'new'}],3);
+ assert.equal(result.rows.length,3);
+ assert.equal(result.rows.at(-1).signature,'new');
 });
