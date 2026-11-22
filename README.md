@@ -165,3 +165,8 @@ Les transactions publiques GeckoTerminal observées lors d'une analyse de pool s
 ### Cas historiques documentés de pertes
 
 La page de test historique présente séparément des études de cas documentées (dont SHARPEI en octobre 2024 et une sortie de pool TWS analysée par CertiK). Ces cas illustrent des schémas de ventes concentrées et de sorties de liquidité, mais ne sont **pas** injectés dans les métriques de replay ni dans l'entraînement du score : sans série OHLCV historique complète et correspondance de mint vérifiée pour l'incident, cela créerait une fausse précision. Les sources sont liées directement dans le tableau de bord.
+
+
+### Détection de groupes de wallets et bundles candidats
+
+Le graphe analyse les achats observés par mint et par slot, ainsi que les rafales d'au moins trois wallets distincts dans une fenêtre de cinq secondes. Il recherche aussi les groupes de wallets qui réapparaissent ensemble sur plusieurs tokens. Les preuves sont séparées entre transactions RPC confirmées et échantillons GeckoTerminal. Les résultats sont nommés « groupes candidats » ou « bundle-like » : ils ne prouvent pas une coordination, un contrôle commun ou un bundle on-chain. Les transactions observées restent limitées à la couverture du RPC et aux pools effectivement inspectés.
