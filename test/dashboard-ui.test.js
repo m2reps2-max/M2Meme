@@ -6,6 +6,7 @@ const path=require('node:path');
 const root=path.join(__dirname,'..');
 const html=fs.readFileSync(path.join(root,'public/dashboard.html'),'utf8');
 const js=fs.readFileSync(path.join(root,'public/dashboard.js'),'utf8');
+const selection=fs.readFileSync(path.join(root,'lib/selection.js'),'utf8');
 
 test('main dashboard navigation has only four simple sections',()=>{
  const nav=html.match(/<nav id="nav"[\s\S]*?<\/nav>/)?.[0]||'';
@@ -55,10 +56,10 @@ test('wallet reputation page exposes point-in-time backtest and outcomes against
 });
 
 test('Radar shortlist is capped at five best and five watch candidates with strict data gates',()=>{
- assert.match(js,/\.slice\(0,5\)/);
- assert.ok(js.includes('coverage||0)>=80'));
- assert.ok(js.includes('liquidityUsd||0)>=10000'));
- assert.match(js,/analysis\?\.risk!=='high'/);
+ assert.match(selection,/\.slice\(0,5\)/);
+ assert.ok(selection.includes('Number(t.analysis?.coverage||0)>=80'));
+ assert.ok(selection.includes('Number(t.liquidityUsd||0)>=10000'));
+ assert.match(selection,/risk!=='high'/);
  assert.match(js,/Aucun candidat assez solide/);
  assert.match(js,/pré-marchés à 5 % ne sont pas présentés comme des opportunités/);
 });
@@ -72,13 +73,10 @@ test('scanner view no longer exposes the full token catalogue or coverage sort f
 });
 
 test('top candidates require complete holder evidence and fully checked security',()=>{
- const start=js.indexOf('function selectionPools(){');
- const end=js.indexOf('\nfunction candidateCards',start);
- const source=js.slice(start,end);
- assert.match(source,/securityComprehensive===true/);
- assert.match(source,/risk==='observations_only'/);
- assert.match(source,/typeof t\.analysis\?\.factors\?\.\[k\]==='number'/);
- assert.match(source,/risk!=='unknown'/);
+ assert.match(selection,/securityComprehensive===true/);
+ assert.match(selection,/risk==='observations_only'/);
+ assert.match(selection,/typeof value==='number'/);
+ assert.match(selection,/risk!=='unknown'/);
 });
 test('candidate cards distinguish partial security evidence from verified security',()=>{
  assert.match(js,/Preuves partielles/);
@@ -88,4 +86,10 @@ test('candidate cards distinguish partial security evidence from verified securi
 test('dashboard assets use a fresh cache version for the curated shortlist',()=>{
  assert.match(html,/styles\.css\?v=curated-v2/);
  assert.match(html,/dashboard\.js\?v=curated-v2/);
+});
+
+test('dashboard loads a server-side shortlist instead of selecting from the first 200 score-sorted tokens',()=>{
+ assert.match(js,/\['Sélection','\/api\/selection'\]/);
+ assert.match(js,/if\(i===5\)state\.selection=data/);
+ assert.match(js,/function selectionPools\(\)\{return state\.selection/);
 });

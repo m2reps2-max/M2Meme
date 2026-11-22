@@ -1,6 +1,6 @@
 'use strict';
 const $=s=>document.querySelector(s), view=$('#view'), nav=$('#nav'), title=$('#page-title');
-const state={overview:{},tokens:[],alerts:[],watchlist:[],wallets:[],autoWallets:[],creators:[],creatorFundingClusters:[],walletIntel:[],walletClusters:[],experts:{},walletGraph:null,walletReputation:null,walletSignalBacktest:null,dataQuality:null,launches:[],backtest:null,historical:null,learning:null,selected:null,page:'overview',sort:'score',search:'',loadErrors:[]};
+const state={overview:{},selection:{best:[],observe:[],eligible:0},tokens:[],alerts:[],watchlist:[],wallets:[],autoWallets:[],creators:[],creatorFundingClusters:[],walletIntel:[],walletClusters:[],experts:{},walletGraph:null,walletReputation:null,walletSignalBacktest:null,dataQuality:null,launches:[],backtest:null,historical:null,learning:null,selected:null,page:'overview',sort:'score',search:'',loadErrors:[]};
 const labels={overview:'Accueil',scanner:'Sélection',opportunities:'Opportunités',watchlist:'Favoris',analysis:'Détails du token',smart:'Wallets suivis',security:'Sécurité',social:'Liens du token',alerts:'Alertes',settings:'Réglages',creators:'Créateurs',backtest:'Résultats',smartIntel:'Activité des wallets',walletGraph:'Graphe wallets',quality:'Qualité des données',more:'Plus',launches:'Nouveaux lancements',experts:'Experts & portefeuilles'};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const date=v=>v?new Date(v).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'—';
@@ -11,16 +11,7 @@ async function api(url,opts={}){const r=await fetch(url,{credentials:'same-origi
 function tokenTable(list){if(!list.length)return '<div class="empty-inline">Aucun token détecté pour le moment.</div>';return '<div class="table-wrap"><table><thead><tr><th>Token</th><th>Score</th><th>Couverture</th><th>Liquidité</th><th>Vol. 1h</th><th>Risque</th><th></th></tr></thead><tbody>'+list.map(t=>{const a=t.analysis||{},risk=a.hardBlocked?pill('Bloqué','bad'):a.risk==='unknown'?pill('Inconnu'):pill(a.risk==='high'?'Élevé':a.risk==='medium'?'À surveiller':'Observations',a.risk==='high'?'bad':a.risk==='medium'?'warn':'good');return '<tr><td><b>'+esc(t.name||'Nouveau token')+'</b><small class="subtle">$'+esc(t.symbol||'—')+' · '+esc(short(t.mint))+'</small></td><td><b class="score '+(Number(a.score)>=75?'good':Number(a.score)>=55?'warn':'neutral')+'">'+(a.score??'—')+'</b></td><td>'+pill(a.readinessLabel||'État inconnu',a.readiness==='complete'?'good':a.readiness==='partial'?'warn':'neutral')+'<small class="subtle">'+(a.coverage??0)+'% des facteurs disponibles</small></td><td>'+usd(t.liquidityUsd)+'</td><td>'+usd(t.volume?.h1)+'</td><td>'+risk+'</td><td><button class="mini-btn" data-token="'+esc(t.mint)+'">Détails</button> <button class="mini-btn" data-watch="'+esc(t.mint)+'">'+(state.watchlist.includes(t.mint)?'★':'☆')+'</button></td></tr>';}).join('')+'</tbody></table></div>';}
 function filters(){return '<div class="filters"><input id="search-token" placeholder="Rechercher un token…" value="'+esc(state.search)+'"><select id="sort-token"><option value="score" '+(state.sort==='score'?'selected':'')+'>Meilleur score</option><option value="newest" '+(state.sort==='newest'?'selected':'')+'>Plus récent</option><option value="liquidity" '+(state.sort==='liquidity'?'selected':'')+'>Liquidité</option><option value="volume" '+(state.sort==='volume'?'selected':'')+'>Volume 24h</option><option value="momentum" '+(state.sort==='momentum'?'selected':'')+'>Pression acheteuse</option></select></div>';}
 function sourceCards(){const names={dexscreener:'DexScreener',solanaRpc:'Solana RPC public',pumpPortal:'PumpPortal · créations live',geckoTerminal:'GeckoTerminal · nouveaux pools',redditRss:'Reddit · signaux sociaux',bluesky:'Bluesky · recherche publique',nostr:'Nostr · relais public',telegramSocial:'Telegram · canaux publics',telegram:'Telegram · alertes du bot'};return '<div class="source-grid">'+Object.entries(state.overview.sources||{}).map(([k,s])=>'<article class="panel source-card"><b>'+esc(names[k]||k)+'</b> '+pill(s.connected?'Connecté':s.configured?'Configuré':'Clé requise',s.connected?'good':s.configured?'warn':'neutral')+'<p>'+esc(s.mode||'')+'</p><small>'+esc(s.error||s.lastError||s.lastSuccess||'En attente de configuration')+'</small></article>').join('')+'</div>';}
-function selectionPools(){
- const tokens=state.tokens.filter(t=>!t.analysis?.hardBlocked&&t.analysis?.risk!=='high'&&t.analysis?.risk!=='unknown'&&Boolean(t.pairAddress||t.geckoPoolAddress));
- const valid=(t,keys)=>keys.every(k=>typeof t.analysis?.factors?.[k]==='number'&&Number.isFinite(t.analysis.factors[k]));
- const quality=t=>Number(t.analysis?.coverage||0)>=80&&Number(t.analysis?.score||0)>=68&&Number(t.liquidityUsd||0)>=10000&&Number(t.volume?.h1||0)>=1000&&Number(t.txns?.h1?.buys||0)+Number(t.txns?.h1?.sells||0)>=10&&t.analysis?.securityComprehensive===true&&t.analysis?.risk==='observations_only'&&valid(t,['activity','momentum','market','liquidityQuality','security']);
- const watch=t=>Number(t.analysis?.coverage||0)>=65&&Number(t.analysis?.score||0)>=58&&Number(t.liquidityUsd||0)>=5000&&Number(t.volume?.h1||0)>0&&valid(t,['market','security']);
- const sort=(a,b)=>Number(b.analysis?.score||0)-Number(a.analysis?.score||0)||Number(b.liquidityUsd||0)-Number(a.liquidityUsd||0);
- const best=tokens.filter(quality).sort(sort).slice(0,5),selected=new Set(best.map(t=>t.mint));
- const observe=tokens.filter(t=>!selected.has(t.mint)&&watch(t)).sort(sort).slice(0,5);
- return {best,observe,eligible:tokens.length};
-}
+function selectionPools(){return state.selection||{best:[],observe:[],eligible:0};}
 function candidateCards(items,emptyText){
  const closeTag=name=>'<'+ '/'+name+'>';
  if(!items.length)return '<div class="empty-inline">'+esc(emptyText)+closeTag('div');
@@ -154,7 +145,7 @@ async function load(options={}){
  const full=options.full!==false;
  setSyncStatus('Actualisation…','neutral');
  dashboardLoadPromise=(async()=>{
-  const coreJobs=[['Vue générale','/api/overview'],['Tokens','/api/tokens?limit=200'],['Alertes','/api/alerts'],['Watchlist','/api/watchlist'],['Experts','/api/intelligence/experts']];
+  const coreJobs=[['Vue générale','/api/overview'],['Tokens','/api/tokens?limit=200'],['Alertes','/api/alerts'],['Watchlist','/api/watchlist'],['Experts','/api/intelligence/experts'],['Sélection','/api/selection']];
   const coreResults=await Promise.allSettled(coreJobs.map(([,url])=>api(url)));
   state.loadErrors=[];
   for(let i=0;i<coreResults.length;i++){
@@ -166,6 +157,7 @@ async function load(options={}){
    if(i===2)state.alerts=data.alerts||[];
    if(i===3)state.watchlist=data.watchlist||[];
    if(i===4)state.experts=data;
+   if(i===5)state.selection=data;
   }
   const coreFailures=coreResults.filter(x=>x.status==='rejected').length;
   setSyncStatus(coreFailures?'Données partielles':state.overview.scannerRunning?'Scanner actif':'Scanner à vérifier',coreFailures?'warn':state.overview.scannerRunning?'good':'warn');
