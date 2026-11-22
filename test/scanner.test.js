@@ -172,3 +172,21 @@ test('la santé distingue serveur actif et sources de données dégradées',()=>
  assert.equal(health.checks.dexscreener.ok,true);
  assert.equal(health.checks.pumpPortal.ok,false);
 });
+
+test('alerts require fresh market data and downgrade delayed signals',async()=>{
+ const s=make(),now=Date.now();
+ s.activeAlertThreshold=()=>({threshold:78});
+ s.earlyBuyerExitIntel=()=>({alert:false,wallets:0,soldSharePct:0});
+ const makeToken=(mint,at,critical=false)=>({mint,symbol:mint.toUpperCase(),pairAddress:'pair-'+mint,liquidityUsd:12000,history:[{at}],analysis:{score:90,coverage:90,hardBlocked:critical,flags:critical?[{level:'critical',message:'critical flag'}]:[]}});
+ s.state.tokens={
+  fresh:makeToken('fresh',now-60_000),
+  delayed:makeToken('delayed',now-8*60_000),
+  stale:makeToken('stale',now-20*60_000,true)
+ };
+ await s.alerts();
+ assert.equal(s.state.tokens.fresh.signalLevel,'opportunity');
+ assert.equal(s.state.tokens.delayed.signalLevel,'watch');
+ assert.equal(s.state.tokens.stale.signalLevel,'none');
+ assert.deepEqual(s.state.alerts.map(x=>x.mint).sort(),['delayed','fresh']);
+ assert.equal(s.state.alerts.find(x=>x.mint==='delayed').level,'watch');
+});
