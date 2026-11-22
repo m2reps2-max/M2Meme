@@ -18,6 +18,11 @@ test('agrège plusieurs comptes token appartenant au même wallet',()=>{
  assert.equal(x.top10AccountPercent,100);
  assert.equal(x.uniqueOwnerCount,3);
  assert.equal(x.ownerConcentrationAvailable,true);
+ assert.equal(x.top20HolderPercent,100);
+ assert.equal(x.holderSampleCoveragePct,100);
+ assert.equal(x.holderGiniTop20,0.4);
+ assert.equal(x.holderHhiTop20,5400);
+ assert.equal(x.effectiveOwnersTop20,1.85);
 });
 
 test('retombe sur les comptes bruts si les propriétaires ne sont pas disponibles',()=>{
@@ -30,4 +35,14 @@ test('retombe sur les comptes bruts si les propriétaires ne sont pas disponible
 test('ne calcule pas de pourcentage si la supply est nulle',()=>{
  const x=analyzeLargestHolders([{amount:'10'}],[null],'0');
  assert.equal(x.top10HolderPercent,null);
+});
+
+test('calcule une concentration partielle sans prétendre connaître les propriétaires inconnus',()=>{
+ const x=analyzeLargestHolders([{amount:'800'},{amount:'200'}],[null,null],'1000');
+ assert.equal(x.holderSampleAccounts,2);
+ assert.equal(x.holderSampleOwners,0);
+ assert.equal(x.unknownOwnerAccounts,2);
+ assert.equal(x.holderGiniTop20,0.3);
+ assert.equal(x.ownerConcentrationAvailable,false);
+ assert.equal(x.top1OwnerPercent,null);
 });
