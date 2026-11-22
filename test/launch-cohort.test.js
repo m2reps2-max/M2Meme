@@ -33,3 +33,18 @@ test('cohort summary counts low-liquidity launches and no-market outcomes by sou
  assert.equal(result.universe.resolved1h,2);
  assert.match(result.method,/premier marché observable/i);
 });
+
+test('un marché absent est comptabilisé pour tout token découvert, même sans launchpad déclaré',()=>{
+ const token={mint:'dex-only',sources:['profile'],firstSeenAt:new Date(1000000).toISOString()};
+ const {ensureLaunchCohort}=require('../lib/launch-cohort');
+ ensureLaunchCohort(token,1000000);
+ resolveNoMarketCohorts([token],1000000+1800001);
+ assert.equal(token.launchCohort.marketStatus,'no_market_after_30m');
+});
+test('une observation tardive résout le premier horizon disponible sans supprimer le résultat',()=>{
+ const token={mint:'late',launchSource:'Pump.fun',pumpCreatedAt:new Date(1000000).toISOString()};
+ observeLaunchCohort(token,{at:1000000,priceUsd:1,liquidityUsd:100});
+ observeLaunchCohort(token,{at:1000000+1800000,priceUsd:1.25,liquidityUsd:90});
+ assert.equal(token.launchCohort.outcomes['15m'].returnPct,25);
+ assert.equal(token.launchCohort.outcomes['15m'].resolutionQuality,'late_observation');
+});
