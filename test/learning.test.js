@@ -1,7 +1,7 @@
 'use strict';
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const {learningSummary}=require('../lib/learning');
+const {learningSummary,recordForecast}=require('../lib/learning');
 
 test('le taux de réussite à une heure compte les hausses de 15% ou plus',()=>{
  const scanner={state:{tokens:{
@@ -26,4 +26,16 @@ test('le taux reste indisponible tant qu’aucune observation à une heure n’e
  const result=learningSummary.call({state:{tokens:{a:{mint:'a',forecasts:[{at:1,score:80,outcomes:{}}]}}}});
  assert.equal(result.successRate.evaluated,0);
  assert.equal(result.successRate.ratePct,null);
+});
+
+test('les prévisions enregistrent le maximum favorable et le drawdown',()=>{
+ const token={mint:'mint',forecasts:[]};
+ const base={priceUsd:1,liquidityUsd:10000,volume1h:1000,volume24h:5000,buys1h:20,sells1h:10,fdv:50000,score:80,coverage:90,classification:'strong_candidate',risk:'low',flags:[]};
+ recordForecast(token,{...base,at:1000000});
+ recordForecast(token,{...base,at:1900000,priceUsd:1.3});
+ recordForecast(token,{...base,at:4600000,priceUsd:.8});
+ const outcome=token.forecasts[0].outcomes['1h'];
+ assert.equal(outcome.returnPct,-20);
+ assert.equal(outcome.maxFavorablePct,30);
+ assert.equal(outcome.maxAdversePct,-20);
 });
