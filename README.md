@@ -35,6 +35,12 @@ Dashboard privé de recherche de meme coins Solana. Le projet utilise uniquement
 - **Wallet intelligence** : observe les variations nettes de soldes SPL dans les transactions récentes des wallets ajoutés. Les prix au moment exact de chaque transaction, le PnL net, les frais et le slippage ne sont pas certifiés.
 - **Backtesting** : compare le prix d'un snapshot au premier snapshot disponible après 1, 5, 15 et 30 minutes, puis segmente les résultats selon le score initial. Les résultats s'accumulent à partir du déploiement et n'incluent ni frais, ni slippage, ni tokens jamais découverts.
 
+## Benchmark historique des anciens gagnants
+
+Le module de backtesting propose un replay exploratoire sur BONK, WIF, POPCAT, BOME, MEW, TRUMP et PENGU via GeckoTerminal Public API. Il récupère le pool le plus liquide indexé puis jusqu'à 180 bougies journalières. Le score historique est un **proxy** basé sur le volume relatif des 7 jours précédents et le momentum de prix sur 3/7 jours : il ne peut pas reconstruire les transactions acheteurs/vendeurs, la liquidité historique, les détenteurs, les autorités de sécurité ni les wallets smart money. Il ne reproduit donc pas exactement le score live.
+
+La fenêtre OHLCV publique est limitée et les tokens plus anciens ne sont pas rejoués depuis leur lancement; le benchmark étudie uniquement la période renvoyée par la source. Comme la liste contient des gagnants connus, elle mesure la capacité à repérer des hausses chez des survivants, pas la précision sur l'ensemble des tokens perdants. Données source : [GeckoTerminal Public API](https://api.geckoterminal.com/docs/index.html), environ 10 appels/minute; le dashboard collecte les tokens progressivement.
+
 ## Installation sur FadeHost
 
 1. Connecte le dépôt GitHub ou mets à jour les fichiers de l'application.
