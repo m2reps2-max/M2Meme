@@ -18,7 +18,7 @@ test('three distinct confirmed RPC buyers in one slot produce an auditable bundl
  assert.equal(result.candidates[0].confirmedRpcBuyers,3);
  assert.equal(result.candidates[0].confidence,'observed_onchain_buyer_cluster');
  assert.equal(result.candidates[0].symbol,'CAT');
- assert.match(result.candidates[0].warning,/ne prouvent pas/i);
+ assert.match(result.candidates[0].warning,/ne prouvent ni/i);
 });
 
 test('wallet overlap across two tokens is surfaced as a recurrent group, not proof of ownership',()=>{
