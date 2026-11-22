@@ -43,6 +43,11 @@ test('un fichier de données corrompu est récupéré depuis la sauvegarde valid
  assert.equal(recovered.state.recoveredFromBackup,true);
  assert.ok(recovered.state.tokens.first);
  assert.equal(recovered.state.tokens.second,undefined);
+ assert.ok(recovered.state.corruptFile);
+ assert.equal(fs.readFileSync(path.join(path.dirname(scanner.file),recovered.state.corruptFile),'utf8'),'{corrupted');
+ recovered.save();
+ const backup=JSON.parse(fs.readFileSync(scanner.file+'.bak','utf8'));
+ assert.ok(backup.tokens.first,'la sauvegarde valide ne doit jamais être remplacée par le JSON corrompu');
 });
 
 test('une migration sans événement de création est conservée sans inventer son âge',()=>{
