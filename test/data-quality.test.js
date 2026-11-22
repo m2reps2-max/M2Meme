@@ -15,7 +15,7 @@ test('fresh market and on-chain observations increase completeness and freshness
  const now=2_000_000;
  const token={mint:'m',priceUsd:1,liquidityUsd:10000,volume:{h1:100,h24:1000},history:[{at:now-30000,priceUsd:1}],security:{checkedAt:new Date(now-30000).toISOString(),data:{uniqueOwnerCount:10,freezeAuthorityActive:false,mintAuthorityActive:false,ownerConcentrationAvailable:true,top10HolderPercent:35}},tradeIntel:{checkedAt:new Date(now-30000).toISOString(),tradeCount:40},socialIntel:{available:true,checkedAt:new Date(now-30000).toISOString()},launchSource:'pumpportal_new_token'};
  const result=tokenDataQuality(token,now);
- assert.equal(result.completenessPct,100);
+ assert.equal(result.completenessPct,100,JSON.stringify(result.checks.map(x=>({key:x.key,available:x.available,weight:x.weight}))));
  assert.equal(result.freshnessPct,100);
  assert.equal(result.quality,'high');
 });
