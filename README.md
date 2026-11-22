@@ -12,7 +12,7 @@ Dashboard privé de recherche de meme coins Solana. Le projet utilise uniquement
 | Qualité de liquidité, ratio volume/liquidité, FDV/liquidité | DexScreener + historique local | Rien |
 | Drapeaux de risque : pression vendeuse, chute de liquidité, pool très peu liquide | DexScreener + RPC public | Rien |
 | Contrôles de mint/freeze authority | RPC public Solana | Rien |
-| Concentration des 10 plus gros comptes détenteurs | RPC public Solana | Rien |
+| Concentration des 10 plus gros détenteurs, avec agrégation des comptes appartenant au même wallet (sur les 20 plus gros comptes renvoyés) | RPC public Solana (`getMultipleAccounts`) | Rien |
 | Suivi de 10 wallets maximum | RPC public Solana, 5 transactions récentes par wallet, toutes les 10 minutes | Rien |
 | Liens de sites et réseaux sociaux | Métadonnées DexScreener | Rien |
 | Alertes Telegram | Telegram Bot API | Bot token + chat ID facultatifs |
@@ -22,9 +22,10 @@ Dashboard privé de recherche de meme coins Solana. Le projet utilise uniquement
 - DexScreener ne recense pas instantanément tous les tokens créés sur Solana. La découverte dépend de ses flux publics (profils et boosts), ce n'est pas un flux exhaustif de chaque lancement.
 - Le RPC public Solana est partagé et soumis à des limites de débit. Si FadeHost ou d'autres utilisateurs envoient trop de requêtes, certaines vérifications peuvent échouer temporairement. On peut renseigner un autre endpoint RPC public/gratuit dans `SOLANA_RPC_URL`, sans garantie de disponibilité.
 - Les contrôles on-chain donnent des observations : ils ne prouvent pas que la liquidité est verrouillée, qu'un token est vendable ou qu'un contrat est sûr.
-- Le pourcentage top 10 est calculé à partir des dix plus gros comptes de tokens renvoyés par le RPC. Les comptes peuvent appartenir au même détenteur (par exemple des pools ou des wallets liés) : ce n'est pas une analyse de bénéficiaires uniques.
+- La concentration des détenteurs agrège les comptes SPL par wallet propriétaire sur les 20 plus gros comptes renvoyés par le RPC, puis calcule top 1 / top 5 / top 10 wallets. La concentration brute des 10 comptes est également affichée. C'est plus fiable qu'un simple classement de comptes, mais ce n'est pas une cartographie complète des bénéficiaires : les wallets liés entre eux ne sont pas fusionnés, et les comptes de pool ou de contrats peuvent apparaître dans le classement.
 - Smart Money suit uniquement les adresses que tu ajoutes. Ce n'est pas une liste automatique de traders rentables et les transactions récentes ne prouvent pas qu'un wallet est performant.
-- Pas de mesure des mentions X, des tendances sociales ou des narratifs : ces fonctions nécessitent des données non disponibles dans cette version gratuite. Les liens sociaux publics restent visibles.
+- Pas de mesure des mentions X, des tendances sociales ou des narratifs : ces fonctions nécessitent des données non disponibles dans cette version gratuite.
+- L'analyse des détenteurs utilise uniquement les 20 plus gros comptes renvoyés par le RPC public. Elle ne détecte pas les liens indirects entre wallets (même personne, financement commun, bundles) et ne doit pas être interprétée comme une preuve d'identité. Les liens sociaux publics restent visibles.
 - Les scores sont des indicateurs heuristiques, pas des probabilités de hausse ni des conseils d'achat. Les signaux de momentum et les variations de liquidité ne deviennent exploitables qu'après plusieurs observations espacées; au premier scan, l'historique est incomplet.
 - Les mesures de volume/liquidité et FDV/liquidité sont des ratios descriptifs, pas des preuves de liquidité réellement retirable. Les données DexScreener peuvent être retardées ou incomplètes.
 - La détection de bundles, de wallets liés, de snipers, de créateurs multi-wallets et de rentabilité historique de wallets n'est pas incluse dans cette version : ces analyses nécessitent des données de transactions plus profondes et une attribution fiable, qu'un simple RPC public ne garantit pas.
