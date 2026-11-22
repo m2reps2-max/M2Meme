@@ -53,3 +53,9 @@ test('data quality reports readiness stages and degraded public sources separate
  assert.equal(summary.sources.find(x=>x.key==='dexscreener').status,'degraded');
  assert.equal(summary.sources.find(x=>x.key==='geckoTerminal').status,'connected');
 });
+
+
+test('un objet volume vide ne compte pas comme données de marché complètes',()=>{
+ const result=tokenDataQuality({mint:'empty-volume',priceUsd:1,liquidityUsd:10000,volume:{},history:[]},1000000);
+ assert.equal(result.checks.find(x=>x.key==='market').available,false);
+});
