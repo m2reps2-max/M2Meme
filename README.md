@@ -114,5 +114,5 @@ Commandes : `/start`, `/dashboard`, `/scan`, `/opportunities`, `/help`. Les aler
 - Le code d'accès est vérifié côté serveur.
 - La session utilise un cookie HttpOnly signé, avec une durée navigateur de 10 ans. Le navigateur peut toujours supprimer ses cookies.
 - Les sessions persistent au redémarrage si `DASHBOARD_SESSION_SECRET` reste identique.
-- Le scanner crée `data/store.json` automatiquement, écrit de façon atomique et conserve une copie `data/store.json.bak` du dernier état valide. En cas de fichier principal illisible au redémarrage, la copie est utilisée automatiquement. Le dossier `data/` doit être persistant sur FadeHost.
+- Le scanner crée `data/store.json` automatiquement, écrit de façon atomique et conserve une copie périodique `data/store.json.bak` du dernier état valide (au plus une fois par heure). En cas de fichier principal illisible au redémarrage, la copie est utilisée automatiquement. Le dossier `data/` doit être persistant sur FadeHost.
 - Les variables secrètes doivent rester dans le panneau FadeHost, jamais dans le dépôt GitHub.
