@@ -57,6 +57,15 @@ Le scanner enrichit automatiquement un pool GeckoTerminal candidat par cycle, en
 
 À chaque cycle de scan, MEME RADAR interroge aussi `https://api.geckoterminal.com/api/v2/networks/solana/new_pools?page=1&include=base_token,quote_token,dex`. Les pools détectés sont ajoutés à la file de tokens, avec le DEX, l'heure de création, la liquidité, le prix, le volume et les transactions fournis par GeckoTerminal. Les données sont ensuite enrichies par DexScreener dès qu'une paire est disponible. La source publique GeckoTerminal est sans clé, mais limitée à environ 10 appels/minute et ses réponses sont mises en cache; le scanner ne fait qu'un appel par cycle.
 
+## Social intelligence (public/free sources)
+
+- Reddit RSS, Bluesky public search and Nostr NIP-50 relay search are sampled independently.
+- Telegram collection reads only public `t.me/s/<channel>` pages explicitly linked in a token's DexScreener social metadata or description. It does not search Telegram globally and cannot read private groups.
+- Telegram channel pages are cached for 15 minutes; up to three public channels per token and three token candidates per social refresh are inspected.
+- Social summaries distinguish mentions, independent authors, Telegram channels and source-network diversity. Repeated identical snippets are surfaced as a possible amplification pattern, never proof of bots or coordination.
+- X/Twitter is not queried because reliable broad search requires paid API access; no unofficial scraping or credentials are silently assumed.
+- Social evidence is a small, noisy auxiliary factor in the score and never overrides on-chain risk gates.
+
 ## Social Radar gratuit
 
 Le module `RedditRadar` interroge périodiquement les flux RSS publics de `r/solana`, `r/memecoins` et `r/pumpfun`. `BlueskyRadar` utilise l'endpoint public `app.bsky.feed.searchPosts` sans authentification et traite jusqu'à cinq candidats par cycle. `NostrRadar` interroge un relais public NIP-50 (`relay.nostr.band`) pour un candidat supplémentaire par cycle, sans clé; les événements sont filtrés localement par symbole ou nom exact, dédupliqués et limités aux dernières 24 heures. Les résultats exposent mentions 1h/24h, auteurs et sentiment lexical; l'engagement visible n'est fourni que par Bluesky. Le nombre de tokens couverts est volontairement limité pour respecter les endpoints publics. Aucun accès X/Twitter ou Telegram n'est revendiqué. La recherche Nostr dépend du support NIP-50 et de la disponibilité du relais public; un échec est affiché comme source indisponible et n'interrompt pas le scanner.
