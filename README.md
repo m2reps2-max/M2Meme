@@ -33,7 +33,8 @@ Dashboard privé de recherche de meme coins Solana. Le projet utilise des source
 | Cohortes historiques gagnants / survivants / boom-bust | Bougies publiques GeckoTerminal, replay proxy journalier, rendements fixes à 1j/3j/7j après chaque signal, rendement final et drawdown | Rien |
 | Enrichissement automatique du meilleur candidat GeckoTerminal et d'un créateur observé à la fois | Quotas publics maîtrisés, une analyse de pool par cycle et un financement créateur toutes les 15 minutes au maximum | Rien |
 | Alertes Telegram | Telegram Bot API | Bot token + chat ID facultatifs |
-| Dashboard et historique | Express + stockage JSON local | Variables d'accès + stockage persistant FadeHost |
+| Dashboard et état actif | Express + JSON compact pour les 1 200 tokens chauds et les données opérationnelles | Variables d'accès + stockage persistant FadeHost |
+| Archive froide des tokens | SQLite natif Node.js, jusqu'à 50 000 tokens archivés, chargement par lots | Aucune clé API ni dépendance native à compiler |
 
 **Limites importantes :**
 - GeckoTerminal ajoute les nouveaux pools indexés sur plusieurs DEX Solana (jusqu'à 40 pools sur deux pages publiques et fenêtre récente), mais ne détecte pas les tokens encore sur une bonding curve sans pool. PumpPortal ajoute les créations/migrations Pump.fun. Raydium LaunchLab, Meteora DBC, Moonshot, LetsBonk et autres launchpads ne sont donc visibles qu'après qu'un pool est indexé par GeckoTerminal ou DexScreener, pas au moment exact de leur création.
@@ -46,6 +47,12 @@ Dashboard privé de recherche de meme coins Solana. Le projet utilise des source
 - Les scores sont des indicateurs heuristiques, pas des probabilités de hausse ni des conseils d'achat. Les signaux de momentum et les variations de liquidité ne deviennent exploitables qu'après plusieurs observations espacées; au premier scan, l'historique est incomplet.
 - Les mesures de volume/liquidité et FDV/liquidité sont des ratios descriptifs, pas des preuves de liquidité réellement retirable. Les données DexScreener peuvent être retardées ou incomplètes.
 - Les bundles, snipers et liens de financement entre wallets ne sont pas prouvés automatiquement. Les flux PumpPortal de créations/migrations sont gratuits; ses flux détaillés d'achats/ventes sont payants et ne sont volontairement pas activés. Les signaux de concentration et de pression vendeuse sont des heuristiques, pas des preuves de manipulation.
+
+## Base hybride à mémoire bornée
+
+Le scanner conserve un cache actif limité à 1 200 tokens dans `data/store.json`. Les tokens qui sortent de ce cache sont archivés dans `data/tokens.archive.sqlite`, avec un historique et des prévisions compactés. L'archive est plafonnée à 50 000 entrées par défaut (`TOKEN_ARCHIVE_MAX` peut modifier ce plafond). À chaque scan, jusqu'à 20 tokens archivés sont réintroduits temporairement pour une nouvelle vérification, avec un délai de revisite de 15 minutes; la vérification de marché peut traiter jusqu'à 200 adresses par cycle. Les tokens actifs restent prioritaires, puis viennent les favoris, les découvertes récentes et le petit lot d'archive.
+
+SQLite utilise le module natif `node:sqlite` : le runtime doit être Node.js 22.5 ou ultérieur dans la branche 22, ou Node.js 26. Le fichier SQLite doit rester dans le dossier persistant `data` de l'hébergement. Si SQLite n'est pas disponible, le scanner désactive l'archive et conserve son ancien plafond actif au lieu de prétendre avoir étendu la base. La taille de la base et le nombre total conservé sont exposés dans l'aperçu du dashboard. L'archive augmente la capacité de conservation, mais ne signifie pas que 50 000 tokens sont tous rescannés chaque minute : le traitement reste échelonné pour protéger la RAM et les quotas des API publiques.
 
 ## Scoring enrichi et collecte automatique
 
