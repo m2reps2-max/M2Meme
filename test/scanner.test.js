@@ -137,7 +137,7 @@ test('le seuil des alertes ne change qu’après une validation hors échantillo
  }
 });
 
-test('le suivi wallet utilise un curseur RPC et reprend après la dernière signature traitée',async()=>{
+test('le suivi wallet surveille les nouvelles signatures au lieu de paginer uniquement vers le passé',async()=>{
  const scanner=make();
  const address='CursorWallet111111111111111111111111111111';
  scanner.state.wallets=[{address,label:'Cursor'}];
@@ -145,7 +145,7 @@ test('le suivi wallet utilise un curseur RPC et reprend après la dernière sign
  scanner.rpc=async(method,params)=>{
   if(method==='getSignaturesForAddress'){
    calls.push(params[1]);
-   return calls.length===1?[{signature:'sig-new'},{signature:'sig-old'}]:[];
+   return calls.length===1?[{signature:'sig-new'},{signature:'sig-old'}]:[{signature:'sig-newer'},{signature:'sig-new'},{signature:'sig-old'}];
   }
   if(method==='getTransaction')return {slot:1,transaction:{message:{accountKeys:[address]}},meta:{preBalances:[100],postBalances:[100],preTokenBalances:[],postTokenBalances:[],fee:0}};
   throw new Error('unexpected RPC '+method);
@@ -153,10 +153,37 @@ test('le suivi wallet utilise un curseur RPC et reprend après la dernière sign
  scanner.save=()=>{};
  scanner.scoreAll=()=>{};
  await scanner.refreshWallets();
- assert.equal(scanner.state.walletCursors[address],'sig-old');
+ assert.equal(scanner.state.walletLatestCursors[address],'sig-new');
+ assert.equal(scanner.state.walletActivity[address].processedSignatures,2);
  await scanner.refreshWallets();
- assert.equal(calls[1].before,'sig-old');
+ assert.equal(scanner.state.walletLatestCursors[address],'sig-newer');
+ assert.equal(scanner.state.walletActivity[address].processedSignatures,1);
+ assert.ok(calls.every(options=>!Object.hasOwn(options,'before')));
 });
+test('le suivi wallet met en file les signatures récentes excédant vingt transactions par cycle',async()=>{
+ const scanner=make(),address='BacklogWallet111111111111111111111111111111';
+ scanner.state.wallets=[{address,label:'Backlog'}];
+ const calls=[];
+ scanner.rpc=async(method,params)=>{
+  if(method==='getSignaturesForAddress'){
+   calls.push(params[1]);
+   if(calls.length===1)return [{signature:'anchor'}];
+   return [...Array.from({length:30},(_,i)=>({signature:'new-'+String(i).padStart(2,'0')})),{signature:'anchor'}];
+  }
+  if(method==='getTransaction')return {slot:1,transaction:{message:{accountKeys:[address]}},meta:{preBalances:[100],postBalances:[100],preTokenBalances:[],postTokenBalances:[],fee:0}};
+  throw new Error('unexpected RPC '+method);
+ };
+ scanner.save=()=>{};
+ scanner.scoreAll=()=>{};
+ await scanner.refreshWallets();
+ await scanner.refreshWallets();
+ assert.equal(scanner.state.walletActivity[address].processedSignatures,20);
+ assert.equal(scanner.state.walletActivity[address].pendingSignatures,10);
+ await scanner.refreshWallets();
+ assert.equal(scanner.state.walletActivity[address].processedSignatures,10);
+ assert.equal(scanner.state.walletActivity[address].pendingSignatures,0);
+});
+
 test('la santé distingue serveur actif et sources de données dégradées',()=>{
  const scanner=make();scanner.running=true;
  scanner.status=()=>({
