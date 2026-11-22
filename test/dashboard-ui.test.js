@@ -53,3 +53,20 @@ test('wallet reputation page exposes point-in-time backtest and outcomes against
  assert.match(source,/Helius/);
  assert.match(js,/api\/intelligence\/wallet-signal-backtest/);
 });
+
+test('Radar shortlist is capped at five best and five watch candidates with strict data gates',()=>{
+ assert.match(js,/\.slice\(0,5\)/);
+ assert.match(js,/coverage\|\|0\)\)>=80/);
+ assert.match(js,/liquidityUsd\|\|0\)\)>=10000/);
+ assert.match(js,/analysis\?\.risk!=='high'/);
+ assert.match(js,/Aucun candidat assez solide/);
+ assert.match(js,/pré-marchés à 5 % ne sont pas présentés comme des opportunités/);
+});
+test('scanner view no longer exposes the full token catalogue or coverage sort filters',()=>{
+ const start=js.indexOf('function renderScanner(){');
+ const end=js.indexOf('\nfunction refreshTable',start);
+ const source=js.slice(start,end);
+ assert.match(source,/Meilleurs candidats/);
+ assert.match(source,/À surveiller/);
+ assert.doesNotMatch(source,/filters\(\)|tokenTable\(/);
+});
