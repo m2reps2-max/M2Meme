@@ -254,3 +254,13 @@ test('un fichier corrompu sans sauvegarde est préservé avant initialisation pr
  assert.equal(fs.readFileSync(path.join(dir,scanner.state.corruptFile),'utf8'),original);
  assert.doesNotThrow(()=>new MemeScanner({dataFile:file}));
 });
+
+test('readiness remains false until the first scan has completed',()=>{
+ const scanner=make();
+ scanner.running=true;
+ assert.equal(scanner.healthSummary().checks.scanner.ok,false);
+ scanner.state.lastScanAt=new Date().toISOString();
+ assert.equal(scanner.healthSummary().checks.scanner.ok,true);
+ scanner.running=false;
+ assert.equal(scanner.healthSummary().checks.scanner.ok,false);
+});
