@@ -42,8 +42,8 @@ test('pre-market, unknown-risk, blocked and incomplete top-pick tokens are exclu
   token(2,{analysis:{...token(2).analysis,coverage:5,score:100}}),
   token(3,{analysis:{...token(3).analysis,risk:'unknown'}}),
   token(4,{analysis:{...token(4).analysis,hardBlocked:true}}),
-  token(5,{analysis:{...token(5).analysis,securityComprehensive:false,risk:'partial'}}),
-  token(6,{analysis:{...token(6).analysis,factors:{...token(6).analysis.factors,liquidityQuality:null}}})
+  token(5,{analysis:{...token(5).analysis,coverage:60,securityComprehensive:false,risk:'partial'}}),
+  token(6,{analysis:{...token(6).analysis,coverage:60,factors:{...token(6).analysis.factors,liquidityQuality:null}}})
  ];
  const result=buildSelection(items);
  assert.equal(result.eligible,5);
