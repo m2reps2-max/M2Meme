@@ -7,8 +7,8 @@ const walletB='FixmSpsB111111111111111111111111111111111111';
 const mint='tca3tbFf111111111111111111111111111111111111';
 
 test('KOL PnL endpoint normalizes realized results and closed positions',()=>{
- const pnl=normalizeKOLPnl({period:'30d',summary:{realized_pnl_sol:12.5,win_rate:0.625,profit_factor:1.8,max_drawdown_sol:3.2,avg_roi_pct:18,avg_hold_minutes:45,win_count:10,loss_count:6},closed_positions:[{token_mint:mint,token_symbol:'COIN',pnl_sol:2.4,roi_pct:120,hold_minutes:32,result:'win'}]});
- assert.equal(pnl.realizedPnlSol,12.5);assert.equal(pnl.winRatePct,62.5);assert.equal(pnl.closedPositions[0].symbol,'COIN');
+ const pnl=normalizeKOLPnl({period:'30d',summary:{realized_pnl_sol:12.5,win_rate:0.625,profit_factor:1.8,max_drawdown_sol:3.2,avg_roi_pct:18,avg_hold_minutes:45,win_count:10,loss_count:6},closed_positions:[{token_mint:mint,token_symbol:'COIN',pnl_sol:2.4,roi_pct:120,hold_minutes:32,result:'win'}],open_positions:[{token_mint:mint,token_name:'Coin',token_symbol:'COIN',buy_count:3,bought_sol:2.1,held_value_sol:3.4,unrealized_pnl_sol:1.3,is_priced:true,first_buy_at:'2026-11-21T10:00:00Z'}]});
+ assert.equal(pnl.realizedPnlSol,12.5);assert.equal(pnl.winRatePct,62.5);assert.equal(pnl.closedPositions[0].symbol,'COIN');assert.equal(pnl.openPositions[0].heldValueSol,3.4);assert.equal(pnl.openPositions[0].isPriced,true);
 });
 
 test('leaderboard rejects shortened addresses and keeps separate ranking evidence',()=>{
