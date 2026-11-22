@@ -75,7 +75,7 @@ test('scanner view no longer exposes the full token catalogue or coverage sort f
 test('top candidates require complete holder evidence and fully checked security',()=>{
  assert.match(selection,/securityComprehensive===true/);
  assert.match(selection,/risk==='observations_only'/);
- assert.match(selection,/typeof factors\[k\]==='number'/);
+ assert.match(selection,/typeof value==='number'/);
  assert.match(selection,/risk!=='unknown'/);
 });
 test('candidate cards distinguish partial security evidence from verified security',()=>{
