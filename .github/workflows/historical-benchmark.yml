@@ -1,0 +1,41 @@
+name: MEME RADAR historical benchmark
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 3 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: meme-radar-historical-benchmark
+  cancel-in-progress: false
+
+jobs:
+  historical-benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run historical replay outside FadeHost
+        env:
+          MEME_RADAR_INGEST_URL: https://m2meme.fadehost.app/internal/actions/historical-benchmark
+          MEME_RADAR_ACTIONS_TOKEN: ${{ secrets.MEME_RADAR_ACTIONS_TOKEN }}
+        run: node scripts/run-actions-historical.js
+
+      - name: Preserve benchmark report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: meme-radar-historical-benchmark
+          path: artifacts/historical-benchmark.json
+          if-no-files-found: ignore
+          retention-days: 14

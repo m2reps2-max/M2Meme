@@ -8,13 +8,15 @@ const {Bot,InlineKeyboard}=require('grammy');
 const {MemeScanner}=require('./lib/scanner');
 const {resolveTelegramToken}=require('./lib/telegram-config');
 const {scoreWalletDiscovery}=require('./lib/wallet-discovery');
+const {COINS:HISTORICAL_COINS}=require('./lib/historical-benchmark');
+const {constantTimeEqual,validateHistoricalPayload,mergeHistoricalBenchmarks}=require('./lib/actions-ingest');
 const {resolveDashboardConfig}=require('./lib/dashboard-config');
 const CONFIG=resolveDashboardConfig({env:process.env,dataDir:path.join(__dirname,'data')});
 const {port:PORT,accessCode:CODE,sessionSecret:SECRET,dashboardUrl:URL,production:PROD}=CONFIG;
 const COOKIE='meme_radar_session',TEN_YEARS=10*365*24*60*60*1000;
 const app=express();app.disable('x-powered-by');app.set('trust proxy',1);
 app.use(helmet({contentSecurityPolicy:{directives:{defaultSrc:["'self'"],scriptSrc:["'self'"],styleSrc:["'self'"],imgSrc:["'self'",'data:','https:'],connectSrc:["'self'"],objectSrc:["'none'"],frameAncestors:["'none'"]}}}));
-app.use(express.json({limit:'24kb'}));app.use(cookieParser());
+app.use('/internal/actions/historical-benchmark',express.raw({type:'application/json',limit:'5mb'}));app.use(express.json({limit:'24kb'}));app.use(cookieParser());
 const fails=new Map();
 let lastLoginCleanup=0;
 function equal(a,b){const x=Buffer.from(String(a)),y=Buffer.from(String(b));return x.length===y.length&&crypto.timingSafeEqual(x,y);}
@@ -28,6 +30,22 @@ function loginLimit(req,res,next){const key=String(req.ip||'unknown'),now=Date.n
 const TELEGRAM_TOKEN=resolveTelegramToken(process.env);
 let bot=null;if(TELEGRAM_TOKEN){bot=new Bot(TELEGRAM_TOKEN);const kb=()=>URL?new InlineKeyboard().url('Ouvrir MEME RADAR',URL):null;bot.command('start',ctx=>ctx.reply('Bienvenue sur MEME RADAR.',kb()?{reply_markup:kb()}:undefined));bot.command('dashboard',ctx=>ctx.reply(URL?'Ouvre ton dashboard privé : '+URL:'Configure DASHBOARD_URL pour recevoir le lien du dashboard.'));bot.command('help',ctx=>ctx.reply('Commandes : /start /dashboard /scan /opportunities /help. Recherche uniquement, aucun achat automatique.'));}
 const scanner=new MemeScanner({dataFile:path.join(__dirname,'data','store.json'),bot,telegramChatId:process.env.TELEGRAM_CHAT_ID});let lastManual=0;
+app.post('/internal/actions/historical-benchmark',(req,res)=>{
+ const expected=String(process.env.MEME_RADAR_ACTIONS_TOKEN||'');
+ if(expected.length<32)return res.status(503).json({error:'Import GitHub Actions non configuré.'});
+ const authorization=String(req.get('authorization')||'');
+ const supplied=authorization.startsWith('Bearer ')?authorization.slice(7):'';
+ if(!constantTimeEqual(expected,supplied))return res.status(401).json({error:'Authentification refusée.'});
+ if(!Buffer.isBuffer(req.body))return res.status(400).json({error:'Corps JSON requis.'});
+ let payload;try{payload=JSON.parse(req.body.toString('utf8'));}catch{return res.status(400).json({error:'JSON invalide.'});}
+ const validation=validateHistoricalPayload(payload,new Set(HISTORICAL_COINS.map(x=>x.symbol)));
+ if(!validation.ok)return res.status(400).json({error:validation.error});
+ scanner.state.historicalBenchmarks=mergeHistoricalBenchmarks(scanner.state.historicalBenchmarks,payload.historicalBenchmarks);
+ scanner.state.historicalBenchmarkActionsAt=String(payload.generatedAt||new Date().toISOString()).slice(0,40);
+ try{scanner.save();}catch(error){console.error('[actions benchmark import]',error.message);return res.status(500).json({error:'Échec de sauvegarde du benchmark.'});}
+ const completed=Object.values(scanner.state.historicalBenchmarks).filter(x=>x.completed).length;
+ res.json({ok:true,received:Object.keys(payload.historicalBenchmarks).length,completed,total:HISTORICAL_COINS.length,importedAt:scanner.state.historicalBenchmarkActionsAt});
+});
 app.get('/health',(_q,r)=>r.json({ok:true,service:'meme-radar',at:new Date().toISOString()}));
 app.get('/health/ready',(_q,r)=>{const health=scanner.healthSummary();const ready=health.checks.scanner.ok;r.status(ready?200:503).json({ok:ready,scannerRunning:scanner.running,at:new Date().toISOString()});});
 app.get('/api/system/health',(_q,r)=>r.json({ok:true,...scanner.healthSummary()}));
@@ -52,9 +70,7 @@ app.get('/api/data-quality',(_q,r)=>r.json({ok:true,...scanner.dataQualitySummar
 app.get('/api/backtest',(_q,r)=>r.json({ok:true,...scanner.backtest()}));
 app.get('/api/learning',(_q,r)=>r.json({ok:true,...scanner.learningSummary()}));
 app.get('/api/backtest/historical',(_q,r)=>r.json({ok:true,...scanner.getHistoricalBenchmark()}));
-let lastHistoricalRun=0,historicalRunning=false,historicalTimer=null;
-async function runHistoricalAutomatically(){if(historicalRunning||Date.now()-lastHistoricalRun<20000)return;historicalRunning=true;lastHistoricalRun=Date.now();try{const result=await scanner.runBackgroundTask('historical',()=>scanner.runHistoricalBenchmark(),205);if(result?.skipped){lastHistoricalRun=Date.now()-15000;return;}if(result.error)console.warn('[historical benchmark]',result.symbol,result.error);else if(result.benchmark)console.log('[historical benchmark]',result.benchmark.symbol,'completed');}catch(e){console.error('[historical benchmark]',e.message);}finally{historicalRunning=false;}}
-app.get('/api/backtest/historical/status',(_q,r)=>r.json({ok:true,running:historicalRunning,automatic:true,lastRunAt:lastHistoricalRun?new Date(lastHistoricalRun).toISOString():null,...scanner.getHistoricalBenchmark()}));
+app.get('/api/backtest/historical/status',(_q,r)=>r.json({ok:true,running:false,automatic:false,executor:'GitHub Actions',configured:String(process.env.MEME_RADAR_ACTIONS_TOKEN||'').length>=32,lastRunAt:scanner.state.historicalBenchmarkActionsAt||null,...scanner.getHistoricalBenchmark()}));
 app.post('/api/backtest/historical/run',async(_q,r)=>r.status(410).json({error:'Le benchmark historique est maintenant exécuté automatiquement.'}));
 app.post('/api/wallets',(q,r)=>{try{r.json({ok:true,wallets:scanner.addWallet(String(q.body?.address||''),String(q.body?.label||''))});}catch(e){r.status(400).json({error:e.message});}});
 app.delete('/api/wallets/:address',(q,r)=>r.json({ok:true,wallets:scanner.removeWallet(q.params.address)}));
@@ -76,5 +92,5 @@ memoryLogTimer=setInterval(()=>{
  if(rssMiB>=220&&Date.now()-lastMemoryWarningAt>=30000){lastMemoryWarningAt=Date.now();console.warn('[process] memory pressure warning: RSS reached',rssMiB,'MiB (hosting limit may be 256 MiB)');}
 },10000);
 memoryLogTimer.unref();
-const server=app.listen(PORT,'0.0.0.0',()=>{console.log('MEME RADAR listening on '+PORT);scanner.start().catch(e=>console.error('[scanner]',e.message));if(bot){console.log('[telegram] Starting grammY long polling…');bot.start().then(()=>console.log('[telegram] Polling stopped cleanly')).catch(e=>console.error('[telegram polling] Startup/runtime failure:',e.message));}else{console.warn('[telegram] Bot disabled: set TELEGRAM_BOT_TOKEN (or legacy BOT_TOKEN) in the hosting environment.');}setTimeout(()=>{runHistoricalAutomatically();historicalTimer=setInterval(runHistoricalAutomatically,300000);},180000);});server.requestTimeout=20000;server.headersTimeout=25000;server.keepAliveTimeout=5000;
-async function shutdown(){scanner.stop();clearInterval(historicalTimer);if(bot)await bot.stop();server.close(()=>process.exit(0));setTimeout(()=>process.exit(1),10000).unref();}process.once('SIGTERM',shutdown);process.once('SIGINT',shutdown);
+const server=app.listen(PORT,'0.0.0.0',()=>{console.log('MEME RADAR listening on '+PORT);scanner.start().catch(e=>console.error('[scanner]',e.message));if(bot){console.log('[telegram] Starting grammY long polling…');bot.start().then(()=>console.log('[telegram] Polling stopped cleanly')).catch(e=>console.error('[telegram polling] Startup/runtime failure:',e.message));}else{console.warn('[telegram] Bot disabled: set TELEGRAM_BOT_TOKEN (or legacy BOT_TOKEN) in the hosting environment.');}});server.requestTimeout=20000;server.headersTimeout=25000;server.keepAliveTimeout=5000;
+async function shutdown(){scanner.stop();if(bot)await bot.stop();server.close(()=>process.exit(0));setTimeout(()=>process.exit(1),10000).unref();}process.once('SIGTERM',shutdown);process.once('SIGINT',shutdown);
