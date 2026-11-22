@@ -19,7 +19,7 @@ DexScreener's public latest-profile/boost feeds are not a complete index of ever
 
 The score is calculated only from available inputs, with a visible coverage percentage. Weights: social mentions 20, on-chain activity 20, market/liquidity 15, watched-wallet activity 15, narrative 10, security 15, timing 5. Unknown inputs are omitted from the denominator; they are never silently treated as safe or positive. A token with insufficient coverage has low confidence. The security provider's observations are not an independent audit, and no score predicts price performance. A freeze authority observation or very high top-holder concentration can hard-block a candidate from the opportunity list.
 
-The wallet module monitors only addresses you add. It does not automatically know which wallets are profitable. X mention lookup searches a token symbol, so homonyms and ticker collisions are possible. Social and wallet data are signals, not proof.
+The wallet module monitors only addresses you add. It does not automatically know which wallets are profitable. X mention lookup searches a token symbol, returns a maximum 10-post sample per manual check and may incur usage-based API charges; homonyms and ticker collisions are possible. Helius polling is limited to 10 watched wallets and runs every 10 minutes to control credits. Social and wallet data are signals, not proof.
 
 ## FadeHost deployment
 
@@ -44,7 +44,7 @@ One shared access code. It is verified server-side and is not exposed to the bro
 
 - This is an analytics and alerting tool only. No private keys, swap execution, automatic buying or selling, or trade signing.
 - DexScreener's latest feeds are discovery sources, not every launch on Solana.
-- PumpPortal, Birdeye, Helius and X features stay unavailable until their respective keys are configured in FadeHost.
+- PumpPortal, Birdeye, Helius and X features stay unavailable until their respective keys are configured in FadeHost. Birdeye and X access may involve paid plans or usage charges; check provider quotas before adding keys.
 - Birdeye's risk fields are provider-reported observations. Unknown values remain unknown; LP locks and sellability are not independently proven.
 - Smart Money is a watchlist of wallets chosen by the user, not a curated profitable-wallet database.
 - Social mentions are symbol searches and can contain unrelated projects.
