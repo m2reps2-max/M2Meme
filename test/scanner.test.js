@@ -16,3 +16,28 @@ test('une concentration extrême sur un seul wallet est signalée',()=>{
  assert.ok(a.flags.some(x=>x.code==='TOP1_WALLET_CONCENTRATION'&&x.level==='critical'));
  assert.ok(a.flags.some(x=>x.code==='TOP5_WALLET_CONCENTRATION'));
 });
+
+test('un lancement Pump.fun conserve le créateur et son horodatage',()=>{
+ const scanner=make();
+ const mint='So11111111111111111111111111111111111111112';
+ scanner.ingestLaunch({mint,name:'Early Cat',symbol:'ECAT',traderPublicKey:'CreatorWallet111111111111111111111111111111',timestamp:Math.floor(Date.now()/1000),initialBuy:1.25,marketCapSol:30,signature:'sig'});
+ const token=scanner.state.tokens[mint];
+ assert.equal(token.launchSource,'Pump.fun');
+ assert.equal(token.creator,'CreatorWallet111111111111111111111111111111');
+ assert.equal(token.symbol,'ECAT');
+ assert.equal(token.launchData.initialBuySol,1.25);
+ assert.ok(token.launchAgeHours>=0);
+});
+
+test('un fichier de données corrompu est récupéré depuis la sauvegarde valide',()=>{
+ const scanner=make();
+ scanner.state.tokens.first={mint:'first',symbol:'FIRST'};
+ scanner.save();
+ scanner.state.tokens.second={mint:'second',symbol:'SECOND'};
+ scanner.save();
+ fs.writeFileSync(scanner.file,'{corrupted','utf8');
+ const recovered=new MemeScanner({dataFile:scanner.file});
+ assert.equal(recovered.state.recoveredFromBackup,true);
+ assert.ok(recovered.state.tokens.first);
+ assert.equal(recovered.state.tokens.second,undefined);
+});
