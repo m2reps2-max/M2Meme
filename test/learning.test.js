@@ -73,7 +73,10 @@ test('out-of-sample calibration separates mints and counts one first forecast pe
  assert.ok(result.training.tokens>=70&&result.training.tokens<=90);
  assert.ok(result.validation.tokens>=10&&result.validation.tokens<=30);
  assert.equal(result.selectedThreshold,60);
- assert.equal(result.holdoutAtSelectedThreshold.tokens,result.validation.tokens);\n assert.ok(Date.parse(result.trainingEndAt)<Date.parse(result.validationStartAt));\n assert.equal(result.baselineComparison.randomSameSize.tokens,result.holdoutAtSelectedThreshold.tokens);\n assert.equal(result.baselineComparison.thresholdVsAllValidation,0);
+ assert.equal(result.holdoutAtSelectedThreshold.tokens,result.validation.tokens);
+ assert.ok(Date.parse(result.trainingEndAt)<Date.parse(result.validationStartAt));
+ assert.equal(result.baselineComparison.randomSameSize.tokens,result.holdoutAtSelectedThreshold.tokens);
+ assert.equal(result.baselineComparison.thresholdVsAllValidation,0);
  assert.equal(result.holdoutAtSelectedThreshold.positive15Pct,100);
 });
 
