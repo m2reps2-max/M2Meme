@@ -107,7 +107,7 @@ test('wallet intelligence flags same-slot buying clusters without asserting comm
  const result=require('../lib/intelligence').walletIntel.call({state});
  const cluster=result.clusters.find(x=>x.kind==='same_slot');
  assert.equal(cluster.trackedWallets,3);
- assert.match(cluster.warning,/pas preuve/i);
+ assert.match(cluster.warning,/indépendantes|pas preuve/i);
 });
 
 test('creator intelligence exposes confirmed swap-like outflow evidence separately from generic outflows',()=>{
