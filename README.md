@@ -222,3 +222,16 @@ par Git.
 Ce workflow déporte uniquement le benchmark historique OHLCV. Le scanner temps réel,
 les alertes Telegram et les observations prospectives restent sur FadeHost. GitHub
 Actions n'est pas un worker permanent et ne remplace pas l'hébergement du scanner.
+
+
+## Qualité de distribution des détenteurs et réputation des wallets
+
+Les contrôles de sécurité RPC exposent maintenant, en plus des concentrations top 1/5/10, des indicateurs de distribution sur les 20 plus grands comptes :
+- Gini et HHI calculés sur l'échantillon observé;
+- nombre effectif de détenteurs dans cet échantillon (inverse du HHI);
+- concentration top 20, nombre de comptes et de propriétaires identifiés;
+- part de la supply contenue dans les 20 comptes récupérés et nombre de propriétaires inconnus.
+
+**Limite importante :** ce n'est pas une analyse de tous les détenteurs. Les métriques Gini/HHI sont des indicateurs partiels calculés sur les 20 comptes renvoyés par le RPC; les comptes inconnus sont traités comme des unités séparées pour ne pas les fusionner arbitrairement. Les pools, lockers, bonding curves et comptes d'infrastructure ne sont pas automatiquement identifiés ou exclus.
+
+La page Wallet Intelligence calcule aussi un indice historique indicatif par wallet à partir du rendement du token environ une heure après le premier achat observable pour chaque token. Plusieurs achats du même wallet sur le même token ne comptent qu'une fois. Le score reste masqué avant cinq tokens évalués et est rétréci vers 50 lorsque l'échantillon est faible. Il ne représente pas le PnL réel du wallet : taille des positions, prix exact au bloc, frais, slippage et ventes exécutées ne sont pas connus. Il ne modifie pas automatiquement le score des tokens.
