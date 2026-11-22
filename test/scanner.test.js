@@ -24,6 +24,7 @@ test('un lancement Pump.fun conserve le créateur et son horodatage',()=>{
  const token=scanner.state.tokens[mint];
  assert.equal(token.launchSource,'Pump.fun');
  assert.equal(token.creator,'CreatorWallet111111111111111111111111111111');
+ assert.equal(token.creatorObservedAtLaunch,true);
  assert.equal(token.symbol,'ECAT');
  assert.equal(token.launchData.initialBuyTokens,1.25);
  assert.ok(token.launchAgeHours>=0);
