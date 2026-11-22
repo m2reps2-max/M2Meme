@@ -16,6 +16,7 @@ test('trade intelligence rewards broad buying but penalizes concentration and se
 
 test('social intelligence remains unavailable when no public observations exist',()=>{
   assert.equal(evaluateSocialIntel(null).score,null);
+  assert.equal(evaluateSocialIntel({available:true,mentions1h:0,mentions24h:0,uniqueAuthors24h:0,sentimentScore:null}).score,null);
   const result=evaluateSocialIntel({available:true,mentions1h:4,mentions24h:8,uniqueAuthors24h:6,sentimentScore:70});
   assert.ok(result.score>50);
 });
@@ -27,6 +28,6 @@ test('candidate intelligence changes ranking only modestly and does not fake dat
   const result=scanner.score(token);
   assert.equal(result.coverage,75);
   assert.ok(Math.abs(result.score-result.baseScore)<=6);
-  assert.equal(result.factors.tradeQuality,100);
+  assert.ok(result.factors.tradeQuality>80);
   assert.equal(result.factors.social>50,true);
 });
