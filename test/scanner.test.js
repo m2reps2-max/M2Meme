@@ -91,3 +91,31 @@ test('les wallets découverts automatiquement sont surveillés même sans wallet
  await scanner.refreshWallets();
  assert.ok(scanner.state.walletActivity[address]);
 });
+
+test('le scanner surveille les sorties du créateur et distingue un swap-like d’un simple transfert',async()=>{
+ const scanner=make();
+ const mint='CreatorToken1111111111111111111111111111111';
+ const creator='CreatorWallet111111111111111111111111111111';
+ scanner.state.tokens[mint]={mint,symbol:'CREATOR',creator,creatorObservedAtLaunch:true,security:{data:{supply:'10000'}}};
+ scanner.rpc=async(method)=>{
+  if(method==='getSignaturesForAddress')return [{signature:'creator-sale-signature'}];
+  if(method==='getTransaction')return {
+   slot:123,
+   transaction:{message:{accountKeys:[creator]}},
+   meta:{
+    fee:5000,preBalances:[1000000000],postBalances:[1100000000],
+    preTokenBalances:[{mint,owner:creator,uiTokenAmount:{amount:'1000',decimals:0}}],
+    postTokenBalances:[{mint,owner:creator,uiTokenAmount:{amount:'500',decimals:0}}]
+   }
+  };
+  throw new Error('unexpected RPC '+method);
+ };
+ await scanner.refreshWallets();
+ const event=scanner.state.walletTrades[0];
+ assert.equal(event.role,'creator');
+ assert.equal(event.direction,'sell');
+ assert.equal(event.swapConfirmed,true);
+ assert.equal(event.quoteReceived.asset,'SOL');
+ assert.equal(scanner.state.tokens[mint].creatorSaleSummary.soldPctSupplyLast,5);
+ assert.ok(scanner.score(scanner.state.tokens[mint]).hardBlocked);
+});
