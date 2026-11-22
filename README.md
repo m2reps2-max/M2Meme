@@ -18,6 +18,7 @@ Dashboard privé de recherche de meme coins Solana. Le projet utilise uniquement
 | Liens de sites et réseaux sociaux | Métadonnées DexScreener | Rien |
 | Découverte de nouveaux pools sur plusieurs DEX Solana | GeckoTerminal Public API (`/networks/solana/new_pools`) | Rien |
 | Mentions et sentiment communautaire indicatif | Flux RSS publics Reddit (`r/solana`, `r/memecoins`, `r/pumpfun`) | Rien |
+| Analyse des transactions récentes, concentration des acheteurs, bursts dans un même bloc et fenêtre de lancement si disponible | GeckoTerminal pool trades (jusqu'à 300 trades / 24h) | Rien |
 | Alertes Telegram | Telegram Bot API | Bot token + chat ID facultatifs |
 | Dashboard et historique | Express + stockage JSON local | Variables d'accès + stockage persistant FadeHost |
 
@@ -40,6 +41,8 @@ Dashboard privé de recherche de meme coins Solana. Le projet utilise uniquement
 ## Social Radar gratuit
 
 Le module `RedditRadar` interroge périodiquement les flux RSS publics de `r/solana`, `r/memecoins` et `r/pumpfun`, sans compte, clé API ni abonnement. Il déduplique les publications, repère les mentions du nom/symbole d'un token et expose le volume de mentions sur 1h/24h, le nombre d'auteurs distincts et un score lexical indicatif. Ce signal reste séparé du score principal pour éviter de surpondérer un flux incomplet ou manipulable. Aucun accès X/Twitter n'est revendiqué. Si Reddit limite les flux, le reste du scanner continue.
+
+Sur la fiche d'un token dont le pool est connu de GeckoTerminal, MEME RADAR peut aussi charger les transactions publiques récentes (jusqu'à 300 sur 24h) et calculer les acheteurs/vendeurs distincts, la part de volume des cinq principaux acheteurs, les achats de plusieurs wallets dans un même bloc et, si l'historique commence assez tôt, les acheteurs des cinq premières minutes du pool. Cette analyse est déclenchée à l'ouverture de la fiche, mise en cache cinq minutes et espacée pour respecter les quotas publics. Un burst dans le même bloc ou une concentration de volume ne prouve pas un bundle, un sniper, une identité commune ou une manipulation; ce sont des indices à examiner.
 
 ## Détection précoce et microstructure
 
