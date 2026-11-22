@@ -293,7 +293,7 @@ test('un lancement sans pool est explicitement en attente de marché et ne resse
  const a=scanner.score({mint:'NewLaunch11111111111111111111111111111111',launchSource:'Pump.fun',launchAgeHours:0.02,pumpCreatedAt:new Date().toISOString()});
  assert.equal(a.coverage,5);
  assert.equal(a.readiness,'awaiting_market');
- assert.equal(a.readinessLabel,'Marché en attente');
+ assert.equal(a.readinessLabel,'Pré-marché · pool absent');
  assert.equal(a.marketLinked,false);
  assert.ok(a.readinessReason.includes('aucun pool'));
  assert.ok(a.missingFactors.includes('market'));
@@ -384,4 +384,37 @@ test('un token Token-2022 non audité ne reçoit pas le facteur sécurité compl
  assert.equal(a.factors.security,undefined);
  assert.ok(a.flags.some(x=>x.code==='TOKEN_2022_REVIEW'));
  assert.equal(a.readiness,'partial');
+});
+
+
+test('les autorités vérifiées alimentent le facteur sécurité même si les propriétaires des holders sont inconnus',()=>{
+ const s=make();
+ const a=s.score({pairAddress:'pool',txns:{h1:{buys:20,sells:10}},volume:{h1:5000,h24:20000},liquidityUsd:10000,fdv:50000,ageHours:2,security:{checkedAt:new Date().toISOString(),data:{freezeAuthorityActive:false,mintAuthorityActive:false,isInitialized:true,isToken2022:false,ownerConcentrationAvailable:false,top10HolderPercent:null}}});
+ assert.equal(a.factors.security,100);
+ assert.equal(a.securityComprehensive,false);
+ assert.equal(a.readiness,'partial');
+ assert.ok(a.evidenceGaps.some(x=>x.key==='holders'));
+});
+
+test('les données absentes d’une paire DexScreener ne remplacent pas les métriques déjà collectées',()=>{
+ const s=make();
+ const mint='So11111111111111111111111111111111111111112';
+ s.state.tokens[mint]={mint,priceUsd:0.01,liquidityUsd:12000,fdv:60000,volume:{h1:3000,h24:15000},txns:{h1:{buys:20,sells:5}},history:[]};
+ s.pair({chainId:'solana',baseToken:{address:mint,name:'Token'},pairAddress:'pair-new',priceUsd:null,liquidity:{usd:null},volume:{},txns:{}});
+ const token=s.state.tokens[mint];
+ assert.equal(token.priceUsd,0.01);
+ assert.equal(token.liquidityUsd,12000);
+ assert.equal(token.volume.h24,15000);
+ assert.deepEqual(token.txns.h1,{buys:20,sells:5});
+ assert.equal(token.history.length,1);
+});
+
+test('un token pré-marché explique explicitement sa couverture de 5 pour cent',()=>{
+ const s=make();
+ const a=s.score({mint:'NewLaunch11111111111111111111111111111111',launchSource:'Pump.fun',pumpCreatedAt:new Date().toISOString(),launchAgeHours:0.02});
+ assert.equal(a.coverage,5);
+ assert.equal(a.readiness,'awaiting_market');
+ assert.equal(a.readinessLabel,'Pré-marché · pool absent');
+ assert.ok(a.readinessReason.includes('uniquement au timing'));
+ assert.ok(a.missingFactorReasons.some(x=>x.key==='market'&&x.reason==='aucun pool DEX relié'));
 });
