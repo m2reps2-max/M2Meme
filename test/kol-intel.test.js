@@ -85,13 +85,14 @@ test('MadeOnSol poller stays inert without an API key',async()=>{
  const result=await radar.refresh();assert.equal(result.configured,false);assert.equal(state.sources.madeOnSol.connected,false);
 });
 
-test('MadeOnSol poller fetches the free leaderboards and feed within schedule',async()=>{
+test('MadeOnSol poller respects the free-tier 30-minute profile budget',async()=>{
  let now=Date.parse('2026-11-22T00:00:00Z');const calls=[];
  const response=(data)=>({ok:true,status:200,statusText:'OK',text:async()=>JSON.stringify(data)});
- const fetchImpl=async(url)=>{calls.push(url);if(url.includes('/kol/leaderboard')){const sort=new URL(url).searchParams.get('sort');return response({period:'7d',leaderboard:[{wallet:walletA,name:'Cented',pnl:5,rank:1,percentile_early_entry_30d:80},{wallet:walletB,name:'Marcell',pnl:4,rank:2}]});}return response({trades:[{wallet_address:walletA,token_mint:mint,action:'buy',sol_amount:1,token_amount:100,tx_signature:'feed-sig',traded_at:'2026-11-22T00:00:00Z',kol_name:'Cented'}]});};
+ const fetchImpl=async(url)=>{calls.push(url);if(url.includes('/kol/leaderboard'))return response({period:'7d',leaderboard:[{wallet:walletA,name:'Cented',pnl:5,rank:1,percentile_early_entry_30d:80},{wallet:walletB,name:'Marcell',pnl:4,rank:2}]});if(url.includes('/kol/feed'))return response({trades:[{wallet_address:walletA,token_mint:mint,action:'buy',sol_amount:1,token_amount:100,tx_signature:'feed-sig',traded_at:'2026-11-22T00:00:00Z',kol_name:'Cented'}]});return response({kol:{name:'Cented'},summary:{realized_pnl_sol:2,win_rate:.6,profit_factor:1.5,max_drawdown_sol:1},open_positions:[],closed_positions:[]});};
  const state={sources:{},experts:[],expertTrades:[]};
  const radar=new MadeOnSolRadar({state,apiKey:'msk_test_key',fetchImpl,now:()=>now});
  const first=await radar.refresh();assert.equal(first.successful,4);assert.equal(state.experts.length,2);assert.equal(state.expertTrades.length,1);assert.equal(calls.length,4);
- now+=5*60*1000;await radar.refresh();assert.equal(calls.length,5);
- now+=10*60*1000;await radar.refresh();assert.equal(calls.length,7);
+ now+=5*60*1000;await radar.refresh();assert.equal(calls.length,4);
+ now+=10*60*1000;await radar.refresh();assert.equal(calls.length,5);
+ now+=15*60*1000;await radar.refresh();assert.equal(calls.length,7);
 });
