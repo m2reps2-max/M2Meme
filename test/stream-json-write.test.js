@@ -9,7 +9,7 @@ const {writeJsonFileSync}=require('../lib/stream-json-write');
 test('streams nested JSON to disk without changing JSON.stringify output',()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'meme-radar-json-'));
  const file=path.join(dir,'state.json');
- const value={text:'émoji 🚀',empty:null,number:Infinity,rows:[1,undefined,{ok:true}],omit:undefined,date:new Date('2026-01-02T03:04:05.000Z')};
+ const value={text:'émoji 🚀',empty:null,number:Infinity,rows:[1,undefined,{ok:true}],omit:undefined,omitFromToJSON:{toJSON(){return undefined;}},date:new Date('2026-01-02T03:04:05.000Z')};
  try{
   writeJsonFileSync(file,value);
   assert.equal(fs.readFileSync(file,'utf8'),JSON.stringify(value));
