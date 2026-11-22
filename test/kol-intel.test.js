@@ -17,6 +17,8 @@ test('leaderboard rejects shortened addresses and keeps separate ranking evidenc
  const state={experts:[]};mergeLeaderboard(state,rows,'pnl','2026-11-22T00:00:00.000Z');
  mergeLeaderboard(state,[{...rows[0],rank:2,earlyEntryPct:90}],'early_entry_pct','2026-11-22T00:01:00.000Z');
  assert.equal(state.experts.length,1);assert.equal(state.experts[0].rankings.pnl.rank,1);assert.equal(state.experts[0].rankings.early_entry_pct.rank,2);
+ mergeLeaderboard(state,[], 'pnl','2026-11-23T00:00:00.000Z');
+ assert.equal(state.experts[0].rankings.pnl,undefined);
 });
 
 test('trade feed validates events and normalizes time and trade amounts',()=>{
