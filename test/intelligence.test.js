@@ -82,3 +82,20 @@ test('creator funding clusters only group distinct launch-event creators sharing
  assert.equal(result[0].tokenCount,2);
  assert.equal(result[0].totalFundingSol,0.5);
 });
+
+test('wallet intelligence includes automatically discovered early buyers with provenance',()=>{
+ const address='AutoWallet11111111111111111111111111111111';
+ const mint='AutoMint111111111111111111111111111111111';
+ const state={
+  wallets:[],
+  autoWallets:[{address,label:'Acheteur observé',automatic:true,sourceMint:mint,sourceSymbol:'AUTO',discoveredAt:new Date(1000).toISOString()}],
+  walletTrades:[],
+  walletActivity:{},
+  tokens:{[mint]:{mint,symbol:'AUTO',history:[]}}
+ };
+ const result=require('../lib/intelligence').walletIntel.call({state});
+ assert.equal(result.wallets.length,1);
+ assert.equal(result.wallets[0].automatic,true);
+ assert.equal(result.wallets[0].sourceSymbol,'AUTO');
+ assert.equal(result.wallets[0].performance.matchedBuys,0);
+});
