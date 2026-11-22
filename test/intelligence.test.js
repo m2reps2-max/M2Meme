@@ -17,3 +17,37 @@ test('backtest limits each horizon to a nearby observation and measures excursio
  assert.equal(first.outcomes['1m'].maxAdversePct,-10);
  assert.equal(first.outcomes['5m'],undefined);
 });
+
+test('wallet intelligence uses nearby price snapshots instead of unrelated forecasts',()=>{
+ const eventAt=1_000_000;
+ const address='Wallet111111111111111111111111111111111111';
+ const mint='Mint111111111111111111111111111111111111111';
+ const state={
+  wallets:[{address,label:'Test wallet'}],
+  walletTrades:[{wallet:address,mint,direction:'buy',at:new Date(eventAt).toISOString()}],
+  walletActivity:{},
+  tokens:{[mint]:{mint,symbol:'TEST',history:[
+   {at:eventAt-30000,priceUsd:1},
+   {at:eventAt+3600000,priceUsd:1.2}
+  ]}}
+ };
+ const result= require('../lib/intelligence').walletIntel.call({state});
+ assert.equal(result.wallets[0].performance.matchedBuys,1);
+ assert.equal(result.wallets[0].performance.average1hReturnPct,20);
+ assert.equal(result.wallets[0].performance.winRatePct,100);
+});
+
+test('wallet intelligence does not invent a result when the one-hour snapshot is missing',()=>{
+ const eventAt=2_000_000;
+ const address='Wallet222222222222222222222222222222222222';
+ const mint='Mint222222222222222222222222222222222222';
+ const state={
+  wallets:[{address}],
+  walletTrades:[{wallet:address,mint,direction:'buy',at:new Date(eventAt).toISOString()}],
+  walletActivity:{},
+  tokens:{[mint]:{mint,history:[{at:eventAt,priceUsd:1},{at:eventAt+1800000,priceUsd:1.5}]}}
+ };
+ const result=require('../lib/intelligence').walletIntel.call({state});
+ assert.equal(result.wallets[0].performance.matchedBuys,0);
+ assert.equal(result.wallets[0].performance.average1hReturnPct,null);
+});
