@@ -327,3 +327,13 @@ test('la qualité de liquidité ne reçoit pas une note avec un seul sous-indica
  const a=s.score({liquidityUsd:20000,ageHours:1,volume:{h1:1000}});
  assert.equal(a.factors.liquidityQuality,undefined);
 });
+
+
+test('un wallet simplement suivi ne compte pas comme acheteur précoce récurrent',()=>{
+ const s=make();
+ const base={txns:{h1:{buys:20,sells:10}},volume:{h1:5000,h24:20000},liquidityUsd:10000,fdv:50000,ageHours:2};
+ const tracked=s.score({...base,smartMoney:{hits:5,wallets:['manual-a','manual-b']}});
+ assert.equal(tracked.factors.earlyBuyerSignal,undefined);
+ const early=s.score({...base,smartMoney:{hits:5,wallets:['manual-a','manual-b'],earlyBuyerWallets:['early-a','early-b']}});
+ assert.equal(early.factors.earlyBuyerSignal,70);
+});
