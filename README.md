@@ -50,7 +50,7 @@ Ne partage jamais ces secrets dans une conversation et ne les commits pas sur Gi
 ### Facultatives
 - `BOT_TOKEN` : token obtenu auprès de @BotFather si tu veux le bot Telegram.
 - `TELEGRAM_CHAT_ID` : identifiant du chat ou canal destinataire. Le bot doit avoir accès au chat.
-- `SOLANA_RPC_URL` : endpoint RPC Solana alternatif. Si vide, le projet utilise automatiquement `https://api.mainnet-beta.solana.com`.
+- `SOLANA_RPC_URL` : endpoint RPC Solana alternatif. Si vide, le projet utilise automatiquement `https://api.mainnet.solana.com`.
 - `PORT` : laisse la valeur attendue par FadeHost (souvent injectée automatiquement).
 - `SCAN_INTERVAL_MS` : intervalle du scanner, par défaut 60000 (60 secondes).
 - `ALERT_MIN_SCORE` : score minimal d'alerte, par défaut 78.
