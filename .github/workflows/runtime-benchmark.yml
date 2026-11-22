@@ -1,0 +1,102 @@
+name: Runtime comparison (Node vs Bun)
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'index.js'
+      - 'lib/**'
+      - 'test/**'
+      - 'package.json'
+      - '.github/workflows/runtime-benchmark.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  runtime:
+    name: "${{ matrix.runtime }} app smoke + tests"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runtime: node
+            version: '26'
+          - runtime: bun
+            version: '1.4.2'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        if: matrix.runtime == 'node'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.version }}
+      - name: Setup Bun
+        if: matrix.runtime == 'bun'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ matrix.version }}
+      - name: Install dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Run complete test suite (Node)
+        if: matrix.runtime == 'node'
+        run: npm test
+      - name: Run complete test suite (Bun)
+        if: matrix.runtime == 'bun'
+        run: bun test
+      - name: Start the real application and measure resident memory
+        shell: bash
+        env:
+          RUNTIME: ${{ matrix.runtime }}
+          NODE_ENV: test
+          PORT: '18765'
+          DASHBOARD_PASSWORD: runtime-benchmark-only
+          DASHBOARD_SESSION_SECRET: 0123456789abcdef0123456789abcdef0123456789abcdef
+        run: |
+          set -euo pipefail
+          if [ "$RUNTIME" = "node" ]; then
+            npm start > runtime.log 2>&1 &
+          else
+            bun index.js > runtime.log 2>&1 &
+          fi
+          APP_PID=$!
+          cleanup() {
+            kill -TERM "$APP_PID" 2>/dev/null || true
+            for _ in $(seq 1 10); do
+              kill -0 "$APP_PID" 2>/dev/null || break
+              sleep 1
+            done
+            kill -KILL "$APP_PID" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          READY=0
+          for _ in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:18765/health > health.json; then
+              READY=1
+              break
+            fi
+            if ! kill -0 "$APP_PID" 2>/dev/null; then
+              cat runtime.log
+              exit 1
+            fi
+            sleep 1
+          done
+          if [ "$READY" -ne 1 ]; then
+            cat runtime.log
+            echo "Application did not become healthy"
+            exit 1
+          fi
+          sleep 15
+          RSS_KB=$(ps -o rss= -p "$APP_PID" | tr -d ' ')
+          if [ -z "$RSS_KB" ]; then
+            cat runtime.log
+            echo "Could not measure application RSS"
+            exit 1
+          fi
+          echo "Runtime: $RUNTIME"
+          echo "Health: $(cat health.json)"
+          echo "Application RSS after 15s: $((RSS_KB / 1024)) MiB"
+          echo "---- application logs ----"
+          cat runtime.log
