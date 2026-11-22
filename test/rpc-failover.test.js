@@ -20,6 +20,10 @@ test('RPC manager switches provider after a rate limit and remembers the working
   assert.equal(scanner.state.sources.solanaRpc.endpoint,'fallback.example');
   assert.equal(scanner.state.sources.solanaRpcProviders['primary.example'].ok,false);
   assert.equal(scanner.state.sources.solanaRpcProviders['fallback.example'].ok,true);
+  const second=await MemeScanner.prototype.rpc.call(scanner,'getSlot',[]);
+  assert.deepEqual(second,{value:42});
+  assert.equal(calls.length,3,'le fournisseur en cooldown ne doit pas être rappelé immédiatement');
+  assert.equal(calls[2],'https://fallback.example');
  }finally{global.fetch=original;}
 });
 
