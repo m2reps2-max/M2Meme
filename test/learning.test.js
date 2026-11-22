@@ -42,8 +42,8 @@ test('les prévisions enregistrent le maximum favorable et le drawdown',()=>{
 
 test('learning segments one-hour outcomes by discovery source and launch age',()=>{
  const result=learningSummary.call({state:{tokens:{
-  a:{mint:'a',forecasts:[{score:80,source:'Pump.fun',launchAgeHours:0.02,outcomes:{'1h':{label:'win',returnPct:20}}}]},
-  b:{mint:'b',forecasts:[{score:60,source:'GeckoTerminal pool',launchAgeHours:0.2,outcomes:{'1h':{label:'loss',returnPct:-25}}}]}
+  a:{mint:'a',forecasts:[{score:80,at:1000,source:'Pump.fun',launchAgeHours:0.02,outcomes:{'1h':{label:'win',returnPct:20}}}]},
+  b:{mint:'b',forecasts:[{score:60,at:2000,source:'GeckoTerminal pool',launchAgeHours:0.2,outcomes:{'1h':{label:'loss',returnPct:-25}}}]}
  }}});
  assert.equal(result.cohorts.bySource['Pump.fun'].winRate1hPct,100);
  assert.equal(result.cohorts.bySource['GeckoTerminal pool'].lossRate1hPct,100);
