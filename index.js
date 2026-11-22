@@ -7,6 +7,7 @@ const cookieParser=require('cookie-parser');
 const {Bot,InlineKeyboard}=require('grammy');
 const {MemeScanner}=require('./lib/scanner');
 const {resolveTelegramToken}=require('./lib/telegram-config');
+const {scoreWalletDiscovery}=require('./lib/wallet-discovery');
 const PORT=Number(process.env.PORT||8080),CODE=String(process.env.DASHBOARD_ACCESS_CODE||''),SECRET=String(process.env.DASHBOARD_SESSION_SECRET||''),URL=String(process.env.DASHBOARD_URL||'').replace(/\/$/,'');
 const PROD=process.env.NODE_ENV==='production',COOKIE='meme_radar_session',TEN_YEARS=10*365*24*60*60*1000;
 if(!CODE.trim()||SECRET.length<32){console.error('DASHBOARD_ACCESS_CODE (non vide) et DASHBOARD_SESSION_SECRET (32+) sont requis.');process.exit(1);}
@@ -40,7 +41,7 @@ app.get('/api/alerts',(_q,r)=>r.json({ok:true,alerts:scanner.state.alerts.slice(
 app.get('/api/watchlist',(_q,r)=>r.json({ok:true,watchlist:scanner.state.watchlist}));
 app.post('/api/watchlist',(q,r)=>{try{r.json({ok:true,watchlist:scanner.addWatch(String(q.body?.mint||''))});}catch(e){r.status(400).json({error:e.message});}});
 app.delete('/api/watchlist/:mint',(q,r)=>r.json({ok:true,watchlist:scanner.removeWatch(q.params.mint)}));
-app.get('/api/wallets',(_q,r)=>r.json({ok:true,wallets:scanner.state.wallets.map(w=>({...w,activity:scanner.state.walletActivity[w.address]||null})),autoWallets:(scanner.state.autoWallets||[]).map(w=>({...w,activity:scanner.state.walletActivity[w.address]||null}))}));
+app.get('/api/wallets',(_q,r)=>r.json({ok:true,wallets:scanner.state.wallets.map(w=>({...w,activity:scanner.state.walletActivity[w.address]||null})),autoWallets:(scanner.state.autoWallets||[]).map(w=>({...w,...scoreWalletDiscovery(w),activity:scanner.state.walletActivity[w.address]||null}))}));
 app.get('/api/intelligence/creators',(_q,r)=>r.json({ok:true,creators:scanner.creatorIntel(),fundingClusters:scanner.creatorFundingClusters()}));
 app.get('/api/intelligence/wallets',(_q,r)=>{const data=scanner.walletIntel();r.json({ok:true,wallets:data.wallets,clusters:data.clusters});});
 app.get('/api/intelligence/wallet-graph',(_q,r)=>r.json({ok:true,...scanner.walletGraphIntel()}));
