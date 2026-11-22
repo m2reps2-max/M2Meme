@@ -77,6 +77,7 @@ app.get('/api/intelligence/experts',(_q,r)=>r.json({ok:true,...buildHeliusWallet
 app.get('/api/data-quality',(_q,r)=>r.json({ok:true,...scanner.dataQualitySummary()}));
 app.get('/api/backtest',(_q,r)=>r.json({ok:true,...scanner.backtest()}));
 app.get('/api/learning',(_q,r)=>r.json({ok:true,...scanner.learningSummary()}));
+app.get('/api/selection-performance',(_q,r)=>r.json({ok:true,...require('./lib/selection-cohort').buildSelectionPerformance(scanner.state)}));
 app.get('/api/backtest/historical',(_q,r)=>r.json({ok:true,...scanner.getHistoricalBenchmark()}));
 app.get('/api/backtest/historical/status',(_q,r)=>r.json({ok:true,running:false,automatic:false,executor:'GitHub Actions',configured:String(process.env.MEME_RADAR_ACTIONS_TOKEN||'').length>=32,lastRunAt:scanner.state.historicalBenchmarkActionsAt||null,...scanner.getHistoricalBenchmark()}));
 app.post('/api/backtest/historical/run',async(_q,r)=>r.status(410).json({error:'Le benchmark historique est maintenant exécuté automatiquement.'}));

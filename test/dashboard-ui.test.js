@@ -84,12 +84,19 @@ test('candidate cards distinguish partial security evidence from verified securi
  assert.match(js,/Sécurité vérifiée/);
 });
 test('dashboard assets use a fresh cache version for the curated shortlist',()=>{
- assert.match(html,/styles\.css\?v=curated-v2/);
- assert.match(html,/dashboard\.js\?v=curated-v2/);
+ assert.match(html,/styles\.css\?v=curated-v3/);
+ assert.match(html,/dashboard\.js\?v=curated-v3/);
 });
 
 test('dashboard loads a server-side shortlist instead of selecting from the first 200 score-sorted tokens',()=>{
  assert.match(js,/\['Sélection','\/api\/selection'\]/);
  assert.match(js,/if\(i===5\)state\.selection=data/);
  assert.match(js,/function selectionPools\(\)\{return state\.selection/);
+});
+
+test('results page displays prospective shortlist cohorts separately from generic forecasts',()=>{
+ assert.match(js,/Qualité réelle de la Sélection/);
+ assert.match(js,/Échantillon témoin/);
+ assert.match(js,/api\/selection-performance/);
+ assert.match(js,/selectionPerformance=data/);
 });
