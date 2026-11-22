@@ -99,7 +99,7 @@ test('le scanner surveille les sorties du cr√©ateur et distingue un swap-like d‚
  const creator='CreatorWallet111111111111111111111111111111';
  scanner.state.tokens[mint]={mint,symbol:'CREATOR',creator,creatorObservedAtLaunch:true,security:{data:{supply:'10000'}}};
  scanner.rpc=async(method)=>{
-  if(method==='getSignaturesForAddress')return [{signature:'creator-sale-signature'}];
+  if(method==='getSignaturesForAddress')return [{signature:'creator-sale-signature-new'},{signature:'creator-sale-signature-old'}];
   if(method==='getTransaction')return {
    slot:123,
    transaction:{message:{accountKeys:[creator]}},
@@ -118,6 +118,8 @@ test('le scanner surveille les sorties du cr√©ateur et distingue un swap-like d‚
  assert.equal(event.swapConfirmed,true);
  assert.equal(event.quoteReceived.asset,'SOL');
  assert.equal(scanner.state.tokens[mint].creatorSaleSummary.soldPctSupplyLast,5);
+ assert.equal(scanner.state.tokens[mint].creatorSaleSummary.totalSoldPctSupply,10);
+ assert.equal(scanner.state.tokens[mint].creatorSaleSummary.soldPctSupply24h,10);
  assert.ok(scanner.score(scanner.state.tokens[mint]).hardBlocked);
 });
 
