@@ -67,3 +67,15 @@ test('un lancement Pump.fun est sauvegardé sans attendre le prochain scan',()=>
  assert.equal(reloaded.state.tokens[mint].symbol,'SCAT');
  assert.equal(reloaded.state.tokens[mint].creator,'CreatorWallet111111111111111111111111111111');
 });
+
+test('un nouveau pool GeckoTerminal est intégré sans inventer un créateur', () => {
+ const scanner=make();
+ const mint='11111111111111111111111111111111';
+ scanner.ingestGeckoPool({tokenAddress:mint,name:'Pool Cat',symbol:'PCAT',poolAddress:'BPFLoaderUpgradeab1e11111111111111111111111',dexName:'Raydium',poolCreatedAt:new Date().toISOString(),ageHours:0,liquidityUsd:12000,priceUsd:0.01,fdv:100000,marketCap:80000,volume:{h1:3000,h24:15000},txns:{h1:{buys:20,sells:5}}});
+ const token=scanner.state.tokens[mint];
+ assert.equal(token.symbol,'PCAT');
+ assert.equal(token.geckoDexName,'Raydium');
+ assert.equal(token.liquidityUsd,12000);
+ assert.equal(token.creator,undefined);
+ assert.ok(token.firstSeenAt);
+});
