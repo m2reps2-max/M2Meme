@@ -55,9 +55,9 @@ test('portfolio does not invent current prices or treat unmatched sells as profi
 });
 
 
-test('win-rate ratios are converted to percentages',()=>{
- const rows=normalizeLeaderboard({leaderboard:[{wallet:walletA,name:'Cented',win_rate:0.625}]});
- assert.equal(rows[0].winRatePct,62.5);
+test('leaderboard keeps provider win-rate percentages and average ROI field',()=>{
+ const rows=normalizeLeaderboard({leaderboard:[{wallet:walletA,name:'Cented',win_rate:62.5,avg_roi:18.4}]});
+ assert.equal(rows[0].winRatePct,62.5);assert.equal(rows[0].avgRoiPct,18.4);
 });
 
 test('token-level KOL signal counts distinct buyers and net flow over six hours',()=>{
