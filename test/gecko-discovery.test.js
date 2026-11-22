@@ -36,7 +36,7 @@ test('trade intelligence flags same-block bursts and reports early buyer coverag
     ['walletG', 'buy', '10:04:50.000Z', 110, 127]
   ];
   const payload = { data: rows.map(([wallet, kind, time, volume, block], i) => ({ id: 'sig' + i, attributes: { tx_from_address: wallet, kind, block_timestamp: '2026-11-22T' + time, volume_in_usd: String(volume), block_number: block, tx_hash: 'sig' + i } })) };
-  const result = analyzePoolTrades(payload, created);
+  const result = analyzePoolTrades(payload, created, Date.parse('2026-11-22T10:10:00.000Z'));
   assert.equal(result.tradeCount, 8);
   assert.equal(result.uniqueBuyers, 6);
   assert.equal(result.sameBlockBuyerClusters, 1);
@@ -97,7 +97,7 @@ test('Gecko sample does not duplicate a wallet RPC observation for the same swap
 test('early buyer window stays incomplete when the five-minute end is not observed',()=>{
  const created='2026-11-22T10:00:00.000Z';
  const payload={data:[['walletA','10:00:01.000Z'],['walletB','10:00:20.000Z']].map(([wallet,time],i)=>({id:'short'+i,attributes:{tx_from_address:wallet,kind:'buy',block_timestamp:'2026-11-22T'+time,volume_in_usd:'200',block_number:800+i}}))};
- const result=analyzePoolTrades(payload,created);
+ const result=analyzePoolTrades(payload,created,Date.parse('2026-11-22T10:10:00.000Z'));
  assert.equal(result.earlyWindow.complete,false);
  assert.equal(result.earlyWindow.reason,'five_minute_window_end_not_observed');
  assert.equal(result.earlyBuyers.length,0);
@@ -106,7 +106,7 @@ test('early buyer window stays incomplete when the five-minute end is not observ
 test('early buyer window stays incomplete when the GeckoTerminal sample reaches its 300-trade cap',()=>{
  const created=Date.parse('2026-11-22T10:00:00.000Z');
  const data=Array.from({length:300},(_,i)=>({id:'cap'+i,attributes:{tx_from_address:'walletA',kind:'buy',block_timestamp:new Date(created+(i===299?290000:i*900)).toISOString(),volume_in_usd:'10',block_number:900+i}}));
- const result=analyzePoolTrades({data},new Date(created).toISOString());
+ const result=analyzePoolTrades({data},new Date(created).toISOString(),created+3600000);
  assert.equal(result.earlyWindow.complete,false);
  assert.equal(result.earlyWindow.reason,'trade_sample_at_api_cap');
  assert.equal(result.earlyBuyers.length,0);
@@ -115,7 +115,7 @@ test('early buyer window stays incomplete when the GeckoTerminal sample reaches 
 test('early buyer window stays incomplete until five minutes have elapsed since pool creation',()=>{
  const created=Date.now()-60000;
  const payload={data:[0,30000,59000].map((offset,i)=>({id:'young'+i,attributes:{tx_from_address:'walletA',kind:'buy',block_timestamp:new Date(created+offset).toISOString(),volume_in_usd:'200',block_number:1000+i}}))};
- const result=analyzePoolTrades(payload,new Date(created).toISOString());
+ const result=analyzePoolTrades(payload,new Date(created).toISOString(),created+60000);
  assert.equal(result.earlyWindow.complete,false);
  assert.equal(result.earlyWindow.reason,'five_minute_window_not_elapsed');
  assert.equal(result.earlyBuyers.length,0);
