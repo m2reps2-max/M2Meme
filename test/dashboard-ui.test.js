@@ -43,3 +43,12 @@ test('advanced intelligence pages remain available internally and scanner naviga
  assert.ok(js.includes("scanner:()=>renderScanner('scanner')"));
  assert.match(js,/analysis:renderDetail/);
 });
+
+test('wallet reputation page exposes point-in-time backtest and outcomes against a baseline',()=>{
+ const start=js.indexOf('function renderExperts(){');
+ const end=js.indexOf('\nfunction renderMore(){',start);
+ const source=js.slice(start,end);
+ assert.match(source,/walletBacktestPanel/);
+ assert.match(source,/firstObservedTokenBaseline/);
+ assert.match(js,/api\/intelligence\/wallet-signal-backtest/);
+});
