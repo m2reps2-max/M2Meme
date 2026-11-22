@@ -65,7 +65,12 @@ process.on('uncaughtExceptionMonitor',(error,origin)=>console.error('[process] u
 process.on('exit',(code)=>console.error('[process] exiting', {code,uptimeSeconds:Math.round(process.uptime()),rssBytes:process.memoryUsage().rss,heapUsedBytes:process.memoryUsage().heapUsed,startedAt:new Date(processStartedAt).toISOString()}));
 process.once('SIGTERM',()=>console.warn('[process] received SIGTERM'));
 process.once('SIGINT',()=>console.warn('[process] received SIGINT'));
-memoryLogTimer=setInterval(()=>{const m=process.memoryUsage();console.log('[process] memory', {rssMiB:Math.round(m.rss/1048576),heapUsedMiB:Math.round(m.heapUsed/1048576),heapTotalMiB:Math.round(m.heapTotal/1048576),uptimeSeconds:Math.round(process.uptime())});},60000);
+let lastMemoryWarningAt=0;
+memoryLogTimer=setInterval(()=>{
+ const m=process.memoryUsage(),rssMiB=Math.round(m.rss/1048576),heapUsedMiB=Math.round(m.heapUsed/1048576);
+ console.log('[process] memory',{rssMiB,heapUsedMiB,heapTotalMiB:Math.round(m.heapTotal/1048576),externalMiB:Math.round(m.external/1048576),uptimeSeconds:Math.round(process.uptime())});
+ if(rssMiB>=220&&Date.now()-lastMemoryWarningAt>=30000){lastMemoryWarningAt=Date.now();console.warn('[process] memory pressure warning: RSS reached',rssMiB,'MiB (hosting limit may be 256 MiB)');}
+},10000);
 memoryLogTimer.unref();
 const server=app.listen(PORT,'0.0.0.0',()=>{console.log('MEME RADAR listening on '+PORT);scanner.start().catch(e=>console.error('[scanner]',e.message));if(bot){console.log('[telegram] Starting grammY long polling…');bot.start().then(()=>console.log('[telegram] Polling stopped cleanly')).catch(e=>console.error('[telegram polling] Startup/runtime failure:',e.message));}else{console.warn('[telegram] Bot disabled: set TELEGRAM_BOT_TOKEN (or legacy BOT_TOKEN) in the hosting environment.');}setTimeout(()=>{runHistoricalAutomatically();historicalTimer=setInterval(runHistoricalAutomatically,30000);},12000);});server.requestTimeout=20000;server.headersTimeout=25000;server.keepAliveTimeout=5000;
 async function shutdown(){scanner.stop();clearInterval(historicalTimer);if(bot)await bot.stop();server.close(()=>process.exit(0));setTimeout(()=>process.exit(1),10000).unref();}process.once('SIGTERM',shutdown);process.once('SIGINT',shutdown);
