@@ -19,3 +19,8 @@ test('Reddit radar matches a token name and reports bounded mentions', async () 
   assert.equal(result.uniqueAuthors24h, 1);
   assert.equal(result.posts.length, 1);
 });
+
+test('RSS links outside Reddit HTTPS are discarded', () => {
+  const rows = parseFeed('<rss><channel><item><title>Moon Cat</title><link>javascript:alert(1)</link><pubDate>Sun, 22 Nov 2026 10:00:00 GMT</pubDate></item></channel></rss>', 'r/solana');
+  assert.equal(rows[0].link, '');
+});
