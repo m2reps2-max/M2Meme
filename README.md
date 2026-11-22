@@ -16,7 +16,7 @@ Dashboard privé de recherche de meme coins Solana. Le projet utilise des source
 | Concentration des 10 plus gros détenteurs, avec agrégation des comptes appartenant au même wallet (sur les 20 plus gros comptes renvoyés) | RPC public Solana (`getMultipleAccounts`) | Rien |
 | Recherche du premier financeur direct des wallets créateurs Pump.fun et détection de financeurs communs | RPC public Solana (`getSignaturesForAddress`, `getTransaction`) | Rien |
 | Suivi de 10 wallets ajoutés manuellement | RPC public Solana, 5 transactions récentes par wallet, toutes les 10 minutes | Rien |
-| Découverte automatique d'acheteurs précoces | Acheteurs ayant réalisé au moins 2 achats et 150 USD cumulés dans les 5 premières minutes du pool, uniquement si cette fenêtre est entièrement couverte et si le token a un score indicatif ≥60 | Rien |
+| Découverte automatique d'acheteurs précoces | Acheteurs ayant réalisé au moins 2 achats et 150 USD cumulés dans les 5 premières minutes du pool, uniquement si cette fenêtre est entièrement couverte et si le token a un score indicatif ≥60 et aucun blocage de risque critique | Rien |
 | Surveillance des acheteurs découverts | Jusqu'à 5 wallets automatiques, 3 transactions récentes chacun toutes les 10 minutes | Rien |
 | Liens de sites et réseaux sociaux | Métadonnées DexScreener | Rien |
 | Découverte de nouveaux pools sur plusieurs DEX Solana | GeckoTerminal Public API (`/networks/solana/new_pools`) | Rien |
