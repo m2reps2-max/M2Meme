@@ -36,7 +36,7 @@ Dashboard privé de recherche de meme coins Solana. Le projet utilise uniquement
 ## Variables FadeHost à configurer
 
 ### Obligatoires
-- `DASHBOARD_ACCESS_CODE` : ton code privé, au moins 12 caractères.
+- `DASHBOARD_ACCESS_CODE` : ton code privé, sans longueur minimale ; il doit simplement être non vide. Pour la sécurité, évite un code trop facile à deviner.
 - `DASHBOARD_SESSION_SECRET` : secret aléatoire stable d'au moins 32 caractères. Ne le change pas à chaque redémarrage.
 - `DASHBOARD_URL` : URL HTTPS publique du dashboard.
 - `NODE_ENV` : `production`.
