@@ -34,3 +34,15 @@ test('Bluesky rejects ambiguous short symbols without making a request',async()=
  assert.equal(calls,0);
  assert.equal(result.available,false);
 });
+
+test('Bluesky retries the alternate public host when the primary search host returns 403',async()=>{
+ const hosts=[];
+ const radar=new BlueskyRadar({fetchImpl:async url=>{
+  hosts.push(new URL(String(url)).host);
+  if(hosts.length===1)return {ok:false,status:403};
+  return {ok:true,json:async()=>({posts:[]})};
+ }});
+ const result=await radar.searchToken({mint:'MintFallback111111111111111111111111111111',symbol:'FALL'});
+ assert.equal(result.available,true);
+ assert.deepEqual(hosts,['api.bsky.app','public.api.bsky.app']);
+});
