@@ -266,6 +266,38 @@ test('readiness remains false until the first scan has completed',()=>{
  assert.equal(scanner.healthSummary().checks.scanner.ok,false);
 });
 
+test('background tasks retry after a scan collision and clear retries on stop',async()=>{
+ const scanner=make();
+ const originalSetTimeout=global.setTimeout;
+ const originalClearTimeout=global.clearTimeout;
+ let scheduled=null,delay=null,called=0;
+ global.setTimeout=(fn,ms)=>{scheduled=fn;delay=ms;return {unref(){}};};
+ global.clearTimeout=()=>{};
+ try{
+  scanner.running=true;
+  scanner.scanning=true;
+  const result=await scanner.runBackgroundTask('social',async()=>{called++;},205);
+  assert.equal(result.skipped,true);
+  assert.equal(result.retryScheduled,true);
+  assert.equal(delay,15000);
+  assert.equal(called,0);
+  scanner.scanning=false;
+  const retry=scheduled;
+  retry();
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(called,1);
+  assert.equal(scanner.backgroundRetryTimers.has('social'),false);
+  scanner.queueBackgroundRetry('wallets',async()=>{},210,60000);
+  assert.equal(scanner.backgroundRetryTimers.has('wallets'),true);
+  scanner.stop();
+  assert.equal(scanner.backgroundRetryTimers.size,0);
+ }finally{
+  global.setTimeout=originalSetTimeout;
+  global.clearTimeout=originalClearTimeout;
+  scanner.stop();
+ }
+});
+
 test('background tasks do not overlap scans or each other',async()=>{
  const scanner=make();
  scanner.running=true;
