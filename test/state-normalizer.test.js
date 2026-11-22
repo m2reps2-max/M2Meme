@@ -51,3 +51,13 @@ test('mutating normalization reuses token objects and the token map to avoid sta
  assert.deepEqual(token.forecasts,[{at:1}]);
  assert.deepEqual(token.smartMoney.wallets,['walletA']);
 });
+
+test('mutating normalization restores missing defaults without replacing existing values',()=>{
+ const input={tokens:{},lastScanAt:'2026-11-22T00:00:00.000Z'};
+ const state=normalizeState(input,{mutate:true});
+ assert.equal(state,input);
+ assert.equal(state.lastScanAt,'2026-11-22T00:00:00.000Z');
+ assert.deepEqual(state.alerts,[]);
+ assert.deepEqual(state.walletTrades,[]);
+ assert.equal(state.version,3);
+});
