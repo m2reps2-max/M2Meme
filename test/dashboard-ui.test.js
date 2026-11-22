@@ -84,10 +84,10 @@ test('candidate cards distinguish partial security evidence from verified securi
  assert.match(js,/Sécurité vérifiée/);
 });
 test('dashboard assets share one cache version so deployed UI fixes are loaded together',()=>{
- const version=html.match(/dashboard\\.js\\?v=([^"]+)/)?.[1];
+ const version=html.match(/dashboard\.js\?v=([^"]+)/)?.[1];
  assert.ok(version);
- assert.match(html,new RegExp('styles\\\\.css\\\\?v='+version));
- assert.match(html,new RegExp('live\\\\.css\\\\?v='+version));
+ assert.ok(html.includes('/assets/styles.css?v='+version));
+ assert.ok(html.includes('/assets/live.css?v='+version));
 });
 
 test('dashboard loads a server-side shortlist instead of selecting from the first 200 score-sorted tokens',()=>{
@@ -117,24 +117,24 @@ test('HTML closing-tag helper is shared by all dashboard renderers',()=>{
 test('every dashboard button action is connected to a delegated handler',()=>{
  for(const attr of ['data-token','data-watch','data-go','data-remove-wallet'])assert.ok(js.includes("hasAttribute('"+attr+"')"),attr);
  for(const id of ['refresh-tokens','retry-dashboard'])assert.ok(js.includes("target.id==='"+id+"'"),id);
- assert.match(js,/view\\.addEventListener\\('submit'/);
- assert.match(js,/#logout/);
- assert.match(js,/nav\\.addEventListener\\('click'/);
+ assert.ok(js.includes("view.addEventListener('submit'"));
+ assert.ok(js.includes("$('#logout').addEventListener"));
+ assert.ok(js.includes("nav.addEventListener('click'"));
 });
 test('dashboard actions provide pending state and report failures instead of silently failing',()=>{
- assert.match(js,/async function runButtonAction\\(/);
- assert.match(js,/button\\.disabled=true/);
- assert.match(js,/setAttribute\\('aria-busy','true'\\)/);
- assert.match(js,/Action impossible/);
- assert.match(js,/async function removeWallet\\(/);
- assert.match(js,/async function toggleWatch\\(/);
+ assert.ok(js.includes('async function runButtonAction('));
+ assert.ok(js.includes('button.disabled=true'));
+ assert.ok(js.includes("setAttribute('aria-busy','true')"));
+ assert.ok(js.includes('Action impossible'));
+ assert.ok(js.includes('async function removeWallet('));
+ assert.ok(js.includes('async function toggleWatch('));
 });
 test('opening token details preserves the enriched token response without a full dashboard reload',()=>{
  const start=js.indexOf('async function openToken(');
  const end=js.indexOf('async function scan(',start);
  const source=js.slice(start,end);
- assert.match(source,/state\\.selected=data\\.token/);
- assert.doesNotMatch(source,/await load\\(/);
+ assert.ok(source.includes('state.selected=data.token'));
+ assert.ok(!source.includes('await load('));
 });
 test('dashboard UI action endpoints exist on the server',()=>{
  const server=fs.readFileSync(path.join(root,'index.js'),'utf8');
