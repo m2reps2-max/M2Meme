@@ -10,7 +10,6 @@ const {buildExpertSnapshot,buildTokenSignals,MadeOnSolRadar}=require('./lib/kol-
 const {resolveTelegramToken}=require('./lib/telegram-config');
 const {scoreWalletDiscovery}=require('./lib/wallet-discovery');
 const {buildWalletReputation}=require('./lib/wallet-reputation');
-const {walletSignalBacktest}=require('./lib/wallet-signal-backtest');
 const {COINS:HISTORICAL_COINS}=require('./lib/historical-benchmark');
 const {constantTimeEqual,validateHistoricalPayload,mergeHistoricalBenchmarks}=require('./lib/actions-ingest');
 const {resolveDashboardConfig}=require('./lib/dashboard-config');
