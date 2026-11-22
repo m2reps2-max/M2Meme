@@ -31,15 +31,18 @@ test('trade intelligence flags same-block bursts and reports early buyer coverag
     ['walletC', 'buy', '10:00:03.000Z', 100, 123],
     ['walletD', 'buy', '10:00:04.000Z', 100, 124],
     ['walletE', 'buy', '10:00:05.000Z', 100, 124],
-    ['walletF', 'sell', '10:01:00.000Z', 20, 125]
+    ['walletF', 'sell', '10:01:00.000Z', 20, 125],
+    ['walletA', 'buy', '10:00:06.000Z', 100, 126]
   ];
   const payload = { data: rows.map(([wallet, kind, time, volume, block], i) => ({ id: 'sig' + i, attributes: { tx_from_address: wallet, kind, block_timestamp: '2026-11-22T' + time, volume_in_usd: String(volume), block_number: block, tx_hash: 'sig' + i } })) };
   const result = analyzePoolTrades(payload, created);
-  assert.equal(result.tradeCount, 6);
+  assert.equal(result.tradeCount, 7);
   assert.equal(result.uniqueBuyers, 5);
   assert.equal(result.sameBlockBuyerClusters, 1);
   assert.equal(result.earlyWindow.complete, true);
   assert.equal(result.earlyWindow.uniqueBuyers, 5);
+  assert.equal(result.earlyBuyers[0].wallet, 'walletA');
+  assert.equal(result.earlyBuyers[0].buys, 2);
   assert.ok(result.flags.some(x => x.code === 'SAME_BLOCK_BUY_BURST'));
   assert.ok(result.flags.some(x => x.code === 'EARLY_BUYER_BURST'));
 });
