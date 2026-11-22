@@ -1,6 +1,6 @@
 # MEME RADAR — version gratuite
 
-Dashboard privé de recherche de meme coins Solana. Le projet utilise uniquement des sources publiques gratuites : DexScreener et le RPC public Solana. Telegram est facultatif. Aucun fournisseur payant, aucune clé API payante, aucun wallet de trading et aucune signature de transaction.
+Dashboard privé de recherche de meme coins Solana. Le projet utilise des sources publiques gratuites : DexScreener, GeckoTerminal, Reddit RSS, PumpPortal (créations/migrations) et le RPC public Solana. Telegram est facultatif. Aucun fournisseur payant, aucune clé API payante, aucun wallet de trading et aucune signature de transaction.
 
 ## Fonctions disponibles sans payer
 
