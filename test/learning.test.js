@@ -76,3 +76,18 @@ test('out-of-sample calibration separates mints and counts one first forecast pe
  assert.equal(result.holdoutAtSelectedThreshold.tokens,result.validation.tokens);
  assert.equal(result.holdoutAtSelectedThreshold.positive15Pct,100);
 });
+
+test('une observation tardive résout le forecast et indique sa qualité',()=>{
+ const token={mint:'late',forecasts:[]};
+ const base={priceUsd:1,liquidityUsd:5000,volume1h:100,volume24h:500,buys1h:5,sells1h:2,fdv:10000,score:70,coverage:80,classification:'watch',risk:'unknown',flags:[]};
+ recordForecast(token,{...base,at:1000000});
+ recordForecast(token,{...base,at:1000000+7200000,priceUsd:1.2});
+ assert.equal(token.forecasts[0].outcomes['1h'].returnPct,20);
+ assert.equal(token.forecasts[0].outcomes['1h'].resolutionQuality,'late_observation');
+});
+test('la calibration hors échantillon ignore les prévisions sans score réel',()=>{
+ const scanner={state:{tokens:{a:{mint:'a',forecasts:[{at:1,score:null,outcomes:{'1h':{returnPct:50,label:'win'}}}]}}}};
+ const result=learningSummary.call(scanner).outOfSample;
+ assert.equal(result.uniqueResolvedTokens,0);
+ assert.equal(result.status,'insufficient_sample');
+});

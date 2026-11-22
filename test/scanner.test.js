@@ -24,6 +24,7 @@ test('un lancement Pump.fun conserve le créateur et son horodatage',()=>{
  scanner.ingestLaunch({mint,name:'Early Cat',symbol:'ECAT',traderPublicKey:'CreatorWallet111111111111111111111111111111',timestamp:Math.floor(Date.now()/1000),initialBuy:1.25,marketCapSol:30,signature:'sig'});
  const token=scanner.state.tokens[mint];
  assert.equal(token.launchSource,'Pump.fun');
+ assert.equal(token.launchCohort.source,'Pump.fun');
  assert.equal(token.creator,'CreatorWallet111111111111111111111111111111');
  assert.equal(token.creatorObservedAtLaunch,true);
  assert.equal(token.symbol,'ECAT');
@@ -98,7 +99,7 @@ test('le scanner surveille les sorties du créateur et distingue un swap-like d�
  const creator='CreatorWallet111111111111111111111111111111';
  scanner.state.tokens[mint]={mint,symbol:'CREATOR',creator,creatorObservedAtLaunch:true,security:{data:{supply:'10000'}}};
  scanner.rpc=async(method)=>{
-  if(method==='getSignaturesForAddress')return [{signature:'creator-sale-signature'}];
+  if(method==='getSignaturesForAddress')return [{signature:'creator-sale-signature-new'},{signature:'creator-sale-signature-old'}];
   if(method==='getTransaction')return {
    slot:123,
    transaction:{message:{accountKeys:[creator]}},
@@ -117,6 +118,8 @@ test('le scanner surveille les sorties du créateur et distingue un swap-like d�
  assert.equal(event.swapConfirmed,true);
  assert.equal(event.quoteReceived.asset,'SOL');
  assert.equal(scanner.state.tokens[mint].creatorSaleSummary.soldPctSupplyLast,5);
+ assert.equal(scanner.state.tokens[mint].creatorSaleSummary.totalSoldPctSupply,10);
+ assert.equal(scanner.state.tokens[mint].creatorSaleSummary.soldPctSupply24h,10);
  assert.ok(scanner.score(scanner.state.tokens[mint]).hardBlocked);
 });
 
@@ -132,4 +135,40 @@ test('le seuil des alertes ne change qu’après une validation hors échantillo
  }finally{
   if(previous===undefined)delete process.env.ALERT_MIN_SCORE;else process.env.ALERT_MIN_SCORE=previous;
  }
+});
+
+test('le suivi wallet utilise un curseur RPC et reprend après la dernière signature traitée',async()=>{
+ const scanner=make();
+ const address='CursorWallet111111111111111111111111111111';
+ scanner.state.wallets=[{address,label:'Cursor'}];
+ const calls=[];
+ scanner.rpc=async(method,params)=>{
+  if(method==='getSignaturesForAddress'){
+   calls.push(params[1]);
+   return calls.length===1?[{signature:'sig-new'},{signature:'sig-old'}]:[];
+  }
+  if(method==='getTransaction')return {slot:1,transaction:{message:{accountKeys:[address]}},meta:{preBalances:[100],postBalances:[100],preTokenBalances:[],postTokenBalances:[],fee:0}};
+  throw new Error('unexpected RPC '+method);
+ };
+ scanner.save=()=>{};
+ scanner.scoreAll=()=>{};
+ await scanner.refreshWallets();
+ assert.equal(scanner.state.walletCursors[address],'sig-old');
+ await scanner.refreshWallets();
+ assert.equal(calls[1].before,'sig-old');
+});
+test('la santé distingue serveur actif et sources de données dégradées',()=>{
+ const scanner=make();scanner.running=true;
+ scanner.status=()=>({
+  dexscreener:{lastSuccess:new Date().toISOString(),error:null},
+  geckoTerminal:{lastSuccess:null,error:'offline'},
+  solanaRpc:{lastSuccess:null,error:'offline'},
+  pumpPortal:{connected:false,lastMessageAt:null,lastError:'offline'},
+  redditRss:{connected:false,lastSuccess:null,error:'offline'},
+  bluesky:{connected:false,lastSuccess:null,lastError:'offline'}
+ });
+ const health=scanner.healthSummary();
+ assert.equal(health.state,'healthy');
+ assert.equal(health.checks.dexscreener.ok,true);
+ assert.equal(health.checks.pumpPortal.ok,false);
 });
