@@ -22,6 +22,7 @@ function fixture(){
   trade(b,target,'buy','target-b','2026-11-22T00:56:00Z',10,.1)
  ],tokens:{
   [target]:{mint:target,pumpCreatedAt:'2026-11-22T00:50:00Z',forecasts:[
+   {at:at-900000,priceUsd:1.1,outcomes:{'1h':{returnPct:-10,label:'drawdown',maxFavorablePct:5,maxAdversePct:-15}}},
    {at:at,priceUsd:1,outcomes:{'1h':{returnPct:25,label:'win',maxFavorablePct:40,maxAdversePct:-5}}},
    {at:at+900000,priceUsd:1.2,outcomes:{'1h':{returnPct:-25,label:'loss',maxFavorablePct:5,maxAdversePct:-30}}}
   ]},
@@ -44,7 +45,9 @@ test('compares one first signal per token against first-observation baselines',(
  assert.equal(result.byHorizon['1h'].walletSignal.tokens,1);
  assert.equal(result.byHorizon['1h'].firstObservedTokenBaseline.tokens,2);
  assert.equal(result.byHorizon['1h'].sameTokensAtFirstObservation.tokens,1);
- assert.equal(result.byHorizon['1h'].signalVsUniverseAverageReturnPct,52.5);
+ assert.equal(result.byHorizon['1h'].signalVsUniverseAverageReturnPct,45);
+ assert.equal(result.byHorizon['1h'].sameTokensAtFirstObservation.averageReturnPct,-10);
+ assert.equal(result.byHorizon['1h'].signalVsSameTokensFirstObservationPct,35);
 });
 test('returns an explicit insufficient-data status when no wallet signal exists',()=>{
  const state=fixture();state.walletTrades=state.walletTrades.filter(x=>x.mint!==target);
