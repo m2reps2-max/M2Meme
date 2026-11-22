@@ -8,7 +8,7 @@ const {Bot,InlineKeyboard}=require('grammy');
 const {MemeScanner}=require('./lib/scanner');
 const PORT=Number(process.env.PORT||3000),CODE=String(process.env.DASHBOARD_ACCESS_CODE||''),SECRET=String(process.env.DASHBOARD_SESSION_SECRET||''),URL=String(process.env.DASHBOARD_URL||'').replace(/\/$/,'');
 const PROD=process.env.NODE_ENV==='production',COOKIE='meme_radar_session',TEN_YEARS=10*365*24*60*60*1000;
-if(CODE.length<12||SECRET.length<32){console.error('DASHBOARD_ACCESS_CODE (12+) et DASHBOARD_SESSION_SECRET (32+) sont requis.');process.exit(1);}
+if(!CODE.trim()||SECRET.length<32){console.error('DASHBOARD_ACCESS_CODE (non vide) et DASHBOARD_SESSION_SECRET (32+) sont requis.');process.exit(1);}
 if(PROD&&!URL.startsWith('https://')){console.error('DASHBOARD_URL doit être en HTTPS en production.');process.exit(1);}
 const app=express();app.disable('x-powered-by');app.set('trust proxy',1);
 app.use(helmet({contentSecurityPolicy:{directives:{defaultSrc:["'self'"],scriptSrc:["'self'"],styleSrc:["'self'"],imgSrc:["'self'",'data:','https:'],connectSrc:["'self'"],objectSrc:["'none'"],frameAncestors:["'none'"]}}}));
