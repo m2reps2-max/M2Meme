@@ -30,7 +30,7 @@ app.post('/api/logout',(_q,r)=>{r.clearCookie(COOKIE,{httpOnly:true,secure:PROD,
 app.get('/api/me',auth,(_q,r)=>r.json({ok:true,authenticated:true}));app.use('/api',auth,origin);
 app.get('/api/status',(_q,r)=>r.json(scanner.overview()));app.get('/api/overview',(_q,r)=>r.json(scanner.overview()));
 app.get('/api/tokens',(q,r)=>{const tokens=scanner.tokens({sort:String(q.query.sort||'score'),limit:Math.min(250,Number(q.query.limit)||100),search:String(q.query.search||'').slice(0,80),includeBlocked:q.query.includeBlocked!=='false'});r.json({ok:true,tokens,count:tokens.length,lastScanAt:scanner.state.lastScanAt});});
-app.get('/api/token/:mint',async(q,r)=>{try{const token=await scanner.detail(q.params.mint);let social=null;if(q.query.social==='true')social=await scanner.social(q.params.mint).catch(e=>({configured:Boolean(process.env.X_BEARER_TOKEN),error:e.message}));r.json({ok:true,token,social});}catch(e){r.status(404).json({error:e.message});}});
+app.get('/api/token/:mint',async(q,r)=>{try{const token=await scanner.detail(q.params.mint);let social=null;if(q.query.social==='true')social=await scanner.social(q.params.mint).catch(e=>({configured:true,error:e.message}));r.json({ok:true,token,social});}catch(e){r.status(404).json({error:e.message});}});
 app.post('/api/scan',async(_q,r)=>{if(Date.now()-lastManual<20000)return r.status(429).json({error:'Attends 20 secondes avant un nouveau scan.'});lastManual=Date.now();try{r.json({ok:true,result:await scanner.scan(),overview:scanner.overview()});}catch(e){r.status(503).json({error:e.message});}});
 app.get('/api/alerts',(_q,r)=>r.json({ok:true,alerts:scanner.state.alerts.slice(-150).reverse()}));
 app.get('/api/watchlist',(_q,r)=>r.json({ok:true,watchlist:scanner.state.watchlist}));
