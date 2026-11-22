@@ -6,14 +6,15 @@ const a='CyaE1Vxv111111111111111111111111111111111111';
 const b='FixmSpsB111111111111111111111111111111111111';
 const mint='tca3tbFf111111111111111111111111111111111111';
 const mint2='tca3tbFf222222222222222222222222222222222222';
+const mint3='tca3tbFf333333333333333333333333333333333333';
 function trade(wallet,direction,signature,at,tokenAmount,quote){return {wallet,mint,direction,signature,at,tokenAmount,swapConfirmed:true,...(direction==='buy'?{quoteSpent:quote}:{quoteReceived:quote})};}
-function state(walletTrades,extra={}){return {tokens:{[mint]:{pumpCreatedAt:'2026-11-22T00:00:00Z'}},wallets:[{address:a},{address:b}],autoWallets:[],experts:[],walletTrades,...extra};}
+function state(walletTrades,extra={}){return {tokens:{[mint]:{pumpCreatedAt:'2026-11-22T00:00:00Z'},[mint2]:{},[mint3]:{}},wallets:[{address:a},{address:b}],autoWallets:[],experts:[],walletTrades,...extra};}
 function provenHistory(wallet,prefix,otherMint=mint){
  return [
-  trade(wallet,'buy',prefix+'b1','2026-11-22T00:01:00Z',100,{asset:'SOL',amount:1}),
-  trade(wallet,'sell',prefix+'s1','2026-11-22T00:02:00Z',100,{asset:'SOL',amount:2}),
-  {...trade(wallet,'buy',prefix+'b2','2026-11-22T00:03:00Z',100,{asset:'SOL',amount:1}),mint:otherMint},
-  {...trade(wallet,'sell',prefix+'s2','2026-11-22T00:04:00Z',100,{asset:'SOL',amount:2}),mint:otherMint}
+  {...trade(wallet,'buy',prefix+'b1','2026-11-22T00:01:00Z',100,{asset:'SOL',amount:1}),mint:otherMint},
+  {...trade(wallet,'sell',prefix+'s1','2026-11-22T00:02:00Z',100,{asset:'SOL',amount:2}),mint:otherMint},
+  {...trade(wallet,'buy',prefix+'b2','2026-11-22T00:03:00Z',100,{asset:'SOL',amount:1}),mint:mint3},
+  {...trade(wallet,'sell',prefix+'s2','2026-11-22T00:04:00Z',100,{asset:'SOL',amount:2}),mint:mint3}
  ];
 }
 test('does not create a token score when fewer than two proven wallets buy',()=>{
