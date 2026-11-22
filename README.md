@@ -195,3 +195,30 @@ Le benchmark agrège maintenant les résultats des alertes à poids égal par to
 
 
 Le benchmark inclut désormais les mints vérifiés de HAWK (lancement du 4 décembre 2024) et LIBRA (14 février 2025) dans les cohortes quantitatives GeckoTerminal. Les cas SHARPEI et TWS restent uniquement documentaires tant qu'une adresse de mint historique fiable n'est pas établie. Les drawdowns publiés sont des chiffres rapportés par les sources, pas des calculs de notre replay.
+
+
+## Backtests déportés vers GitHub Actions
+
+Le benchmark OHLCV historique peut être exécuté hors de FadeHost par le workflow
+`.github/workflows/historical-benchmark.yml` : lancement manuel ou chaque lundi
+à 03:17 UTC. Le runner utilise Node.js 22, traite les tokens séquentiellement pour
+respecter les limites publiques de GeckoTerminal, puis conserve un rapport JSON
+comme artifact pendant 14 jours.
+
+Pour importer automatiquement les résultats dans le dashboard :
+
+1. Générer un secret aléatoire d'au moins 32 caractères (par exemple 64 caractères hexadécimaux).
+2. Ajouter `MEME_RADAR_ACTIONS_TOKEN` dans les variables d'environnement FadeHost.
+3. Ajouter le même secret dans GitHub : **Settings → Secrets and variables → Actions → New repository secret**, avec le nom `MEME_RADAR_ACTIONS_TOKEN`.
+4. Lancer manuellement **Actions → MEME RADAR historical benchmark → Run workflow**.
+
+Le point d'entrée HTTPS d'import est protégé par ce bearer token, accepte uniquement
+les symboles du benchmark connus et valide les métriques avant de les sauvegarder.
+Un échec partiel ne remplace pas un résultat terminé encore récent. Si le secret
+n'est pas configuré, le workflow produit quand même l'artifact, mais n'importe rien
+dans le dashboard. Ne jamais mettre ce secret dans le dépôt ou dans un fichier suivi
+par Git.
+
+Ce workflow déporte uniquement le benchmark historique OHLCV. Le scanner temps réel,
+les alertes Telegram et les observations prospectives restent sur FadeHost. GitHub
+Actions n'est pas un worker permanent et ne remplace pas l'hébergement du scanner.
