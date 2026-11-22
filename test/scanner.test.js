@@ -119,3 +119,17 @@ test('le scanner surveille les sorties du créateur et distingue un swap-like d�
  assert.equal(scanner.state.tokens[mint].creatorSaleSummary.soldPctSupplyLast,5);
  assert.ok(scanner.score(scanner.state.tokens[mint]).hardBlocked);
 });
+
+test('le seuil des alertes ne change qu’après une validation hors échantillon suffisante',()=>{
+ const scanner=make();
+ const previous=process.env.ALERT_MIN_SCORE;
+ process.env.ALERT_MIN_SCORE='78';
+ try{
+  scanner.learningSummary=()=>({outOfSample:{status:'holdout_available',selectedThreshold:70,validation:{tokens:25},holdoutAtSelectedThreshold:{tokens:22,positive15Pct:60,averageReturnPct:18,loss20Pct:15}}});
+  assert.deepEqual(scanner.activeAlertThreshold(),{threshold:70,source:'out_of_sample_validation',validated:true,holdoutTokens:22});
+  scanner.learningSummary=()=>({outOfSample:{status:'holdout_available',selectedThreshold:65,validation:{tokens:19},holdoutAtSelectedThreshold:{tokens:19,positive15Pct:80,averageReturnPct:40,loss20Pct:5}}});
+  assert.deepEqual(scanner.activeAlertThreshold(),{threshold:78,source:'configured',validated:false,holdoutTokens:19});
+ }finally{
+  if(previous===undefined)delete process.env.ALERT_MIN_SCORE;else process.env.ALERT_MIN_SCORE=previous;
+ }
+});
