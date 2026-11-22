@@ -101,9 +101,16 @@ function render(page=state.page){
  }
 }
 let dashboardLoadPromise=null;
+function setSyncStatus(label,kind='neutral'){
+ const badge=$('#sync-status');
+ if(!badge)return;
+ badge.className='pill '+kind;
+ badge.innerHTML='<i></i>'+esc(label);
+}
 async function load(options={}){
  if(dashboardLoadPromise)return dashboardLoadPromise;
  const full=options.full!==false;
+ setSyncStatus('Actualisation…','neutral');
  dashboardLoadPromise=(async()=>{
   const coreJobs=[['Vue générale','/api/overview'],['Tokens','/api/tokens?limit=200'],['Alertes','/api/alerts'],['Watchlist','/api/watchlist']];
   const coreResults=await Promise.allSettled(coreJobs.map(([,url])=>api(url)));
@@ -117,6 +124,8 @@ async function load(options={}){
    if(i===2)state.alerts=data.alerts||[];
    if(i===3)state.watchlist=data.watchlist||[];
   }
+  const coreFailures=coreResults.filter(x=>x.status==='rejected').length;
+  setSyncStatus(coreFailures?'Données partielles':state.overview.scannerRunning?'Scanner actif':'Scanner à vérifier',coreFailures?'warn':state.overview.scannerRunning?'good':'warn');
   render(state.page);
   if(!full)return;
   const secondaryJobs=[['Wallets','/api/wallets'],['Créateurs','/api/intelligence/creators'],['Wallet intelligence','/api/intelligence/wallets'],['Backtest','/api/backtest'],['Benchmark historique','/api/backtest/historical'],['Apprentissage continu','/api/learning'],['Nouveaux lancements','/api/launches'],['Graphe wallets','/api/intelligence/wallet-graph'],['Qualité des données','/api/data-quality']];
@@ -135,6 +144,7 @@ async function load(options={}){
    if(i===7)state.walletGraph=data;
    if(i===8)state.dataQuality=data;
   }
+  setSyncStatus(state.loadErrors.length?'Données partielles':state.overview.scannerRunning?'Scanner actif':'Scanner à vérifier',state.loadErrors.length?'warn':state.overview.scannerRunning?'good':'warn');
   render(state.page);
  })();
  try{return await dashboardLoadPromise;}
