@@ -43,6 +43,11 @@ test('un fichier de données corrompu est récupéré depuis la sauvegarde valid
  assert.equal(recovered.state.recoveredFromBackup,true);
  assert.ok(recovered.state.tokens.first);
  assert.equal(recovered.state.tokens.second,undefined);
+ assert.ok(recovered.state.corruptFile);
+ assert.equal(fs.readFileSync(path.join(path.dirname(scanner.file),recovered.state.corruptFile),'utf8'),'{corrupted');
+ recovered.save();
+ const backup=JSON.parse(fs.readFileSync(scanner.file+'.bak','utf8'));
+ assert.ok(backup.tokens.first,'la sauvegarde valide ne doit jamais être remplacée par le JSON corrompu');
 });
 
 test('une migration sans événement de création est conservée sans inventer son âge',()=>{
@@ -216,4 +221,46 @@ test('alerts require fresh market data and downgrade delayed signals',async()=>{
  assert.equal(s.state.tokens.stale.signalLevel,'none');
  assert.deepEqual(s.state.alerts.map(x=>x.mint).sort(),['delayed','fresh']);
  assert.equal(s.state.alerts.find(x=>x.mint==='delayed').level,'watch');
+});
+
+
+test('un état JSON valide mais de schéma incorrect ne fait pas planter le scanner',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'meme-radar-invalid-schema-'));
+ const file=path.join(dir,'store.json');
+ fs.writeFileSync(file,JSON.stringify({version:1,tokens:null,alerts:{},watchlist:'invalid',wallets:[null,{address:'walletA'}],autoWallets:'invalid',walletTrades:{},sources:[]}));
+ const scanner=new MemeScanner({dataFile:file});
+ assert.deepEqual(scanner.state.tokens,{});
+ assert.deepEqual(scanner.state.alerts,[]);
+ assert.deepEqual(scanner.state.watchlist,[]);
+ assert.equal(scanner.state.wallets.length,1);
+ assert.deepEqual(scanner.state.sources,{});
+ assert.doesNotThrow(()=>scanner.status());
+ assert.doesNotThrow(()=>scanner.overview());
+ scanner.save();
+ const reloaded=new MemeScanner({dataFile:file});
+ assert.deepEqual(reloaded.state.tokens,{});
+});
+
+test('un fichier corrompu sans sauvegarde est préservé avant initialisation propre',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'meme-radar-corrupt-preserve-'));
+ const file=path.join(dir,'store.json');
+ const original='{ definitely not valid json';
+ fs.writeFileSync(file,original,'utf8');
+ const scanner=new MemeScanner({dataFile:file});
+ assert.match(scanner.state.recoveryWarning,/illisibles/);
+ assert.ok(scanner.state.corruptFile);
+ assert.equal(fs.readFileSync(path.join(dir,scanner.state.corruptFile),'utf8'),original);
+ scanner.save();
+ assert.equal(fs.readFileSync(path.join(dir,scanner.state.corruptFile),'utf8'),original);
+ assert.doesNotThrow(()=>new MemeScanner({dataFile:file}));
+});
+
+test('readiness remains false until the first scan has completed',()=>{
+ const scanner=make();
+ scanner.running=true;
+ assert.equal(scanner.healthSummary().checks.scanner.ok,false);
+ scanner.state.lastScanAt=new Date().toISOString();
+ assert.equal(scanner.healthSummary().checks.scanner.ok,true);
+ scanner.running=false;
+ assert.equal(scanner.healthSummary().checks.scanner.ok,false);
 });
