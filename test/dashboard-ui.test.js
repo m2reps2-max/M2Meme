@@ -150,3 +150,12 @@ test('API origin guard accepts the configured public dashboard origin behind Fad
  assert.match(server,/sec-fetch-site/);
  assert.doesNotMatch(server,/new URL\(o\)\.host!==req\.get\('host'\)/);
 });
+
+
+test('empty shortlist explains its rejection causes without relaxing selection rules',()=>{
+ assert.match(js,/p\.diagnostics\|\|\{\}/);
+ assert.match(js,/blockedOrUnknownRisk/);
+ assert.match(js,/missingMarketTimestamp/);
+ assert.match(js,/staleMarketOver15m/);
+ assert.match(selection,/securityComprehensive===true/);
+});
