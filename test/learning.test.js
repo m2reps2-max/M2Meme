@@ -73,7 +73,7 @@ test('out-of-sample calibration separates mints and counts one first forecast pe
  assert.ok(result.training.tokens>=70&&result.training.tokens<=90);
  assert.ok(result.validation.tokens>=10&&result.validation.tokens<=30);
  assert.equal(result.selectedThreshold,60);
- assert.equal(result.holdoutAtSelectedThreshold.tokens,result.validation.tokens);
+ assert.equal(result.holdoutAtSelectedThreshold.tokens,result.validation.tokens);\n assert.ok(Date.parse(result.trainingEndAt)<Date.parse(result.validationStartAt));\n assert.equal(result.baselineComparison.randomSameSize.tokens,result.holdoutAtSelectedThreshold.tokens);\n assert.equal(result.baselineComparison.thresholdVsAllValidation,0);
  assert.equal(result.holdoutAtSelectedThreshold.positive15Pct,100);
 });
 
@@ -90,4 +90,19 @@ test('la calibration hors échantillon ignore les prévisions sans score réel',
  const result=learningSummary.call(scanner).outOfSample;
  assert.equal(result.uniqueResolvedTokens,0);
  assert.equal(result.status,'insufficient_sample');
+});
+
+test('la validation walk-forward utilise uniquement des tokens plus récents que le training',()=>{
+ const tokens={};
+ for(let i=0;i<40;i++){
+  const mint='WalkForward'+String(i).padStart(4,'0');
+  tokens[mint]={mint,forecasts:[{at:i*1000+1,score:i<32?85:45,outcomes:{'1h':{returnPct:i<32?25:-10,label:i<32?'win':'drawdown'}}}]};
+ }
+ const result=learningSummary.call({state:{tokens}}).outOfSample;
+ assert.equal(result.training.tokens,32);
+ assert.equal(result.validation.tokens,8);
+ assert.ok(Date.parse(result.trainingEndAt)<Date.parse(result.validationStartAt));
+ assert.equal(result.selectedThreshold,60);
+ assert.equal(result.holdoutAtSelectedThreshold.tokens,0);
+ assert.equal(result.status,'holdout_too_small');
 });
