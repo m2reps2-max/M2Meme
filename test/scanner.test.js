@@ -133,3 +133,39 @@ test('le seuil des alertes ne change qu’après une validation hors échantillo
   if(previous===undefined)delete process.env.ALERT_MIN_SCORE;else process.env.ALERT_MIN_SCORE=previous;
  }
 });
+
+test('le suivi wallet utilise un curseur RPC et reprend après la dernière signature traitée',async()=>{
+ const scanner=make();
+ const address='CursorWallet111111111111111111111111111111';
+ scanner.state.wallets=[{address,label:'Cursor'}];
+ const calls=[];
+ scanner.rpc=async(method,params)=>{
+  if(method==='getSignaturesForAddress'){
+   calls.push(params[1]);
+   return calls.length===1?[{signature:'sig-new'},{signature:'sig-old'}]:[];
+  }
+  if(method==='getTransaction')return {slot:1,transaction:{message:{accountKeys:[address]}},meta:{preBalances:[100],postBalances:[100],preTokenBalances:[],postTokenBalances:[],fee:0}};
+  throw new Error('unexpected RPC '+method);
+ };
+ scanner.save=()=>{};
+ scanner.scoreAll=()=>{};
+ await scanner.refreshWallets();
+ assert.equal(scanner.state.walletCursors[address],'sig-old');
+ await scanner.refreshWallets();
+ assert.equal(calls[1].before,'sig-old');
+});
+test('la santé distingue serveur actif et sources de données dégradées',()=>{
+ const scanner=make();scanner.running=true;
+ scanner.status=()=>({
+  dexscreener:{lastSuccess:new Date().toISOString(),error:null},
+  geckoTerminal:{lastSuccess:null,error:'offline'},
+  solanaRpc:{lastSuccess:null,error:'offline'},
+  pumpPortal:{connected:false,lastMessageAt:null,lastError:'offline'},
+  redditRss:{connected:false,lastSuccess:null,error:'offline'},
+  bluesky:{connected:false,lastSuccess:null,lastError:'offline'}
+ });
+ const health=scanner.healthSummary();
+ assert.equal(health.state,'healthy');
+ assert.equal(health.checks.dexscreener.ok,true);
+ assert.equal(health.checks.pumpPortal.ok,false);
+});
