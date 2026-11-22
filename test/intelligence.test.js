@@ -148,3 +148,40 @@ test('early buyer exit intelligence ignores unconfirmed transfers and one-wallet
  assert.equal(result.alert,false);
  assert.equal(result.recentSwapLikeSells,1);
 });
+
+test('wallet performance counts one outcome per token and shrinks small samples toward neutral',()=>{
+ const address='RepeatWallet111111111111111111111111111111';
+ const mint='RepeatMint11111111111111111111111111111111';
+ const eventAt=3_000_000;
+ const history=[{at:eventAt-1000,priceUsd:1},{at:eventAt+3600000,priceUsd:1.2}];
+ const walletTrades=Array.from({length:8},(_,i)=>({wallet:address,mint,direction:'buy',at:new Date(eventAt+i*1000).toISOString()}));
+ const result=require('../lib/intelligence').walletIntel.call({state:{
+  wallets:[{address}],walletTrades,walletActivity:{},tokens:{[mint]:{mint,symbol:'TEST',history}}
+ }});
+ const performance=result.wallets[0].performance;
+ assert.equal(performance.observedBuyEvents,8);
+ assert.equal(performance.matchedBuys,1);
+ assert.equal(performance.matchedTokens,1);
+ assert.equal(performance.observedPerformanceScore,null);
+ assert.equal(performance.winRatePct,100);
+});
+
+test('wallet performance score needs several independent token observations and is confidence-shrunk',()=>{
+ const address='ConsistentWallet111111111111111111111111111111';
+ const tokens={};
+ const walletTrades=[];
+ for(let i=0;i<5;i++){
+  const mint='ConsistentMint'+i+'1111111111111111111111111111';
+  const eventAt=10_000_000+i*10_000_000;
+  walletTrades.push({wallet:address,mint,direction:'buy',at:new Date(eventAt).toISOString()});
+  tokens[mint]={mint,symbol:'T'+i,history:[{at:eventAt-1000,priceUsd:1},{at:eventAt+3600000,priceUsd:1.2}]};
+ }
+ const result=require('../lib/intelligence').walletIntel.call({state:{
+  wallets:[{address}],walletTrades,walletActivity:{},tokens
+ }});
+ const performance=result.wallets[0].performance;
+ assert.equal(performance.matchedTokens,5);
+ assert.ok(performance.observedPerformanceScore>50);
+ assert.ok(performance.observedPerformanceScore<85);
+ assert.equal(performance.severeLossRatePct,0);
+});
