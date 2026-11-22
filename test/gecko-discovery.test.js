@@ -84,3 +84,11 @@ test('pool trade persistence enforces a bounded rolling history',()=>{
  assert.equal(result.rows.length,3);
  assert.equal(result.rows.at(-1).signature,'new');
 });
+
+test('Gecko sample does not duplicate a wallet RPC observation for the same swap',()=>{
+ const existing=[{wallet:'walletA',mint:'mintA',signature:'same-sig',at:'2026-11-22T10:00:00Z',direction:'buy',source:'solana_rpc'}];
+ const result=mergeObservedTrades(existing,'mintA',[{wallet:'walletA',mint:'mintA',signature:'same-sig',at:'2026-11-22T10:00:00Z',direction:'buy',volumeUsd:10}],5000);
+ assert.equal(result.added,0);
+ assert.equal(result.rows.length,1);
+ assert.equal(result.rows[0].source,'solana_rpc');
+});
