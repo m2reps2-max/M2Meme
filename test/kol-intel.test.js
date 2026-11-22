@@ -1,0 +1,66 @@
+'use strict';
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const {normalizeLeaderboard,normalizeTrades,mergeLeaderboard,mergeTrades,portfolioFor,buildExpertSnapshot,MadeOnSolRadar}=require('../lib/kol-intel');
+const walletA='CyaE1Vxv111111111111111111111111111111111111';
+const walletB='FixmSpsB111111111111111111111111111111111111';
+const mint='tca3tbFf111111111111111111111111111111111111';
+
+test('leaderboard rejects shortened addresses and keeps separate ranking evidence',()=>{
+ const rows=normalizeLeaderboard({period:'7d',leaderboard:[{wallet:walletA,name:'Cented',pnl:12,win_rate:60,percentile_early_entry_30d:82},{wallet:'CyaE...ga54o',name:'truncated'}]},'pnl');
+ assert.equal(rows.length,1);assert.equal(rows[0].wallet,walletA);assert.equal(rows[0].pnlSol,12);
+ const state={experts:[]};mergeLeaderboard(state,rows,'pnl','2026-11-22T00:00:00.000Z');
+ mergeLeaderboard(state,[{...rows[0],rank:2,earlyEntryPct:90}],'early_entry_pct','2026-11-22T00:01:00.000Z');
+ assert.equal(state.experts.length,1);assert.equal(state.experts[0].rankings.pnl.rank,1);assert.equal(state.experts[0].rankings.early_entry_pct.rank,2);
+});
+
+test('trade feed validates events and normalizes time and trade amounts',()=>{
+ const rows=normalizeTrades({trades:[
+  {wallet_address:walletA,token_mint:mint,action:'buy',sol_amount:2,token_amount:1000,price_usd_at_trade:0.002,tx_signature:'sig-a',traded_at:'2026-11-22T00:00:00Z',kol_name:'Cented'},
+  {wallet_address:'short',token_mint:mint,action:'buy',sol_amount:2,token_amount:1000,traded_at:'2026-11-22T00:00:00Z'},
+  {wallet_address:walletA,token_mint:mint,action:'transfer',sol_amount:2,token_amount:1000,traded_at:'2026-11-22T00:00:00Z'}
+ ]});
+ assert.equal(rows.length,1);assert.equal(rows[0].action,'buy');assert.equal(rows[0].solAmount,2);
+});
+
+test('feed merge deduplicates signatures and stores only ranked expert wallets',()=>{
+ const state={experts:[{wallet:walletA,name:'Cented'}],expertTrades:[]};
+ const row=normalizeTrades({trades:[{wallet_address:walletA,token_mint:mint,action:'buy',sol_amount:1,token_amount:500,tx_signature:'same',traded_at:'2026-11-22T00:00:00Z'}]})[0];
+ assert.equal(mergeTrades(state,[row,row]).added,1);assert.equal(mergeTrades(state,[row]).added,0);assert.equal(state.expertTrades.length,1);
+ const outsider={...row,id:'other',wallet:walletB};assert.equal(mergeTrades(state,[outsider]).added,0);
+});
+
+test('observed portfolio estimates average-cost exits and marks coverage incomplete',()=>{
+ const events=[
+  {wallet:walletA,mint,action:'buy',solAmount:2,tokenAmount:1000,priceUsd:0.002,at:'2026-11-22T00:00:00Z',name:'Coin',symbol:'COIN'},
+  {wallet:walletA,mint,action:'buy',solAmount:2,tokenAmount:1000,priceUsd:0.004,at:'2026-11-22T00:01:00Z'},
+  {wallet:walletA,mint,action:'sell',solAmount:3,tokenAmount:1000,priceUsd:0.003,at:'2026-11-22T00:02:00Z'}
+ ];
+ const result=portfolioFor({wallet:walletA},events,{[mint]:{priceUsd:0.006,name:'Coin',symbol:'COIN'}});
+ assert.equal(result.openPositionCount,1);assert.equal(result.openPositions[0].quantity,1000);
+ assert.equal(result.openPositions[0].averageEntryUsd,0.003);assert.equal(result.openPositions[0].unrealizedPct,100);
+ assert.equal(result.observedRealizedPnlSol,1);assert.equal(result.historyComplete,false);
+});
+
+test('portfolio does not invent current prices or treat unmatched sells as profit',()=>{
+ const result=portfolioFor({wallet:walletA},[
+  {wallet:walletA,mint,action:'sell',solAmount:1,tokenAmount:100,priceUsd:null,at:'2026-11-22T00:00:00Z'}
+ ],{});
+ assert.equal(result.openPositionCount,0);assert.equal(result.observedRealizedPnlSol,null);assert.equal(result.unmatchedSells,1);
+});
+
+test('MadeOnSol poller stays inert without an API key',async()=>{
+ const state={sources:{}};const radar=new MadeOnSolRadar({state,apiKey:''});
+ const result=await radar.refresh();assert.equal(result.configured,false);assert.equal(state.sources.madeOnSol.connected,false);
+});
+
+test('MadeOnSol poller fetches the free leaderboards and feed within schedule',async()=>{
+ let now=Date.parse('2026-11-22T00:00:00Z');const calls=[];
+ const response=(data)=>({ok:true,status:200,statusText:'OK',text:async()=>JSON.stringify(data)});
+ const fetchImpl=async(url)=>{calls.push(url);if(url.includes('/kol/leaderboard')){const sort=new URL(url).searchParams.get('sort');return response({period:'7d',leaderboard:[{wallet:walletA,name:'Cented',pnl:5,rank:1,percentile_early_entry_30d:80},{wallet:walletB,name:'Marcell',pnl:4,rank:2}]});}return response({trades:[{wallet_address:walletA,token_mint:mint,action:'buy',sol_amount:1,token_amount:100,tx_signature:'feed-sig',traded_at:'2026-11-22T00:00:00Z',kol_name:'Cented'}]});};
+ const state={sources:{},experts:[],expertTrades:[]};
+ const radar=new MadeOnSolRadar({state,apiKey:'msk_test_key',fetchImpl,now:()=>now});
+ const first=await radar.refresh();assert.equal(first.successful,3);assert.equal(state.experts.length,2);assert.equal(state.expertTrades.length,1);assert.equal(calls.length,3);
+ now+=5*60*1000;await radar.refresh();assert.equal(calls.length,3);
+ now+=10*60*1000;await radar.refresh();assert.equal(calls.length,4);
+});
