@@ -29,6 +29,12 @@ Dashboard privé de recherche de meme coins Solana. Le projet utilise uniquement
 - Les mesures de volume/liquidité et FDV/liquidité sont des ratios descriptifs, pas des preuves de liquidité réellement retirable. Les données DexScreener peuvent être retardées ou incomplètes.
 - La détection de bundles, de wallets liés, de snipers, de créateurs multi-wallets et de rentabilité historique de wallets n'est pas incluse dans cette version : ces analyses nécessitent des données de transactions plus profondes et une attribution fiable, qu'un simple RPC public ne garantit pas.
 
+## Modules d'intelligence
+
+- **Analyse créateur (proxy)** : regroupe les tokens par mint/freeze authority exposée par les contrôles RPC. Ce n'est pas une identification certaine du créateur initial.
+- **Wallet intelligence** : observe les variations nettes de soldes SPL dans les transactions récentes des wallets ajoutés. Les prix au moment exact de chaque transaction, le PnL net, les frais et le slippage ne sont pas certifiés.
+- **Backtesting** : compare le prix d'un snapshot au premier snapshot disponible après 1, 5, 15 et 30 minutes, puis segmente les résultats selon le score initial. Les résultats s'accumulent à partir du déploiement et n'incluent ni frais, ni slippage, ni tokens jamais découverts.
+
 ## Installation sur FadeHost
 
 1. Connecte le dépôt GitHub ou mets à jour les fichiers de l'application.
