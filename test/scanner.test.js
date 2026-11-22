@@ -80,3 +80,14 @@ test('un nouveau pool GeckoTerminal est intégré sans inventer un créateur', (
  assert.equal(token.creator,undefined);
  assert.ok(token.firstSeenAt);
 });
+
+test('les wallets découverts automatiquement sont surveillés même sans wallet manuel',async()=>{
+ const scanner=make();
+ const address='AutoWallet11111111111111111111111111111111';
+ scanner.state.autoWallets=[{address,label:'Acheteur observé'}];
+ scanner.rpc=async(method)=>{assert.equal(method,'getSignaturesForAddress');return [];};
+ scanner.save=()=>{};
+ scanner.scoreAll=()=>{};
+ await scanner.refreshWallets();
+ assert.ok(scanner.state.walletActivity[address]);
+});
