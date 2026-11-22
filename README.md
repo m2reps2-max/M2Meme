@@ -170,3 +170,8 @@ La page de test historique présente séparément des études de cas documentée
 ### Détection de groupes de wallets et bundles candidats
 
 Le graphe analyse les achats observés par mint et par slot, ainsi que les rafales d'au moins trois wallets distincts dans une fenêtre de cinq secondes. Il recherche aussi les groupes de wallets qui réapparaissent ensemble sur plusieurs tokens. Les preuves sont séparées entre transactions RPC confirmées et échantillons GeckoTerminal. Les résultats sont nommés « groupes candidats » ou « bundle-like » : ils ne prouvent pas une coordination, un contrôle commun ou un bundle on-chain. Les transactions observées restent limitées à la couverture du RPC et aux pools effectivement inspectés.
+
+
+### Comparaison des alertes par cohorte historique
+
+Le benchmark agrège maintenant les résultats des alertes à poids égal par token dans chaque cohorte (cycle winners, survivants, boom-bust, long-tail et forte volatilité). Il affiche, à 1/3/7 jours, le rendement moyen par token, la proportion moyenne de tokens ayant atteint +15%, la proportion ayant touché -20% et l'écart moyen entre alertes et tous les signaux du même token. Cette agrégation évite qu'un token avec davantage de bougies domine les statistiques. Les signaux quotidiens et leurs fenêtres futures se chevauchent : ils ne sont pas indépendants. Les cohortes restent un échantillon de cas connus et ne constituent pas un univers exhaustif ni un backtest de lancement à lancement.
