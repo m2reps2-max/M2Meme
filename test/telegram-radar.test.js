@@ -83,3 +83,8 @@ test('extracts only Telegram links from the public channel header', () => {
     '<div data-post="seedchannel/1"><a href="https://t.me/randomtokenchannel">Token</a></div>';
   assert.deepEqual(extractHeaderChannels(html), ['solwhaletrending']);
 });
+
+test('default discovery seeds include launch, whale, KOL and crypto research sources', () => {
+  const { DISCOVERY_SEEDS } = require('../lib/telegram-radar');
+  assert.deepEqual(DISCOVERY_SEEDS, ['solearlytrending', 'solwhaletrending', 'soltrenchtrending', 'spydefi', 'arcanegems']);
+});
