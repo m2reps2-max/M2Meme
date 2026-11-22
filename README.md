@@ -52,7 +52,7 @@ Les prévisions conservent désormais les excursions maximales favorables et dé
 
 ## Deuxième avis de sécurité gratuit (GL1TCH)
 
-À l'ouverture d'une fiche token, MEME RADAR demande aussi un rapport indépendant à l'API publique de GL1TCH, sans clé API ni abonnement. Le rapport peut apporter des signaux complémentaires sur les wallets liés, les volumes artificiels, l'historique du déployeur, les extensions Token-2022, les métadonnées et la liquidité. Le score et le verdict GL1TCH sont affichés séparément : ils ne sont pas mélangés au score MEME RADAR, car les échelles et méthodes des deux projets ne sont pas nécessairement comparables.
+Automatiquement, MEME RADAR demande aussi un rapport indépendant à l'API publique de GL1TCH pour les cinq candidats prioritaires du contrôle de sécurité, environ toutes les dix minutes, et à l'ouverture d'une fiche token si le rapport est absent ou périmé. Aucun abonnement ni clé API n'est requis. Le rapport peut apporter des signaux complémentaires sur les wallets liés, les volumes artificiels, l'historique du déployeur, les extensions Token-2022, les métadonnées et la liquidité. Le score et le verdict GL1TCH sont affichés séparément : ils ne sont pas mélangés au score MEME RADAR, car les échelles et méthodes des deux projets ne sont pas nécessairement comparables.
 
 Le résultat est mis en cache 30 minutes en cas de succès et 5 minutes en cas d'échec. MEME RADAR plafonne ses propres appels à 30 par minute pour rester sous la limite publique annoncée par GL1TCH (40/minute par IP). Le module est facultatif du point de vue du fonctionnement : si GL1TCH est indisponible, le scanner local continue normalement. Aucun nouveau secret, abonnement ou variable FadeHost n'est requis.
 
