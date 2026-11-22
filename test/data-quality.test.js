@@ -33,6 +33,7 @@ test('missing timestamps stay unknown and are excluded from freshness averages',
  const unknown={mint:'unknown'};
  const result=dataQualitySummary.call({state:{tokens:{stale,unknown}}});
  assert.equal(result.tokens.find(x=>x.mint==='unknown').freshnessPct,null);
+ assert.ok(result.tokens.find(x=>x.mint==='unknown').issues.some(x=>x.severity==='unknown_timestamp'));
  assert.equal(result.summary.freshnessCoverageTokens,1);
  assert.equal(result.summary.freshnessCoveragePct,50);
  assert.equal(result.summary.averageFreshnessPct,0);
