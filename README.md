@@ -160,3 +160,8 @@ Commandes : `/start`, `/dashboard`, `/scan`, `/opportunities`, `/help`. Les aler
 ### Échantillons de transactions GeckoTerminal
 
 Les transactions publiques GeckoTerminal observées lors d'une analyse de pool sont désormais enregistrées dans l'historique des wallets, avec leur signature, leur mint, leur slot, leur horodatage, leur direction et leur volume USD. L'ingestion est idempotente et l'historique est borné à 5 000 événements. Cela enrichit le graphe des wallets au-delà des seuls wallets surveillés manuellement ou découverts comme acheteurs précoces. Cette source reste un échantillon public limité aux pools analysés et aux 300 dernières transactions retournées; elle ne représente pas l'ensemble des échanges du marché.
+
+
+### Cas historiques documentés de pertes
+
+La page de test historique présente séparément des études de cas documentées (dont SHARPEI en octobre 2024 et une sortie de pool TWS analysée par CertiK). Ces cas illustrent des schémas de ventes concentrées et de sorties de liquidité, mais ne sont **pas** injectés dans les métriques de replay ni dans l'entraînement du score : sans série OHLCV historique complète et correspondance de mint vérifiée pour l'incident, cela créerait une fausse précision. Les sources sont liées directement dans le tableau de bord.
