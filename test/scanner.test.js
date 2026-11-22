@@ -357,7 +357,7 @@ test('la freeze authority reste un blocage critique indépendant des données ho
 
 test('une couverture élevée sans facteur sécurité ne peut pas produire un candidat fort',()=>{
  const s=make();
- const token={txns:{h1:{buys:100,sells:10}},volume:{h1:10000,h24:50000},liquidityUsd:20000,fdv:100000,ageHours:1,history:[{at:1,liquidityUsd:15000,priceUsd:.01,buys1h:10,sells1h:10},{at:2,liquidityUsd:20000,priceUsd:.012,buys1h:100,sells1h:10}]};
+ const token={pairAddress:'market-pool',txns:{h1:{buys:100,sells:10}},volume:{h1:10000,h24:50000},liquidityUsd:20000,fdv:100000,ageHours:1,history:[{at:1,liquidityUsd:15000,priceUsd:.01,buys1h:10,sells1h:10},{at:2,liquidityUsd:20000,priceUsd:.012,buys1h:100,sells1h:10}]};
  const a=s.score(token);
  assert.ok(a.coverage>=70);
  assert.equal(a.readiness,'partial');
