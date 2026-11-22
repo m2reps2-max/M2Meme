@@ -130,12 +130,14 @@ Le système fournit une calibration et une tranche de score historiquement la pl
 ## Variables FadeHost à configurer
 
 ### Obligatoires
-- `DASHBOARD_ACCESS_CODE` : ton code privé, sans longueur minimale ; il doit simplement être non vide. Pour la sécurité, évite un code trop facile à deviner.
-- `DASHBOARD_SESSION_SECRET` : secret aléatoire stable d'au moins 32 caractères. Ne le change pas à chaque redémarrage.
-- `DASHBOARD_URL` : URL HTTPS publique du dashboard.
-- `NODE_ENV` : `production`.
+- `DASHBOARD_ACCESS_CODE` : ton code privé non vide. L'ancien nom `DASHBOARD_PASSWORD` est aussi accepté automatiquement pour ne pas casser les déploiements existants. Pour la sécurité, évite un code trop facile à deviner.
 
-Génère une valeur forte pour le secret de session avec cette commande sur une machine disposant de Node.js :
+### Facultatives mais recommandées
+- `DASHBOARD_SESSION_SECRET` : secret stable d'au moins 32 caractères. Si tu ne le renseignes pas, le bot en génère un aléatoire dans `data/session-secret.key` et le réutilise aux redémarrages. Le dossier `data/` doit donc être persistant sur FadeHost. Si tu fournis un secret explicite, ne le change pas à chaque redémarrage.
+- `DASHBOARD_URL` : URL HTTPS publique du dashboard. Elle sert au lien envoyé dans Telegram; le serveur peut démarrer sans elle.
+- `NODE_ENV` : `production` (recommandé). Les cookies sont sécurisés en production.
+
+Génère une valeur forte pour le secret de session avec cette commande sur une machine disposant de Node.js si tu préfères le définir toi-même :
 ```bash
 node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 ```
@@ -152,6 +154,12 @@ Ne partage jamais ces secrets dans une conversation et ne les commits pas sur Gi
 
 **Aucune autre clé n'est nécessaire.** N'ajoute pas `BIRDEYE_API_KEY`, `HELIUS_API_KEY`, `X_BEARER_TOKEN` ou `PUMPPORTAL_API_KEY` : cette version ne les utilise plus.
 
+## Vérification de santé
+
+- `GET /health` : liveness minimal, public et sans divulgation des erreurs internes.
+- `GET /health/ready` : readiness du processus scanner.
+- `GET /api/system/health` : détails des sources, réservé à une session authentifiée.
+
 ## Telegram
 
 Commandes : `/start`, `/dashboard`, `/scan`, `/opportunities`, `/help`. Le bot démarre en long polling au lancement du serveur si `TELEGRAM_BOT_TOKEN` (ou `BOT_TOKEN`) est renseigné. Les alertes sont envoyées uniquement si le token et `TELEGRAM_CHAT_ID` sont renseignés.
@@ -162,7 +170,7 @@ Commandes : `/start`, `/dashboard`, `/scan`, `/opportunities`, `/help`. Le bot d
 - Le code d'accès est vérifié côté serveur.
 - La session utilise un cookie HttpOnly signé, avec une durée navigateur de 10 ans. Le navigateur peut toujours supprimer ses cookies.
 - Les sessions persistent au redémarrage si `DASHBOARD_SESSION_SECRET` reste identique.
-- Le scanner crée `data/store.json` automatiquement, écrit de façon atomique et conserve une copie périodique `data/store.json.bak` du dernier état valide (au plus une fois par heure). En cas de fichier principal illisible au redémarrage, la copie est utilisée automatiquement. Le dossier `data/` doit être persistant sur FadeHost.
+- Le scanner crée `data/store.json` automatiquement, écrit de façon atomique et conserve une copie périodique `data/store.json.bak` du dernier état valide (au plus une fois par heure). En cas de fichier principal illisible au redémarrage, la copie est utilisée automatiquement. Si les deux fichiers sont illisibles, le fichier corrompu est conservé sous un nom `.corrupt-*` avant l'initialisation d'un état propre. Les structures JSON partielles ou d'ancienne version sont normalisées sans faire planter le serveur. Le dossier `data/` doit être persistant sur FadeHost.
 - Les variables secrètes doivent rester dans le panneau FadeHost, jamais dans le dépôt GitHub.
 
 
