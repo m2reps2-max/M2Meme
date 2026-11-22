@@ -8,6 +8,9 @@ Dashboard privé de recherche de meme coins Solana. Le projet utilise uniquement
 |---|---|---|
 | Découverte de tokens | DexScreener (profils récents et tokens boostés) | Rien |
 | Prix, liquidité, volume, transactions, âge de la paire | DexScreener | Rien |
+| Momentum acheteurs/vendeurs et accélération entre scans | DexScreener + historique local | Rien |
+| Qualité de liquidité, ratio volume/liquidité, FDV/liquidité | DexScreener + historique local | Rien |
+| Drapeaux de risque : pression vendeuse, chute de liquidité, pool très peu liquide | DexScreener + RPC public | Rien |
 | Contrôles de mint/freeze authority | RPC public Solana | Rien |
 | Concentration des 10 plus gros comptes détenteurs | RPC public Solana | Rien |
 | Suivi de 10 wallets maximum | RPC public Solana, 5 transactions récentes par wallet, toutes les 10 minutes | Rien |
@@ -22,7 +25,9 @@ Dashboard privé de recherche de meme coins Solana. Le projet utilise uniquement
 - Le pourcentage top 10 est calculé à partir des dix plus gros comptes de tokens renvoyés par le RPC. Les comptes peuvent appartenir au même détenteur (par exemple des pools ou des wallets liés) : ce n'est pas une analyse de bénéficiaires uniques.
 - Smart Money suit uniquement les adresses que tu ajoutes. Ce n'est pas une liste automatique de traders rentables et les transactions récentes ne prouvent pas qu'un wallet est performant.
 - Pas de mesure des mentions X, des tendances sociales ou des narratifs : ces fonctions nécessitent des données non disponibles dans cette version gratuite. Les liens sociaux publics restent visibles.
-- Les scores sont des indicateurs heuristiques, pas des probabilités de hausse ni des conseils d'achat.
+- Les scores sont des indicateurs heuristiques, pas des probabilités de hausse ni des conseils d'achat. Les signaux de momentum et les variations de liquidité ne deviennent exploitables qu'après plusieurs observations espacées; au premier scan, l'historique est incomplet.
+- Les mesures de volume/liquidité et FDV/liquidité sont des ratios descriptifs, pas des preuves de liquidité réellement retirable. Les données DexScreener peuvent être retardées ou incomplètes.
+- La détection de bundles, de wallets liés, de snipers, de créateurs multi-wallets et de rentabilité historique de wallets n'est pas incluse dans cette version : ces analyses nécessitent des données de transactions plus profondes et une attribution fiable, qu'un simple RPC public ne garantit pas.
 
 ## Installation sur FadeHost
 
