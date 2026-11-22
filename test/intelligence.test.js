@@ -1,7 +1,7 @@
 'use strict';
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const {backtest}=require('../lib/intelligence');
+const {backtest,creatorFundingClusters}=require('../lib/intelligence');
 
 test('backtest limits each horizon to a nearby observation and measures excursions',()=>{
  const history=[
