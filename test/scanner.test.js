@@ -285,3 +285,23 @@ test('background tasks do not overlap scans or each other',async()=>{
  assert.equal(scanner.backgroundTaskRunning,null);
  scanner.stop();
 });
+
+
+test('un lancement sans pool est explicitement en attente de marché et ne ressemble pas à une panne',()=>{
+ const scanner=make();
+ const a=scanner.score({mint:'NewLaunch11111111111111111111111111111111',launchSource:'Pump.fun',launchAgeHours:0.02,pumpCreatedAt:new Date().toISOString()});
+ assert.equal(a.coverage,5);
+ assert.equal(a.readiness,'awaiting_market');
+ assert.equal(a.readinessLabel,'Marché en attente');
+ assert.equal(a.marketLinked,false);
+ assert.ok(a.readinessReason.includes('aucun pool'));
+ assert.ok(a.missingFactors.includes('market'));
+});
+
+test('un token avec un pool mais peu de facteurs est signalé comme analyse incomplète',()=>{
+ const scanner=make();
+ const a=scanner.score({mint:'PoolToken11111111111111111111111111111111',pairAddress:'pool',liquidityUsd:10000,volume:{h24:5000},ageHours:null});
+ assert.equal(a.readiness,'insufficient_data');
+ assert.equal(a.marketLinked,true);
+ assert.ok(a.missingFactors.includes('security'));
+});
