@@ -23,7 +23,7 @@ test('parses public Telegram channel messages and rejects malformed timestamps',
 });
 
 test('token matching prefers mint and rejects ambiguous short symbols', () => {
-  assert.equal(tokenMention('Mint123456789012345678901234567890123', { mint: 'Mint123456789012345678901234567890123', symbol: 'CAT' }), true);
+  assert.equal(tokenMention('Mint123456789ABCDEFGHJKLMNPQRSTUVWXYZ', { mint: 'Mint123456789ABCDEFGHJKLMNPQRSTUVWXYZ', symbol: 'CAT' }), true);
   assert.equal(tokenMention('CATCH is moving', { mint: 'SomeOtherMint123456789012345678901234', symbol: 'CAT' }), false);
   assert.equal(tokenMention('$BONK is moving', { mint: 'SomeOtherMint123456789012345678901234', symbol: 'BONK' }), true);
 });
