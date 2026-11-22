@@ -1,51 +1,72 @@
-# MEME RADAR V2 — Solana intelligence scanner
+# MEME RADAR — version gratuite
 
-A private, read-only meme-coin research dashboard. V2 adds a live discovery pipeline, token ranking with coverage, token detail analysis, optional security checks, optional watched-wallet activity, optional X mention lookup, watchlist, alert history, and Telegram notifications. **No automatic trading or transaction signing is implemented.**
+Dashboard privé de recherche de meme coins Solana. Le projet utilise uniquement des sources publiques gratuites : DexScreener et le RPC public Solana. Telegram est facultatif. Aucun fournisseur payant, aucune clé API payante, aucun wallet de trading et aucune signature de transaction.
 
-## What is live and what needs a key
+## Fonctions disponibles sans payer
 
-| Provider | Role | Key required |
+| Fonction | Source | Configuration |
 |---|---|---|
-| DexScreener | Public latest token profiles, boosted tokens, pair/price/liquidity/volume/transaction data | No |
-| PumpPortal | WebSocket stream for newly created Pump.fun tokens | Yes (`PUMPPORTAL_API_KEY`) |
-| Birdeye | Token security observations, authority flags and holder concentration | Yes (`BIRDEYE_API_KEY`) |
-| Helius | Recent transaction history for wallets added to Smart Money watchlist | Yes (`HELIUS_API_KEY`) |
-| X API | On-demand recent public mentions for a token symbol | Yes (`X_BEARER_TOKEN`) |
-| Telegram | Alerts to a private chat or channel | `BOT_TOKEN` + `TELEGRAM_CHAT_ID` |
+| Découverte de tokens | DexScreener (profils récents et tokens boostés) | Rien |
+| Prix, liquidité, volume, transactions, âge de la paire | DexScreener | Rien |
+| Contrôles de mint/freeze authority | RPC public Solana | Rien |
+| Concentration des 10 plus gros comptes détenteurs | RPC public Solana | Rien |
+| Suivi de 10 wallets maximum | RPC public Solana, 5 transactions récentes par wallet, toutes les 10 minutes | Rien |
+| Liens de sites et réseaux sociaux | Métadonnées DexScreener | Rien |
+| Alertes Telegram | Telegram Bot API | Bot token + chat ID facultatifs |
+| Dashboard et historique | Express + stockage JSON local | Variables d'accès + stockage persistant FadeHost |
 
-DexScreener's public latest-profile/boost feeds are not a complete index of every new token. PumpPortal is the new-token launch stream in this implementation. If no PumpPortal key is configured, discovery is limited to tokens visible in DexScreener's latest profiles/boost lists. API coverage, provider limits and delays apply.
+**Limites importantes :**
+- DexScreener ne recense pas instantanément tous les tokens créés sur Solana. La découverte dépend de ses flux publics (profils et boosts), ce n'est pas un flux exhaustif de chaque lancement.
+- Le RPC public Solana est partagé et soumis à des limites de débit. Si FadeHost ou d'autres utilisateurs envoient trop de requêtes, certaines vérifications peuvent échouer temporairement. On peut renseigner un autre endpoint RPC public/gratuit dans `SOLANA_RPC_URL`, sans garantie de disponibilité.
+- Les contrôles on-chain donnent des observations : ils ne prouvent pas que la liquidité est verrouillée, qu'un token est vendable ou qu'un contrat est sûr.
+- Le pourcentage top 10 est calculé à partir des dix plus gros comptes de tokens renvoyés par le RPC. Les comptes peuvent appartenir au même détenteur (par exemple des pools ou des wallets liés) : ce n'est pas une analyse de bénéficiaires uniques.
+- Smart Money suit uniquement les adresses que tu ajoutes. Ce n'est pas une liste automatique de traders rentables et les transactions récentes ne prouvent pas qu'un wallet est performant.
+- Pas de mesure des mentions X, des tendances sociales ou des narratifs : ces fonctions nécessitent des données non disponibles dans cette version gratuite. Les liens sociaux publics restent visibles.
+- Les scores sont des indicateurs heuristiques, pas des probabilités de hausse ni des conseils d'achat.
 
-## Scoring and risk
+## Installation sur FadeHost
 
-The score is calculated only from available inputs, with a visible coverage percentage. Weights: social mentions 20, on-chain activity 20, market/liquidity 15, watched-wallet activity 15, narrative 10, security 15, timing 5. Unknown inputs are omitted from the denominator; they are never silently treated as safe or positive. A token with insufficient coverage has low confidence. The security provider's observations are not an independent audit, and no score predicts price performance. A freeze authority observation or very high top-holder concentration can hard-block a candidate from the opportunity list.
+1. Connecte le dépôt GitHub ou mets à jour les fichiers de l'application.
+2. Choisis **Node.js 20 ou supérieur**.
+3. Dans le panneau FadeHost, configure les variables listées ci-dessous.
+4. Lance l'installation des dépendances avec `npm install`.
+5. Définis la commande de démarrage sur `npm start`.
+6. Vérifie que le dossier `data/` est conservé lors des redémarrages et redéploiements.
 
-The wallet module monitors only addresses you add. It does not automatically know which wallets are profitable. X mention lookup searches a token symbol, returns a maximum 10-post sample per manual check and may incur usage-based API charges; homonyms and ticker collisions are possible. Helius polling is limited to 10 watched wallets and runs every 10 minutes to control credits. Social and wallet data are signals, not proof.
+## Variables FadeHost à configurer
 
-## FadeHost deployment
+### Obligatoires
+- `DASHBOARD_ACCESS_CODE` : ton code privé, au moins 12 caractères.
+- `DASHBOARD_SESSION_SECRET` : secret aléatoire stable d'au moins 32 caractères. Ne le change pas à chaque redémarrage.
+- `DASHBOARD_URL` : URL HTTPS publique du dashboard.
+- `NODE_ENV` : `production`.
 
-1. Upload the repository files to the app directory or connect the GitHub repository.
-2. Use Node.js 20 or newer.
-3. Set the variables from `.env.example` in the FadeHost panel. Never paste API keys into GitHub or dashboard code.
-4. Set a strong `DASHBOARD_ACCESS_CODE` (12+ characters).
-5. Generate `DASHBOARD_SESSION_SECRET` once with `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`; keep it stable across restarts.
-6. Set `DASHBOARD_URL` to the public HTTPS dashboard URL and `NODE_ENV=production`.
-7. Install with `npm install`, then run `npm start`.
-8. The scanner creates `data/store.json` automatically. Ensure FadeHost preserves the app's `data/` directory across restarts and deployments.
+Génère une valeur forte pour le secret de session avec cette commande sur une machine disposant de Node.js :
+```bash
+node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+```
+Ne partage jamais ces secrets dans une conversation et ne les commits pas sur GitHub.
+
+### Facultatives
+- `BOT_TOKEN` : token obtenu auprès de @BotFather si tu veux le bot Telegram.
+- `TELEGRAM_CHAT_ID` : identifiant du chat ou canal destinataire. Le bot doit avoir accès au chat.
+- `SOLANA_RPC_URL` : endpoint RPC Solana alternatif. Si vide, le projet utilise automatiquement `https://api.mainnet-beta.solana.com`.
+- `PORT` : laisse la valeur attendue par FadeHost (souvent injectée automatiquement).
+- `SCAN_INTERVAL_MS` : intervalle du scanner, par défaut 60000 (60 secondes).
+- `ALERT_MIN_SCORE` : score minimal d'alerte, par défaut 78.
+- `MIN_LIQUIDITY_USD` : liquidité minimale, par défaut 5000 USD.
+
+**Aucune autre clé n'est nécessaire.** N'ajoute pas `BIRDEYE_API_KEY`, `HELIUS_API_KEY`, `X_BEARER_TOKEN` ou `PUMPPORTAL_API_KEY` : cette version ne les utilise plus.
 
 ## Telegram
 
-Set `BOT_TOKEN` and `TELEGRAM_CHAT_ID`. Commands: `/start`, `/dashboard`, `/scan`, `/opportunities`, `/help`. The bot sends qualifying alerts to the configured chat. Use the Telegram test action from the dashboard Settings page to test delivery.
+Commandes : `/start`, `/dashboard`, `/scan`, `/opportunities`, `/help`. Les alertes sont envoyées uniquement si `BOT_TOKEN` et `TELEGRAM_CHAT_ID` sont renseignés.
 
-## Dashboard access
+## Sécurité et données
 
-One shared access code. It is verified server-side and is not exposed to the browser. A signed HttpOnly cookie has a 10-year browser lifetime and no server-side idle timeout. Sessions survive restarts if `DASHBOARD_SESSION_SECRET` stays unchanged. A browser can still clear cookies. Changing the access code or session secret invalidates existing sessions.
-
-## Important limitations
-
-- This is an analytics and alerting tool only. No private keys, swap execution, automatic buying or selling, or trade signing.
-- DexScreener's latest feeds are discovery sources, not every launch on Solana.
-- PumpPortal, Birdeye, Helius and X features stay unavailable until their respective keys are configured in FadeHost. Birdeye and X access may involve paid plans or usage charges; check provider quotas before adding keys.
-- Birdeye's risk fields are provider-reported observations. Unknown values remain unknown; LP locks and sellability are not independently proven.
-- Smart Money is a watchlist of wallets chosen by the user, not a curated profitable-wallet database.
-- Social mentions are symbol searches and can contain unrelated projects.
-- The scanner stores data locally in `data/store.json`; use persistent storage/backups on the host.
+- Aucun achat/vente automatique, aucune clé privée et aucune signature de transaction.
+- Le code d'accès est vérifié côté serveur.
+- La session utilise un cookie HttpOnly signé, avec une durée navigateur de 10 ans. Le navigateur peut toujours supprimer ses cookies.
+- Les sessions persistent au redémarrage si `DASHBOARD_SESSION_SECRET` reste identique.
+- Le scanner crée `data/store.json` automatiquement. Le dossier `data/` doit être persistant sur FadeHost.
+- Les variables secrètes doivent rester dans le panneau FadeHost, jamais dans le dépôt GitHub.
