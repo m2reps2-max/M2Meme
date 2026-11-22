@@ -8,13 +8,15 @@ const {Bot,InlineKeyboard}=require('grammy');
 const {MemeScanner}=require('./lib/scanner');
 const {resolveTelegramToken}=require('./lib/telegram-config');
 const {scoreWalletDiscovery}=require('./lib/wallet-discovery');
+const {COINS:HISTORICAL_COINS}=require('./lib/historical-benchmark');
+const {constantTimeEqual,validateHistoricalPayload,mergeHistoricalBenchmarks}=require('./lib/actions-ingest');
 const {resolveDashboardConfig}=require('./lib/dashboard-config');
 const CONFIG=resolveDashboardConfig({env:process.env,dataDir:path.join(__dirname,'data')});
 const {port:PORT,accessCode:CODE,sessionSecret:SECRET,dashboardUrl:URL,production:PROD}=CONFIG;
 const COOKIE='meme_radar_session',TEN_YEARS=10*365*24*60*60*1000;
 const app=express();app.disable('x-powered-by');app.set('trust proxy',1);
 app.use(helmet({contentSecurityPolicy:{directives:{defaultSrc:["'self'"],scriptSrc:["'self'"],styleSrc:["'self'"],imgSrc:["'self'",'data:','https:'],connectSrc:["'self'"],objectSrc:["'none'"],frameAncestors:["'none'"]}}}));
-app.use(express.json({limit:'24kb'}));app.use(cookieParser());
+app.use('/internal/actions/historical-benchmark',express.raw({type:'application/json',limit:'2mb'}));app.use(express.json({limit:'24kb'}));app.use(cookieParser());
 const fails=new Map();
 let lastLoginCleanup=0;
 function equal(a,b){const x=Buffer.from(String(a)),y=Buffer.from(String(b));return x.length===y.length&&crypto.timingSafeEqual(x,y);}
@@ -28,6 +30,22 @@ function loginLimit(req,res,next){const key=String(req.ip||'unknown'),now=Date.n
 const TELEGRAM_TOKEN=resolveTelegramToken(process.env);
 let bot=null;if(TELEGRAM_TOKEN){bot=new Bot(TELEGRAM_TOKEN);const kb=()=>URL?new InlineKeyboard().url('Ouvrir MEME RADAR',URL):null;bot.command('start',ctx=>ctx.reply('Bienvenue sur MEME RADAR.',kb()?{reply_markup:kb()}:undefined));bot.command('dashboard',ctx=>ctx.reply(URL?'Ouvre ton dashboard privé : '+URL:'Configure DASHBOARD_URL pour recevoir le lien du dashboard.'));bot.command('help',ctx=>ctx.reply('Commandes : /start /dashboard /scan /opportunities /help. Recherche uniquement, aucun achat automatique.'));}
 const scanner=new MemeScanner({dataFile:path.join(__dirname,'data','store.json'),bot,telegramChatId:process.env.TELEGRAM_CHAT_ID});let lastManual=0;
+app.post('/internal/actions/historical-benchmark',(req,res)=>{
+ const expected=String(process.env.MEME_RADAR_ACTIONS_TOKEN||'');
+ if(expected.length<32)return res.status(503).json({error:'Import GitHub Actions non configuré.'});
+ const authorization=String(req.get('authorization')||'');
+ const supplied=authorization.startsWith('Bearer ')?authorization.slice(7):'';
+ if(!constantTimeEqual(expected,supplied))return res.status(401).json({error:'Authentification refusée.'});
+ if(!Buffer.isBuffer(req.body))return res.status(400).json({error:'Corps JSON requis.'});
+ let payload;try{payload=JSON.parse(req.body.toString('utf8'));}catch{return res.status(400).json({error:'JSON invalide.'});}
+ const validation=validateHistoricalPayload(payload,new Set(HISTORICAL_COINS.map(x=>x.symbol)));
+ if(!validation.ok)return res.status(400).json({error:validation.error});
+ scanner.state.historicalBenchmarks=mergeHistoricalBenchmarks(scanner.state.historicalBenchmarks,payload.historicalBenchmarks);
+ scanner.state.historicalBenchmarkActionsAt=String(payload.generatedAt||new Date().toISOString()).slice(0,40);
+ try{scanner.save();}catch(error){console.error('[actions benchmark import]',error.message);return res.status(500).json({error:'Échec de sauvegarde du benchmark.'});}
+ const completed=Object.values(scanner.state.historicalBenchmarks).filter(x=>x.completed).length;
+ res.json({ok:true,received:Object.keys(payload.historicalBenchmarks).length,completed,total:HISTORICAL_COINS.length,importedAt:scanner.state.historicalBenchmarkActionsAt});
+});
 app.get('/health',(_q,r)=>r.json({ok:true,service:'meme-radar',at:new Date().toISOString()}));
 app.get('/health/ready',(_q,r)=>{const health=scanner.healthSummary();const ready=health.checks.scanner.ok;r.status(ready?200:503).json({ok:ready,scannerRunning:scanner.running,at:new Date().toISOString()});});
 app.get('/api/system/health',(_q,r)=>r.json({ok:true,...scanner.healthSummary()}));
