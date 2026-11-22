@@ -1,7 +1,7 @@
 'use strict';
 const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const os=require('node:os');const path=require('node:path');const {MemeScanner}=require('../lib/scanner');
 function make(){const dir=fs.mkdtempSync(path.join(os.tmpdir(),'meme-radar-test-'));return new MemeScanner({dataFile:path.join(dir,'store.json')});}
-test('score ne compte que les facteurs réellement disponibles',()=>{const s=make();const a=s.score({txns:{h1:{buys:70,sells:30}},volume:{h1:25000,h24:120000},liquidityUsd:45000,ageHours:3});assert.equal(a.coverage,75);assert.ok(a.score>=0&&a.score<=100);assert.equal(a.confidence,'high');});
+test('score ne compte que les facteurs réellement disponibles',()=>{const s=make();const a=s.score({txns:{h1:{buys:70,sells:30}},volume:{h1:25000,h24:120000},liquidityUsd:45000,ageHours:3});assert.equal(a.coverage,40);assert.ok(a.score>=0&&a.score<=100);assert.equal(a.confidence,'low');});
 test('une freeze authority active bloque le token',()=>{const s=make();const a=s.score({txns:{h1:{buys:20,sells:10}},volume:{h1:5000,h24:20000},liquidityUsd:10000,ageHours:2,security:{checkedAt:new Date().toISOString(),data:{freezeAuthorityActive:true,mintAuthorityActive:false,top10HolderPercent:30}}});assert.equal(a.hardBlocked,true);assert.equal(a.risk,'high');});
 test('les données sociales et wallet inconnues ne sont pas inventées',()=>{const s=make();const a=s.score({txns:{h1:{buys:1,sells:1}},volume:{h1:1,h24:2},liquidityUsd:100,ageHours:1,smartMoney:{hits:0,wallets:[]}});assert.equal(Object.hasOwn(a.factors,'social'),false);assert.equal(Object.hasOwn(a.factors,'smartMoney'),false);assert.equal(Object.hasOwn(a.factors,'narrative'),false);});
 test('watchlist valide et déduplique les adresses',()=>{const s=make(),mint='So11111111111111111111111111111111111111112';assert.equal(s.addWatch(mint).length,1);assert.equal(s.addWatch(mint).length,1);assert.throws(()=>s.addWatch('invalid'),/invalide/);assert.equal(s.removeWatch(mint).length,0);});
@@ -10,11 +10,12 @@ test('wallets sont ajoutés et retirés proprement',()=>{const s=make(),wallet='
 test('le score expose les signaux de momentum et la qualité de liquidité',()=>{const s=make();const t={txns:{h1:{buys:80,sells:20}},volume:{h1:12000,h24:90000},liquidityUsd:30000,fdv:300000,ageHours:1,history:[{at:1,liquidityUsd:25000,priceUsd:0.00001,buys1h:30,sells1h:20},{at:2,liquidityUsd:30000,priceUsd:0.000012,buys1h:80,sells1h:20}]};const a=s.score(t);assert.ok(a.factors.activity>=0);assert.ok(a.factors.momentum>=0);assert.ok(a.factors.liquidityQuality>=0);assert.equal(a.factors.buyRatio,80);assert.equal(t.metrics.fdvToLiquidity,10);});
 test('une forte baisse de liquidité est signalée',()=>{const s=make();const t={txns:{h1:{buys:20,sells:10}},volume:{h1:5000,h24:20000},liquidityUsd:7000,fdv:50000,ageHours:2,history:[{at:1,liquidityUsd:10000,priceUsd:1,buys1h:10,sells1h:5},{at:2,liquidityUsd:7000,priceUsd:.8,buys1h:20,sells1h:10}]};const a=s.score(t);assert.ok(a.flags.some(x=>x.code==='LIQUIDITY_DROP'));assert.equal(a.hardBlocked,true);});
 
-test('une concentration extrême sur un seul wallet est signalée',()=>{
+test('une concentration extrême de wallets reste un avertissement tant que les comptes de pool ne sont pas exclus',()=>{
  const s=make();
- const a=s.score({txns:{h1:{buys:30,sells:10}},volume:{h1:8000,h24:30000},liquidityUsd:12000,ageHours:2,security:{checkedAt:new Date().toISOString(),data:{freezeAuthorityActive:false,mintAuthorityActive:false,top10HolderPercent:42,top1OwnerPercent:38,top5OwnerPercent:61}}});
- assert.ok(a.flags.some(x=>x.code==='TOP1_WALLET_CONCENTRATION'&&x.level==='critical'));
- assert.equal(a.hardBlocked,true,'un drapeau critique doit exclure le token des opportunités');
+ const a=s.score({txns:{h1:{buys:30,sells:10}},volume:{h1:8000,h24:30000},liquidityUsd:12000,ageHours:2,security:{checkedAt:new Date().toISOString(),data:{freezeAuthorityActive:false,mintAuthorityActive:false,top10HolderPercent:90,top1OwnerPercent:38,top5OwnerPercent:61,ownerConcentrationAvailable:true}}});
+ assert.ok(a.flags.some(x=>x.code==='TOP1_WALLET_CONCENTRATION'&&x.level==='warning'));
+ assert.ok(a.flags.some(x=>x.code==='HOLDER_CONCENTRATION'&&x.level==='warning'));
+ assert.equal(a.hardBlocked,false,'une concentration échantillonnée ne doit pas bloquer automatiquement un token');
  assert.ok(a.flags.some(x=>x.code==='TOP5_WALLET_CONCENTRATION'));
 });
 
@@ -209,7 +210,7 @@ test('alerts require fresh market data and downgrade delayed signals',async()=>{
  const s=make(),now=Date.now();
  s.activeAlertThreshold=()=>({threshold:78});
  s.earlyBuyerExitIntel=()=>({alert:false,wallets:0,soldSharePct:0});
- const makeToken=(mint,at,critical=false)=>({mint,symbol:mint.toUpperCase(),pairAddress:'pair-'+mint,liquidityUsd:12000,history:[{at}],analysis:{score:90,coverage:90,hardBlocked:critical,flags:critical?[{level:'critical',message:'critical flag'}]:[]}});
+ const makeToken=(mint,at,critical=false)=>({mint,symbol:mint.toUpperCase(),pairAddress:'pair-'+mint,liquidityUsd:12000,history:[{at}],analysis:{score:90,coverage:90,factors:{security:80},hardBlocked:critical,flags:critical?[{level:'critical',message:'critical flag'}]:[]}});
  s.state.tokens={
   fresh:makeToken('fresh',now-60_000),
   delayed:makeToken('delayed',now-8*60_000),
@@ -304,4 +305,83 @@ test('un token avec un pool mais peu de facteurs est signalé comme analyse inco
  assert.equal(a.readiness,'insufficient_data');
  assert.equal(a.marketLinked,true);
  assert.ok(a.missingFactors.includes('security'));
+});
+
+
+test('une concentration des comptes inconnue ne bloque pas le token et ne donne pas une sécurité complète',()=>{
+ const s=make();
+ const a=s.score({txns:{h1:{buys:20,sells:10}},volume:{h1:5000,h24:20000},liquidityUsd:10000,ageHours:2,security:{checkedAt:new Date().toISOString(),data:{freezeAuthorityActive:false,mintAuthorityActive:false,top10HolderPercent:null,top10AccountPercent:95,ownerConcentrationAvailable:false}}});
+ assert.equal(a.hardBlocked,false);
+ assert.equal(a.factors.security,undefined);
+ assert.ok(a.flags.some(x=>x.code==='TOP10_ACCOUNT_CONCENTRATION_UNVERIFIED'));
+});
+
+test('le momentum reste inconnu sans historique comparatif ni signal microstructure',()=>{
+ const s=make();
+ const a=s.score({txns:{h1:{buys:90,sells:10}},volume:{h1:10000,h24:50000},liquidityUsd:20000,fdv:100000,ageHours:1});
+ assert.equal(a.factors.momentum,undefined);
+ assert.equal(a.factors.activity!==undefined,true);
+});
+
+test('la qualité de liquidité ne reçoit pas une note avec un seul sous-indicateur',()=>{
+ const s=make();
+ const a=s.score({liquidityUsd:20000,ageHours:1,volume:{h1:1000}});
+ assert.equal(a.factors.liquidityQuality,undefined);
+});
+
+
+test('seuls les acheteurs réellement observés dans une fenêtre initiale complète alimentent le facteur précoce',()=>{
+ const s=make();
+ const base={txns:{h1:{buys:20,sells:10}},volume:{h1:5000,h24:20000},liquidityUsd:10000,fdv:50000,ageHours:2,smartMoney:{hits:5,wallets:['manual-a','manual-b']}};
+ const incomplete=s.score({...base,tradeIntel:{earlyWindow:{complete:false},earlyBuyers:[{wallet:'w1',buys:5,buyVolumeUsd:900}]}});
+ assert.equal(incomplete.factors.earlyBuyerSignal,undefined);
+ const complete=s.score({...base,tradeIntel:{earlyWindow:{complete:true},earlyBuyers:[{wallet:'w1',buys:3,buyVolumeUsd:300},{wallet:'w2',buys:2,buyVolumeUsd:200}]}});
+ assert.equal(complete.factors.earlyBuyerSignal,70);
+});
+
+
+test('un volume 24h absent ne rend pas le facteur marché disponible',()=>{
+ const s=make();
+ const a=s.score({txns:{h1:{buys:20,sells:10}},volume:{h1:5000},liquidityUsd:10000,fdv:50000,ageHours:2});
+ assert.equal(a.factors.market,undefined);
+});
+
+
+test('la freeze authority reste un blocage critique indépendant des données holders',()=>{
+ const s=make();
+ const a=s.score({txns:{h1:{buys:30,sells:10}},volume:{h1:8000,h24:30000},liquidityUsd:12000,ageHours:2,security:{checkedAt:new Date().toISOString(),data:{freezeAuthorityActive:true,mintAuthorityActive:false,top10HolderPercent:null,ownerConcentrationAvailable:false}}});
+ assert.equal(a.hardBlocked,true);
+ assert.ok(a.flags.some(x=>x.code==='FREEZE_AUTHORITY'&&x.level==='critical'));
+});
+
+
+test('une couverture élevée sans facteur sécurité ne peut pas produire un candidat fort',()=>{
+ const s=make();
+ const token={pairAddress:'market-pool',txns:{h1:{buys:100,sells:10}},volume:{h1:10000,h24:50000},liquidityUsd:20000,fdv:100000,ageHours:1,history:[{at:1,liquidityUsd:15000,priceUsd:.01,buys1h:10,sells1h:10},{at:2,liquidityUsd:20000,priceUsd:.012,buys1h:100,sells1h:10}]};
+ const a=s.score(token);
+ assert.ok(a.coverage>=70);
+ assert.equal(a.readiness,'partial');
+ assert.equal(a.confidence,'medium');
+ assert.notEqual(a.classification,'strong_candidate');
+});
+
+test('une opportunité Telegram exige une sécurité vérifiée; sinon le signal reste watch',async()=>{
+ const s=make(),now=Date.now();
+ s.activeAlertThreshold=()=>({threshold:78});
+ s.earlyBuyerExitIntel=()=>({alert:false,wallets:0,soldSharePct:0});
+ s.state.tokens={
+  unverified:{mint:'unverified',symbol:'UNV',pairAddress:'pair-unverified',liquidityUsd:12000,history:[{at:now}],analysis:{score:95,coverage:90,factors:{activity:95},flags:[],hardBlocked:false}}
+ };
+ await s.alerts();
+ assert.equal(s.state.tokens.unverified.signalLevel,'watch');
+ assert.equal(s.state.alerts[0].level,'watch');
+});
+
+
+test('un token Token-2022 non audité ne reçoit pas le facteur sécurité complet',()=>{
+ const s=make();
+ const a=s.score({txns:{h1:{buys:20,sells:10}},volume:{h1:5000,h24:20000},liquidityUsd:10000,fdv:50000,ageHours:2,pairAddress:'token-2022-pool',security:{checkedAt:new Date().toISOString(),data:{freezeAuthorityActive:false,mintAuthorityActive:false,isInitialized:true,isToken2022:true,ownerConcentrationAvailable:true,top10HolderPercent:20}}});
+ assert.equal(a.factors.security,undefined);
+ assert.ok(a.flags.some(x=>x.code==='TOKEN_2022_REVIEW'));
+ assert.equal(a.readiness,'partial');
 });

@@ -13,9 +13,9 @@ test('data quality distinguishes missing data from strong signals',()=>{
 
 test('fresh market and on-chain observations increase completeness and freshness',()=>{
  const now=2_000_000;
- const token={mint:'m',priceUsd:1,liquidityUsd:10000,volume:{h1:100},history:[{at:now-30000,priceUsd:1}],security:{checkedAt:new Date(now-30000).toISOString(),data:{uniqueOwnerCount:10}},tradeIntel:{checkedAt:new Date(now-30000).toISOString(),tradeCount:40},socialIntel:{available:true,checkedAt:new Date(now-30000).toISOString()},launchSource:'pumpportal_new_token'};
+ const token={mint:'m',priceUsd:1,liquidityUsd:10000,volume:{h1:100,h24:1000},history:[{at:now-30000,priceUsd:1}],security:{checkedAt:new Date(now-30000).toISOString(),data:{uniqueOwnerCount:10,freezeAuthorityActive:false,mintAuthorityActive:false,ownerConcentrationAvailable:true,top10HolderPercent:35}},tradeIntel:{checkedAt:new Date(now-30000).toISOString(),tradeCount:40},socialIntel:{available:true,checkedAt:new Date(now-30000).toISOString()},launchSource:'pumpportal_new_token'};
  const result=tokenDataQuality(token,now);
- assert.equal(result.completenessPct,100);
+ assert.equal(result.completenessPct,100,JSON.stringify(result.checks.map(x=>({key:x.key,available:x.available,weight:x.weight}))));
  assert.equal(result.freshnessPct,100);
  assert.equal(result.quality,'high');
 });
@@ -32,8 +32,8 @@ test('summary reports tracked tokens and bounded quality categories',()=>{
 
 test('missing or future timestamps do not dilute average freshness or appear fresh',()=>{
  const now=5_000_000;
- const measured={mint:'measured',priceUsd:1,liquidityUsd:100,volume:{h1:1},history:[{at:now-60000}],security:{checkedAt:new Date(now-60000).toISOString(),data:{}},launchSource:'pumpportal'};
- const unknown={mint:'unknown',history:[{priceUsd:1}],security:{data:{}}};
+ const measured={mint:'measured',priceUsd:1,liquidityUsd:100,volume:{h1:1},history:[{at:now-60000}],security:{checkedAt:new Date(now-60000).toISOString(),data:{freezeAuthorityActive:false,mintAuthorityActive:false,ownerConcentrationAvailable:true,top10HolderPercent:20}},launchSource:'pumpportal'};
+ const unknown={mint:'unknown',history:[{priceUsd:1}],security:{data:{freezeAuthorityActive:false,mintAuthorityActive:false,ownerConcentrationAvailable:false,top10HolderPercent:null}}};
  const future={mint:'future',priceUsd:1,liquidityUsd:100,volume:{h1:1},history:[{at:now+3600000}],security:{checkedAt:new Date(now+3600000).toISOString(),data:{}}};
  const summary=dataQualitySummary.call({state:{tokens:{measured,unknown,future}}},now);
  assert.equal(summary.summary.freshnessCoverageTokens,1);
@@ -52,4 +52,16 @@ test('data quality reports readiness stages and degraded public sources separate
  assert.equal(summary.summary.degradedSources,1);
  assert.equal(summary.sources.find(x=>x.key==='dexscreener').status,'degraded');
  assert.equal(summary.sources.find(x=>x.key==='geckoTerminal').status,'connected');
+});
+
+
+test('un objet volume vide ne compte pas comme données de marché complètes',()=>{
+ const result=tokenDataQuality({mint:'empty-volume',priceUsd:1,liquidityUsd:10000,volume:{},history:[]},1000000);
+ assert.equal(result.checks.find(x=>x.key==='market').available,false);
+});
+
+
+test('un volume horaire seul ne valide pas la mesure de marché 24h requise par le score',()=>{
+ const result=tokenDataQuality({mint:'hourly-only',priceUsd:1,liquidityUsd:10000,volume:{h1:500},history:[]},1000000);
+ assert.equal(result.checks.find(x=>x.key==='market').available,false);
 });
