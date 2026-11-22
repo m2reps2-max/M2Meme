@@ -75,6 +75,13 @@ test('best picks require fresh security and transaction evidence, not only fresh
  assert.equal(result.diagnostics.bestRejectedStaleTransactions,1);
 });
 
+test('security freshness window matches the hourly background refresh cadence',()=>{
+ const tokenWith45mSecurityAge=token(9,{security:{checkedAt:new Date(NOW-45*60_000).toISOString()}});
+ const result=buildSelection([tokenWith45mSecurityAge],NOW);
+ assert.equal(result.best.length,1);
+ assert.equal(result.qualityGate.bestSecurityMaxAgeMinutes,65);
+});
+
 test('watchlist tolerates partial security but not stale market or very stale security',()=>{
  const partial=token(1,{liquidityUsd:7000,volume:{h1:250},analysis:{score:65,coverage:70,risk:'partial',securityComprehensive:false,hardBlocked:false,factors:{market:70,security:80}},security:{}});
  const stale=token(2,{liquidityUsd:7000,volume:{h1:250},security:{checkedAt:new Date(NOW-90*60_000).toISOString()},analysis:{score:66,coverage:70,risk:'partial',securityComprehensive:false,hardBlocked:false,factors:{market:70,security:80}}});
