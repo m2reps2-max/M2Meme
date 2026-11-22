@@ -53,3 +53,16 @@ test('une migration sans événement de création est conservée sans inventer s
  assert.equal(token.pumpCreatedAt,undefined);
  assert.equal(token.migrationPool,'PoolAddress');
 });
+
+test('un lancement Pump.fun est sauvegardé sans attendre le prochain scan',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'meme-radar-launch-save-'));
+ const file=path.join(dir,'store.json');
+ const scanner=new MemeScanner({dataFile:file});
+ const mint='So11111111111111111111111111111111111111112';
+ scanner.ingestLaunch({mint,name:'Saved Cat',symbol:'SCAT',traderPublicKey:'CreatorWallet111111111111111111111111111111',timestamp:Math.floor(Date.now()/1000)});
+ assert.ok(scanner.persistTimer);
+ scanner.flushScheduledSave();
+ const reloaded=new MemeScanner({dataFile:file});
+ assert.equal(reloaded.state.tokens[mint].symbol,'SCAT');
+ assert.equal(reloaded.state.tokens[mint].creator,'CreatorWallet111111111111111111111111111111');
+});
