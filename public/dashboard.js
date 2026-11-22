@@ -1,7 +1,7 @@
 'use strict';
 const $=s=>document.querySelector(s), view=$('#view'), nav=$('#nav'), title=$('#page-title');
-const state={overview:{},tokens:[],alerts:[],watchlist:[],wallets:[],autoWallets:[],creators:[],creatorFundingClusters:[],walletIntel:[],walletClusters:[],walletGraph:null,dataQuality:null,launches:[],backtest:null,historical:null,learning:null,selected:null,page:'overview',sort:'score',search:'',loadErrors:[]};
-const labels={overview:'Accueil',scanner:'Scanner',opportunities:'Opportunités',watchlist:'Favoris',analysis:'Détails du token',smart:'Wallets suivis',security:'Sécurité',social:'Liens du token',alerts:'Alertes',settings:'Réglages',creators:'Créateurs',backtest:'Résultats',smartIntel:'Activité des wallets',walletGraph:'Graphe wallets',quality:'Qualité des données',more:'Plus',launches:'Nouveaux lancements'};
+const state={overview:{},tokens:[],alerts:[],watchlist:[],wallets:[],autoWallets:[],creators:[],creatorFundingClusters:[],walletIntel:[],walletClusters:[],experts:{},walletGraph:null,dataQuality:null,launches:[],backtest:null,historical:null,learning:null,selected:null,page:'overview',sort:'score',search:'',loadErrors:[]};
+const labels={overview:'Accueil',scanner:'Scanner',opportunities:'Opportunités',watchlist:'Favoris',analysis:'Détails du token',smart:'Wallets suivis',security:'Sécurité',social:'Liens du token',alerts:'Alertes',settings:'Réglages',creators:'Créateurs',backtest:'Résultats',smartIntel:'Activité des wallets',walletGraph:'Graphe wallets',quality:'Qualité des données',more:'Plus',launches:'Nouveaux lancements',experts:'Experts & portefeuilles'};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const date=v=>v?new Date(v).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'—';
 const usd=v=>Number(v)?new Intl.NumberFormat('fr-FR',{style:'currency',currency:'USD',maximumFractionDigits:Number(v)<1?6:0}).format(Number(v)):'—';
@@ -87,9 +87,28 @@ function renderLaunches(){
  +(a.length?a.map(t=>'<article class="panel detail-card" style="margin:10px 0"><b>'+esc(t.name||'Token')+' · $'+esc(t.symbol||'—')+'</b><p class="mono">'+esc(t.mint)+'</p><p>Source : <b>'+esc(t.launchSource||(t.geckoDexName?'Pool '+t.geckoDexName:'Pool GeckoTerminal'))+'</b> · Détecté/créé : '+date(t.pumpCreatedAt||t.geckoPoolCreatedAt||t.firstSeenAt)+'</p><p>Créateur observé : '+esc(t.creator?short(t.creator):'Non fourni')+' · Sorties swap-like : '+(t.creatorSaleSummary?.confirmedSwapLikeSales||0)+' · Dernière sortie : '+date(t.creatorSaleSummary?.lastAt)+' · Âge : '+((t.launchAgeHours??t.ageHours)==null?'—':Number.isFinite(Number(t.launchAgeHours??t.ageHours))?Number(t.launchAgeHours??t.ageHours).toFixed(1)+' h':'—')+' · Liquidité : '+usd(t.liquidityUsd)+'</p><p>'+(t.migrated?'Migration Pump.fun détectée':t.geckoPoolAddress?'Pool DEX détecté':'Aucune migration observée')+' · '+esc(t.launchObservedVia||'source pool')+'</p><button class="mini-btn" data-token="'+esc(t.mint)+'">Détails</button></article>').join(''):'<div class="empty-inline">En attente de nouvelles créations ou de nouveaux pools Solana.</div>')
  +'<p class="footnote">GeckoTerminal repère les pools indexés; PumpPortal repère les créations/migrations Pump.fun. Les autres launchpads ne sont pas suivis avant qu’un pool soit indexé. Le scanner analyse automatiquement le meilleur pool GeckoTerminal par cycle. Les transactions détaillées sont aussi actualisées à l’ouverture d’une fiche, avec cache et espacement pour respecter les quotas gratuits.</p>';
 }
+
+function renderExperts(){
+ const data=state.experts||{},experts=data.experts||[],source=data.source||{};
+ const sol=v=>v==null?'—':(Number(v)>0?'+':'')+Number(v).toFixed(2)+' SOL';
+ const cards=experts.map((x,i)=>{
+  const p=x.portfolio||{},pnl=x.pnlSnapshot||{};
+  const positions=pnl.openPositions?.length
+   ?pnl.openPositions.map(pos=>'<p class="factor-row"><b>'+esc(pos.name||pos.symbol||'Token')+'</b> · investi '+(pos.boughtSol==null?'—':Number(pos.boughtSol).toFixed(3)+' SOL')+' · valeur '+(pos.isPriced?Number(pos.heldValueSol||0).toFixed(3)+' SOL':'non valorisée')+' · PnL latent '+(pos.isPriced&&pos.unrealizedPnlSol!=null?Number(pos.unrealizedPnlSol).toFixed(3)+' SOL':'—')+'</p>').join('')
+   :(p.openPositions||[]).map(pos=>'<p class="factor-row"><b>'+esc(pos.name||pos.symbol||'Token')+'</b> · '+Number(pos.quantity||0).toLocaleString('fr-FR',{maximumFractionDigits:2})+' unités observées · '+(pos.currentValueUsd==null?'prix inconnu':usd(pos.currentValueUsd))+' · '+(pos.unrealizedPct==null?'—':pos.unrealizedPct+'%')+'</p>').join('');
+  const closed=(pnl.closedPositions||[]).slice(0,5).map(pos=>'<p class="factor-row">'+pill(pos.result==='win'?'GAIN':'PERTE',pos.result==='win'?'good':'bad')+' '+esc(pos.name||pos.symbol||short(pos.mint))+' · '+sol(pos.pnlSol)+' · '+(pos.roiPct==null?'—':pos.roiPct+'%')+'</p>').join('');
+  const link=x.twitterUrl?'<a class="external-link" href="'+esc(x.twitterUrl)+'" target="_blank" rel="noopener">X ↗</a> · ':'';
+  return '<details class="panel detail-card"><summary>#'+(i+1)+' · <b>'+esc(x.name||'KOL')+'</b> · '+sol(x.pnlSol)+' · '+(x.winRatePct==null?'WR —':x.winRatePct+'%')+'</summary><p class="mono">'+esc(x.wallet)+'</p><p>'+link+'<a class="external-link" href="https://solscan.io/account/'+esc(x.wallet)+'" target="_blank" rel="noopener">Wallet ↗</a></p><p>Entrées précoces : '+(x.earlyEntryPct==null?'—':x.earlyEntryPct+'%')+' · Volume : '+(x.volumeSol==null?'—':x.volumeSol+' SOL')+'</p><p>Achats observés : '+(p.buys||0)+' · Ventes observées : '+(p.sells||0)+' · PnL estimé observé : '+sol(p.observedRealizedPnlSol)+'</p><p>Performance fournisseur 30j : '+sol(pnl.realizedPnlSol)+' · win rate '+(pnl.winRatePct==null?'—':pnl.winRatePct+'%')+' · profit factor '+(pnl.profitFactor==null?'—':pnl.profitFactor)+' · drawdown '+(pnl.maxDrawdownSol==null?'—':Number(pnl.maxDrawdownSol).toFixed(2)+' SOL')+'</p>'+'<h4>Positions ouvertes</h4>'+(positions||'<p class="muted">Aucune position ouverte fournie ou reconstruite pour le moment.</p>')+(closed?'<h4>Dernières positions clôturées (fournisseur)</h4>'+closed:'')+'<small class="footnote">'+esc(p.method||'Historique partiel.')+' Collecte depuis '+date(p.coverageSince)+'</small></details>';
+ }).join('');
+ const signals=state.tokens.filter(t=>t.kolIntel).sort((a,b)=>Number(b.kolIntel.uniqueBuyers||0)-Number(a.kolIntel.uniqueBuyers||0)||Number(b.kolIntel.netSol||0)-Number(a.kolIntel.netSol||0)).slice(0,15).map(t=>'<p class="factor-row"><button class="mini-btn" data-token="'+esc(t.mint)+'">Détails</button> <b>'+esc(t.name||t.symbol||short(t.mint))+'</b> · '+t.kolIntel.uniqueBuyers+' acheteurs KOL · '+Number(t.kolIntel.netSol||0).toFixed(2)+' SOL net · '+esc(t.kolIntel.signal)+'</p>').join('');
+ const trades=(data.recentTrades||[]).slice(0,20).map(t=>'<p class="factor-row">'+pill(t.action==='buy'?'ACHAT':'VENTE',t.action==='buy'?'good':'warn')+' '+esc(t.kolName||short(t.wallet))+' · '+esc(t.symbol||short(t.mint))+' · '+Number(t.solAmount||0).toFixed(3)+' SOL · '+date(t.at)+'</p>').join('');
+ const setup=data.configured?'':'<article class="panel detail-card"><h3>Activer le suivi</h3><p>Une clé API gratuite MadeOnSol est nécessaire. Aucun abonnement payant n’est requis pour les endpoints utilisés.</p><p><a class="external-link" href="https://madeonsol.com/developer" target="_blank" rel="noopener">Obtenir la clé API gratuite ↗</a></p><p>Ajoute MADEONSOL_API_KEY dans FadeHost puis redémarre le bot.</p></article>';
+ view.innerHTML='<div class="section-heading"><div><h2>Experts & portefeuilles</h2><p class="muted">Classement des 50 KOL Solana selon leurs performances et leurs entrées précoces.</p></div></div><div class="stat-grid"><article class="panel stat"><span>Experts</span><strong>'+(data.expertCount||0)+'</strong></article><article class="panel stat"><span>Transactions observées</span><strong>'+(data.tradeCount||0)+'</strong></article><article class="panel stat"><span>Dernière mise à jour</span><strong>'+date(data.updatedAt)+'</strong></article></div>'+setup+(signals?'<article class="panel detail-card"><h3>Tokens accumulés par plusieurs KOL</h3>'+signals+'</article>':'')+(source.error?'<div class="notice">'+esc(source.error)+'</div>':'')+(cards||'<div class="panel empty-panel"><h3>En attente des données</h3><p>Le classement apparaîtra après la configuration de la clé gratuite.</p></div>')+(trades?'<article class="panel detail-card"><h3>Derniers achats et ventes KOL</h3>'+trades+'</article>':'')+'<p class="footnote">Les étiquettes de wallets viennent du fournisseur. Les positions sont reconstruites depuis le début de collecte et ne représentent pas tous les soldes on-chain. Le flux gratuit est retardé d’environ 5 minutes et le bot le relève toutes les 10 minutes. Les tweets X ne sont pas scrapés; seuls les mouvements publics des wallets sont suivis.</p>';
+}
+
 function renderMore(){
- const items=[['backtest','↗','Résultats','Voir si les signaux du bot ont été pertinents'],['alerts','♧','Alertes','Retrouver les alertes envoyées'],['settings','⚙','Paramètres','Vérifier les réglages et les connexions']];
- view.innerHTML='<div class="section-heading"><div><h2>Plus</h2><p class="muted">Les trois pages utiles en dehors du scanner.</p></div></div><div class="simple-menu">'+items.map(x=>'<button class="panel simple-menu-item" data-go="'+x[0]+'"><span class="module-icon">'+x[1]+'</span><span><b>'+x[2]+'</b><small>'+x[3]+'</small></span><span class="module-state">→</span></button>').join('')+'</div>';
+ const items=[['experts','◎','Experts & portefeuilles','Suivre les 50 KOL et leurs mouvements on-chain'],['backtest','↗','Résultats','Voir si les signaux du bot ont été pertinents'],['alerts','♧','Alertes','Retrouver les alertes envoyées'],['settings','⚙','Paramètres','Vérifier les réglages et les connexions']];
+ view.innerHTML='<div class="section-heading"><div><h2>Plus</h2><p class="muted">Les pages utiles en dehors du scanner.</p></div></div><div class="simple-menu">'+items.map(x=>'<button class="panel simple-menu-item" data-go="'+x[0]+'"><span class="module-icon">'+x[1]+'</span><span><b>'+x[2]+'</b><small>'+x[3]+'</small></span><span class="module-state">→</span></button>').join('')+'</div>';
 }
 function renderSettings(){
  const sources=Object.values(state.overview.sources||{});
@@ -102,7 +121,7 @@ function render(page=state.page){
  state.page=page;title.textContent=labels[page]||labels.overview;
  nav.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.view===page));
  try{
-  ({overview:renderOverview,scanner:()=>renderScanner('scanner'),opportunities:()=>renderScanner('opportunities'),watchlist:renderWatchlist,analysis:renderDetail,smart:renderSmart,security:renderSecurity,social:renderSocial,creators:renderCreators,backtest:renderBacktest,historical:renderHistorical,smartIntel:renderWalletIntel,walletGraph:renderWalletGraph,quality:renderQuality,alerts:renderAlerts,settings:renderSettings,more:renderMore}[page]||renderOverview)();
+  ({overview:renderOverview,scanner:()=>renderScanner('scanner'),opportunities:()=>renderScanner('opportunities'),watchlist:renderWatchlist,analysis:renderDetail,smart:renderSmart,security:renderSecurity,social:renderSocial,creators:renderCreators,backtest:renderBacktest,historical:renderHistorical,smartIntel:renderWalletIntel,walletGraph:renderWalletGraph,quality:renderQuality,alerts:renderAlerts,settings:renderSettings,more:renderMore,experts:renderExperts}[page]||renderOverview)();
   if(state.loadErrors.length)view.insertAdjacentHTML('afterbegin','<div class="notice"><b>Actualisation partielle</b><p>'+state.loadErrors.map(esc).join('<br>')+'</p><small>Nouvelle tentative automatique dans 30 secondes.</small></div>');
  }catch(error){
   console.error('[MEME RADAR UI]',error);
@@ -121,7 +140,7 @@ async function load(options={}){
  const full=options.full!==false;
  setSyncStatus('Actualisation…','neutral');
  dashboardLoadPromise=(async()=>{
-  const coreJobs=[['Vue générale','/api/overview'],['Tokens','/api/tokens?limit=200'],['Alertes','/api/alerts'],['Watchlist','/api/watchlist']];
+  const coreJobs=[['Vue générale','/api/overview'],['Tokens','/api/tokens?limit=200'],['Alertes','/api/alerts'],['Watchlist','/api/watchlist'],['Experts','/api/intelligence/experts']];
   const coreResults=await Promise.allSettled(coreJobs.map(([,url])=>api(url)));
   state.loadErrors=[];
   for(let i=0;i<coreResults.length;i++){
@@ -132,6 +151,7 @@ async function load(options={}){
    if(i===1)state.tokens=data.tokens||[];
    if(i===2)state.alerts=data.alerts||[];
    if(i===3)state.watchlist=data.watchlist||[];
+   if(i===4)state.experts=data;
   }
   const coreFailures=coreResults.filter(x=>x.status==='rejected').length;
   setSyncStatus(coreFailures?'Données partielles':state.overview.scannerRunning?'Scanner actif':'Scanner à vérifier',coreFailures?'warn':state.overview.scannerRunning?'good':'warn');
