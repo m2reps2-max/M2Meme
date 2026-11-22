@@ -1,7 +1,7 @@
 'use strict';
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const {replayHistoricalCandles,getHistoricalBenchmark,resolveSearchMint}=require('../lib/historical-benchmark');
+const {replayHistoricalCandles,getHistoricalBenchmark,resolveSearchMint,DOCUMENTED_CASE_STUDIES}=require('../lib/historical-benchmark');
 
 test('historical replay reports terminal return and peak-to-trough drawdown',()=>{
  const base=Date.UTC(2026,0,1)/1000;
@@ -58,4 +58,16 @@ test('benchmark token resolution requires exact token metadata and never matches
  const resolved=resolveSearchMint(payload,{symbol:'BONK',name:'Bonk'});
  assert.equal(resolved.mint,'Right1111111111111111111111111111111111');
  assert.equal(resolveSearchMint(payload,{symbol:'BON',name:'Bon'}),null);
+});
+
+test('documented rug case studies are sourced and never counted as quantitative OHLCV replays',()=>{
+ assert.equal(DOCUMENTED_CASE_STUDIES.length,2);
+ const shar=DOCUMENTED_CASE_STUDIES.find(x=>x.symbol==='SHAR');
+ const tws=DOCUMENTED_CASE_STUDIES.find(x=>x.symbol==='TWS');
+ assert.equal(shar.reportedDrawdownPct,-96.3);
+ assert.equal(shar.quantitativeReplay,false);
+ assert.match(shar.evidenceUrl,/decrypt\.co/);
+ assert.equal(tws.quantitativeReplay,false);
+ assert.match(tws.evidenceUrl,/certik\.com/);
+ assert.ok(shar.identityNote.includes('aucune adresse mint'));
 });
