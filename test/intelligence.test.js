@@ -70,3 +70,15 @@ test('creator intelligence distinguishes launch-event wallets from metadata prox
  assert.equal(proxy.tokenCount,2);
  assert.equal(groups.some(x=>x.address===metadata),false);
 });
+
+test('creator funding clusters only group distinct launch-event creators sharing a funder',()=>{
+ const result=creatorFundingClusters.call({state:{tokens:{
+  a:{mint:'a',creator:'Creator11111111111111111111111111111',creatorObservedAtLaunch:true,creatorFunding:{funder:'Funder11111111111111111111111111111',sol:0.2}},
+  b:{mint:'b',creator:'Creator22222222222222222222222222222',creatorObservedAtLaunch:true,creatorFunding:{funder:'Funder11111111111111111111111111111',sol:0.3}},
+  c:{mint:'c',creator:'Creator33333333333333333333333333333',creatorObservedAtLaunch:false,creatorFunding:{funder:'Funder11111111111111111111111111111',sol:0.4}}
+ }}});
+ assert.equal(result.length,1);
+ assert.equal(result[0].creatorCount,2);
+ assert.equal(result[0].tokenCount,2);
+ assert.equal(result[0].totalFundingSol,0.5);
+});
