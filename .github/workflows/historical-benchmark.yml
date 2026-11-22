@@ -27,7 +27,7 @@ jobs:
 
       - name: Run historical replay outside FadeHost
         env:
-          MEME_RADAR_INGEST_URL: ${{ secrets.MEME_RADAR_INGEST_URL }}
+          MEME_RADAR_INGEST_URL: https://m2meme.fadehost.app/internal/actions/historical-benchmark
           MEME_RADAR_ACTIONS_TOKEN: ${{ secrets.MEME_RADAR_ACTIONS_TOKEN }}
         run: node scripts/run-actions-historical.js
 
