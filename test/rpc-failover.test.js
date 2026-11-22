@@ -1,7 +1,7 @@
 'use strict';
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const {MemeScanner}=require('../lib/scanner');
+const {MemeScanner,buildRpcEndpoints}=require('../lib/scanner');
 
 test('RPC manager switches provider after a rate limit and remembers the working endpoint',async()=>{
  const original=global.fetch;
@@ -39,4 +39,18 @@ test('RPC application errors do not trigger failover to another provider',async(
   await assert.rejects(()=>MemeScanner.prototype.rpc.call(scanner,'getAccountInfo',[]),/Invalid params/);
   assert.equal(calls,1);
  }finally{global.fetch=original;}
+});
+
+test('Helius is the primary RPC when configured, with custom and public fallbacks',()=>{
+ const endpoints=buildRpcEndpoints({heliusApiKey:'test key/with+symbols',customRpcUrl:'https://custom.example/rpc'});
+ assert.equal(endpoints.length,4);
+ assert.equal(new URL(endpoints[0]).hostname,'mainnet.helius-rpc.com');
+ assert.equal(new URL(endpoints[0]).searchParams.get('api-key'),'test key/with+symbols');
+ assert.equal(endpoints[1],'https://custom.example/rpc');
+ assert.equal(endpoints[2],'https://api.mainnet.solana.com');
+ assert.equal(endpoints[3],'https://solana-rpc.publicnode.com');
+});
+test('RPC endpoints do not contain a Helius URL when no API key is configured',()=>{
+ const endpoints=buildRpcEndpoints({heliusApiKey:'',customRpcUrl:''});
+ assert.deepEqual(endpoints,['https://api.mainnet.solana.com','https://solana-rpc.publicnode.com']);
 });
