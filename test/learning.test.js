@@ -109,3 +109,18 @@ test('la validation walk-forward utilise uniquement des tokens plus récents que
  assert.equal(result.holdoutAtSelectedThreshold.tokens,0);
  assert.equal(result.status,'holdout_too_small');
 });
+
+test('low-liquidity tokens are included in forecasts and segmented separately',()=>{
+ const token={mint:'micro',geckoPoolAddress:'pool',forecasts:[]};
+ recordForecast(token,{priceUsd:0.000001,liquidityUsd:250,volume1h:10,volume24h:50,buys1h:2,sells1h:1,fdv:10000,score:68,coverage:70,classification:'watch',risk:'high',flags:[],at:1000000});
+ assert.equal(token.forecasts.length,1);
+ assert.equal(token.forecasts[0].liquidityBand,'under_1k');
+ const result=learningSummary.call({state:{tokens:{micro:{...token,forecasts:[{...token.forecasts[0],outcomes:{'1h':{label:'loss',returnPct:-30}}}]}}}});
+ assert.equal(result.cohorts.byLiquidity.under_1k.resolved,1);
+ assert.equal(result.cohorts.byLiquidity.under_1k.lossRate1hPct,100);
+});
+test('zero-liquidity tokens do not create invalid forecast prices',()=>{
+ const token={mint:'no-liquidity',forecasts:[]};
+ recordForecast(token,{priceUsd:1,liquidityUsd:0,score:80,at:1000000});
+ assert.equal(token.forecasts.length,0);
+});
