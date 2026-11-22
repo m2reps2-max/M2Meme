@@ -1,7 +1,7 @@
 'use strict';
 const $=s=>document.querySelector(s), view=$('#view'), nav=$('#nav'), title=$('#page-title');
-const state={overview:{},tokens:[],alerts:[],watchlist:[],wallets:[],autoWallets:[],creators:[],creatorFundingClusters:[],walletIntel:[],walletClusters:[],walletGraph:null,dataQuality:null,launches:[],backtest:null,historical:null,learning:null,selected:null,page:'overview',sort:'score',search:'',loadErrors:[]};
-const labels={overview:'Accueil',scanner:'Scanner',opportunities:'Opportunités',watchlist:'Favoris',analysis:'Détails du token',smart:'Wallets suivis',security:'Sécurité',social:'Liens du token',alerts:'Alertes',settings:'Réglages',creators:'Créateurs',backtest:'Résultats',smartIntel:'Activité des wallets',walletGraph:'Graphe wallets',quality:'Qualité des données',more:'Plus',launches:'Nouveaux lancements'};
+const state={overview:{},tokens:[],alerts:[],watchlist:[],wallets:[],autoWallets:[],creators:[],creatorFundingClusters:[],walletIntel:[],walletClusters:[],experts:{},walletGraph:null,dataQuality:null,launches:[],backtest:null,historical:null,learning:null,selected:null,page:'overview',sort:'score',search:'',loadErrors:[]};
+const labels={overview:'Accueil',scanner:'Scanner',opportunities:'Opportunités',watchlist:'Favoris',analysis:'Détails du token',smart:'Wallets suivis',security:'Sécurité',social:'Liens du token',alerts:'Alertes',settings:'Réglages',creators:'Créateurs',backtest:'Résultats',smartIntel:'Activité des wallets',walletGraph:'Graphe wallets',quality:'Qualité des données',more:'Plus',launches:'Nouveaux lancements',experts:'Experts & portefeuilles',experts:'Experts & portefeuilles'};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const date=v=>v?new Date(v).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'—';
 const usd=v=>Number(v)?new Intl.NumberFormat('fr-FR',{style:'currency',currency:'USD',maximumFractionDigits:Number(v)<1?6:0}).format(Number(v)):'—';
@@ -87,8 +87,206 @@ function renderLaunches(){
  +(a.length?a.map(t=>'<article class="panel detail-card" style="margin:10px 0"><b>'+esc(t.name||'Token')+' · $'+esc(t.symbol||'—')+'</b><p class="mono">'+esc(t.mint)+'</p><p>Source : <b>'+esc(t.launchSource||(t.geckoDexName?'Pool '+t.geckoDexName:'Pool GeckoTerminal'))+'</b> · Détecté/créé : '+date(t.pumpCreatedAt||t.geckoPoolCreatedAt||t.firstSeenAt)+'</p><p>Créateur observé : '+esc(t.creator?short(t.creator):'Non fourni')+' · Sorties swap-like : '+(t.creatorSaleSummary?.confirmedSwapLikeSales||0)+' · Dernière sortie : '+date(t.creatorSaleSummary?.lastAt)+' · Âge : '+((t.launchAgeHours??t.ageHours)==null?'—':Number.isFinite(Number(t.launchAgeHours??t.ageHours))?Number(t.launchAgeHours??t.ageHours).toFixed(1)+' h':'—')+' · Liquidité : '+usd(t.liquidityUsd)+'</p><p>'+(t.migrated?'Migration Pump.fun détectée':t.geckoPoolAddress?'Pool DEX détecté':'Aucune migration observée')+' · '+esc(t.launchObservedVia||'source pool')+'</p><button class="mini-btn" data-token="'+esc(t.mint)+'">Détails</button></article>').join(''):'<div class="empty-inline">En attente de nouvelles créations ou de nouveaux pools Solana.</div>')
  +'<p class="footnote">GeckoTerminal repère les pools indexés; PumpPortal repère les créations/migrations Pump.fun. Les autres launchpads ne sont pas suivis avant qu’un pool soit indexé. Le scanner analyse automatiquement le meilleur pool GeckoTerminal par cycle. Les transactions détaillées sont aussi actualisées à l’ouverture d’une fiche, avec cache et espacement pour respecter les quotas gratuits.</p>';
 }
+function renderExperts(){
+ const data=state.experts||{},experts=data.experts||[],source=data.source||{};
+ const sol=v=>v==null?'—':(Number(v)>0?'+':'')+Number(v).toFixed(2)+' SOL';
+ const cards='<div class="stat-grid">'+[['Experts suivis',data.expertCount||0],['Transactions KOL observées',data.tradeCount||0],['Dernière mise à jour',date(data.updatedAt)]].map(x=>'<article class="panel stat"><span>'+x[0]+'</span><strong>'+x[1]+'</strong></article>').join('')+'</div>';
+ const setup=!data.configured?'<article class="panel detail-card"><h3>Activer le suivi des experts</h3><p>Le module utilise le flux KOL et les classements de MadeOnSol. Une clé gratuite est nécessaire; aucune carte bancaire ni formule payante n’est requise selon la documentation du fournisseur.</p><p><a class="external-link" href="https://madeonsol.com/developer" target="_blank" rel="noopener">Obtenir la clé API gratuite ↗</a></p><p>Ajoute ensuite <b>MADEONSOL_API_KEY</b> dans les variables d’environnement FadeHost, puis redémarre le bot.</p></article>':'';
+ const rows=experts.map((x,i)=>{
+  const p=x.portfolio||{},positions=p.openPositions||[];
+  const positionHtml=positions.length?'<div class="table-wrap"><table><thead><tr><th>Token</th><th>Position observée</th><th>Valeur actuelle</th><th>Variation</th></tr></thead><tbody>'+positions.map(pos=>'<tr><td><b>'+esc(pos.name||'Token')+'</b><small class="subtle">,'↗','Résultats','Voir si les signaux du bot ont été pertinents'],['alerts','♧','Alertes','Retrouver les alertes envoyées'],['settings','⚙','Paramètres','Vérifier les réglages et les connexions']];
+ view.innerHTML='<div class="section-heading"><div><h2>Plus</h2><p class="muted">Les trois pages utiles en dehors du scanner.</p></div></div><div class="simple-menu">'+items.map(x=>'<button class="panel simple-menu-item" data-go="'+x[0]+'"><span class="module-icon">'+x[1]+'</span><span><b>'+x[2]+'</b><small>'+x[3]+'</small></span><span class="module-state">→</span></button>').join('')+'</div>';
+}
+function renderSettings(){
+ const sources=Object.values(state.overview.sources||{});
+ const connected=sources.filter(x=>x.connected).length;
+ const total=sources.length;
+ const telegram=state.overview.sources?.telegram;
+ view.innerHTML='<div class="section-heading"><div><h2>Paramètres</h2><p class="muted">État général du bot. Les réglages techniques restent dans FadeHost.</p></div></div><div class="simple-status"><article class="panel stat"><span>Scanner</span><strong>'+pill(state.overview.scannerRunning?'Actif':'À vérifier',state.overview.scannerRunning?'good':'warn')+'</strong></article><article class="panel stat"><span>Telegram</span><strong>'+pill(telegram?.connected?'Connecté':telegram?.configured?'Configuré':'Non configuré',telegram?.connected?'good':'warn')+'</strong></article><article class="panel stat"><span>Sources de données</span><strong>'+connected+' / '+total+'</strong></article></div><p class="footnote">Aucun achat automatique n’est effectué. Les clés et paramètres techniques ne sont jamais modifiés depuis cette page.</p>';
+}
+function render(page=state.page){
+ state.page=page;title.textContent=labels[page]||labels.overview;
+ nav.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.view===page));
+ try{
+  ({overview:renderOverview,scanner:()=>renderScanner('scanner'),opportunities:()=>renderScanner('opportunities'),watchlist:renderWatchlist,analysis:renderDetail,smart:renderSmart,security:renderSecurity,social:renderSocial,creators:renderCreators,backtest:renderBacktest,historical:renderHistorical,smartIntel:renderWalletIntel,walletGraph:renderWalletGraph,quality:renderQuality,alerts:renderAlerts,settings:renderSettings,more:renderMore,experts:renderExperts}[page]||renderOverview)();
+  if(state.loadErrors.length)view.insertAdjacentHTML('afterbegin','<div class="notice"><b>Actualisation partielle</b><p>'+state.loadErrors.map(esc).join('<br>')+'</p><small>Nouvelle tentative automatique dans 30 secondes.</small></div>');
+ }catch(error){
+  console.error('[MEME RADAR UI]',error);
+  view.innerHTML='<div class="panel empty-panel"><div class="empty-icon">!</div><h2>Actualisation en cours</h2><p>'+esc(error.message||error)+'</p><small>Nouvelle tentative automatique dans 30 secondes.</small></div>';
+ }
+}
+let dashboardLoadPromise=null;
+function setSyncStatus(label,kind='neutral'){
+ const badge=$('#sync-status');
+ if(!badge)return;
+ badge.className='pill '+kind;
+ badge.innerHTML='<i></i>'+esc(label);
+}
+async function load(options={}){
+ if(dashboardLoadPromise)return dashboardLoadPromise;
+ const full=options.full!==false;
+ setSyncStatus('Actualisation…','neutral');
+ dashboardLoadPromise=(async()=>{
+  const coreJobs=[['Vue générale','/api/overview'],['Tokens','/api/tokens?limit=200'],['Alertes','/api/alerts'],['Watchlist','/api/watchlist'],['Experts','/api/intelligence/experts']];
+  const coreResults=await Promise.allSettled(coreJobs.map(([,url])=>api(url)));
+  state.loadErrors=[];
+  for(let i=0;i<coreResults.length;i++){
+   const result=coreResults[i];
+   if(result.status==='rejected'){state.loadErrors.push(coreJobs[i][0]+': '+(result.reason?.message||'Erreur inconnue'));continue;}
+   const data=result.value;
+   if(i===0)state.overview=data;
+   if(i===1)state.tokens=data.tokens||[];
+   if(i===2)state.alerts=data.alerts||[];
+   if(i===3)state.watchlist=data.watchlist||[];
+   if(i===4)state.experts=data;
+  }
+  const coreFailures=coreResults.filter(x=>x.status==='rejected').length;
+  setSyncStatus(coreFailures?'Données partielles':state.overview.scannerRunning?'Scanner actif':'Scanner à vérifier',coreFailures?'warn':state.overview.scannerRunning?'good':'warn');
+  render(state.page);
+  if(!full)return;
+  const secondaryJobs=[['Wallets','/api/wallets'],['Créateurs','/api/intelligence/creators'],['Wallet intelligence','/api/intelligence/wallets'],['Backtest','/api/backtest'],['Benchmark historique','/api/backtest/historical'],['Apprentissage continu','/api/learning'],['Nouveaux lancements','/api/launches'],['Graphe wallets','/api/intelligence/wallet-graph'],['Qualité des données','/api/data-quality']];
+  const results=await Promise.allSettled(secondaryJobs.map(([,url])=>api(url)));
+  for(let i=0;i<results.length;i++){
+   const result=results[i];
+   if(result.status==='rejected'){state.loadErrors.push(secondaryJobs[i][0]+': '+(result.reason?.message||'Erreur inconnue'));continue;}
+   const data=result.value;
+   if(i===0){state.wallets=data.wallets||[];state.autoWallets=data.autoWallets||[];}
+   if(i===1){state.creators=data.creators||[];state.creatorFundingClusters=data.fundingClusters||[];}
+   if(i===2){state.walletIntel=data.wallets||[];state.walletClusters=data.clusters||[];}
+   if(i===3)state.backtest=data;
+   if(i===4)state.historical=data;
+   if(i===5)state.learning=data;
+   if(i===6)state.launches=data.tokens||[];
+   if(i===7)state.walletGraph=data;
+   if(i===8)state.dataQuality=data;
+  }
+  setSyncStatus(state.loadErrors.length?'Données partielles':state.overview.scannerRunning?'Scanner actif':'Scanner à vérifier',state.loadErrors.length?'warn':state.overview.scannerRunning?'good':'warn');
+  render(state.page);
+ })();
+ try{return await dashboardLoadPromise;}
+ finally{dashboardLoadPromise=null;}
+}
+async function openToken(mint,social=false){try{const d=await api('/api/token/'+encodeURIComponent(mint));state.selected=d.token;if(social){const s=await api('/api/token/'+encodeURIComponent(mint)+'?social=true');state.selected=s.token;state.selected.socialData=s.social;}await load();state.selected=state.tokens.find(t=>t.mint===mint)||state.selected;render('analysis');}catch(e){alert(e.message);}}
+async function scan(){const b=$('#run-scan')||$('#refresh-tokens');if(b){b.disabled=true;b.textContent='Scan…';}try{await api('/api/scan',{method:'POST',body:'{}'});await load();}catch(e){alert(e.message);}finally{const x=$('#run-scan')||$('#refresh-tokens');if(x){x.disabled=false;x.textContent='Actualiser';}}}
+nav.addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b)render(b.dataset.view);});
+view.addEventListener('click',async e=>{const t=e.target.closest('[data-token]');if(t)return openToken(t.dataset.token);const w=e.target.closest('[data-watch]');if(w){try{if(state.watchlist.includes(w.dataset.watch))await api('/api/watchlist/'+encodeURIComponent(w.dataset.watch),{method:'DELETE'});else await api('/api/watchlist',{method:'POST',body:JSON.stringify({mint:w.dataset.watch})});await load();}catch(x){alert(x.message);}return;}const go=e.target.closest('[data-go]');if(go)return render(go.dataset.go);const rm=e.target.closest('[data-remove-wallet]');if(rm){await api('/api/wallets/'+encodeURIComponent(rm.dataset.removeWallet),{method:'DELETE'});await load();}});
+view.addEventListener('input',e=>{if(e.target.id==='search-token'){state.search=e.target.value;refreshTable();}});view.addEventListener('change',e=>{if(e.target.id==='sort-token'){state.sort=e.target.value;refreshTable();}});
+view.addEventListener('submit',async e=>{if(e.target.id==='wallet-form'){e.preventDefault();const f=e.target;try{await api('/api/wallets',{method:'POST',body:JSON.stringify({address:f.address.value.trim(),label:f.label.value.trim()})});await load();}catch(x){alert(x.message);}}});
+$('#logout').addEventListener('click',async()=>{await fetch('/api/logout',{method:'POST'});location.replace('/login');});
+
+let dashboardRefreshTimer=null;
+let dashboardBooted=false;
+async function bootDashboard(){
+ if(dashboardBooted)return;
+ dashboardBooted=true;
+ view.innerHTML='<div class="panel empty-panel"><div class="empty-icon">◎</div><h2>Connexion au scanner</h2><p>Chargement des données et de l’état de surveillance…</p></div>';
+ try{await load();}catch(error){console.error('[MEME RADAR boot]',error);view.innerHTML='<div class="panel empty-panel"><h2>Connexion impossible</h2><p>'+esc(error.message||error)+'</p><button class="primary" id="retry-dashboard">Réessayer</button></div>';}
+ dashboardRefreshTimer=setInterval(()=>{if(!document.hidden)load({full:false}).catch(error=>console.warn('[MEME RADAR refresh]',error));},30000);
+}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&dashboardBooted)load({full:false}).catch(error=>console.warn('[MEME RADAR resume]',error));});
+view.addEventListener('click',e=>{if(e.target.closest('#retry-dashboard')){dashboardBooted=false;bootDashboard();}});
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bootDashboard,{once:true});
+else bootDashboard();
++esc(pos.symbol||'—')+' · '+esc(short(pos.mint))+'</small></td><td>'+Number(pos.quantity||0).toLocaleString('fr-FR',{maximumFractionDigits:2})+'</td><td>'+(pos.currentValueUsd==null?'Prix indisponible':usd(pos.currentValueUsd))+'</td><td>'+(pos.unrealizedPct==null?'—':(pos.unrealizedPct>0?'+':'')+pos.unrealizedPct+'%')+'</td></tr>').join('')+'</tbody></table></div>':'<p class="muted">Aucune position acheteuse reconstruite depuis le début de la collecte.</p>';
+  return '<details class="panel detail-card" style="margin:10px 0"><summary><b>#'+(i+1)+' · '+esc(x.name||'KOL')+'</b> · '+(x.pnlSol==null?'PnL fournisseur —':sol(x.pnlSol))+' · '+(x.winRatePct==null?'WR —':x.winRatePct+'%')+' · '+p.openPositionCount+' position(s) observée(s)</summary><p class="mono">'+esc(x.wallet)+'</p><p>'+(x.twitterUrl?'<a class="external-link" href="'+esc(x.twitterUrl)+'" target="_blank" rel="noopener">Profil X ↗</a> · ':'')+'<a class="external-link" href="https://solscan.io/account/'+esc(x.wallet)+'" target="_blank" rel="noopener">Wallet Solscan ↗</a></p><p>Classement moyen : '+(x.combinedRank==null?'—':Number(x.combinedRank).toFixed(1))+' · Entrées précoces : '+(x.earlyEntryPct==null?'—':x.earlyEntryPct+'%')+' · Achats/ventes : '+(x.buyCount??'—')+'/'+(x.sellCount??'—')+' · Volume : '+(x.volumeSol==null?'—':Number(x.volumeSol).toFixed(2)+' SOL')+'</p><p>Positions reconstruites : <b>'+p.openPositionCount+'</b> · Achats observés : '+p.buys+' · Ventes observées : '+p.sells+' · PnL réalisé estimé sur événements observés : '+sol(p.observedRealizedPnlSol)+'</p>'+positionHtml+'<small class="footnote">'+esc(p.method||'Historique incomplet.')+' Couverture depuis : '+date(p.coverageSince)+'</small></details>';
+ }).join('');
+ const trades=(data.recentTrades||[]).slice(0,30);
+ view.innerHTML='<div class="section-heading"><div><h2>Experts & portefeuilles</h2><p class="muted">Les 50 KOL Solana les mieux classés selon leur rentabilité et leur précocité d’entrée.</p></div></div>'+cards+setup+(source.error?'<div class="notice"><b>Source temporairement indisponible</b><p>'+esc(source.error)+'</p></div>':'')+(experts.length?'<div class="section-heading spaced"><div><h3>Classement des experts</h3><p class="muted">Ouvre un expert pour voir ses achats, ventes et positions observées.</p></div></div>'+rows:'<div class="panel empty-panel"><h3>Aucun expert reçu pour le moment</h3><p>Le classement se remplit après configuration de la clé gratuite et la première synchronisation.</p></div>')+(trades.length?'<div class="section-heading spaced"><div><h3>Derniers achats et ventes détectés</h3><p class="muted">Transactions publiées dans le flux KOL.</p></div></div><div class="table-wrap"><table><thead><tr><th>Expert</th><th>Action</th><th>Token</th><th>Montant</th><th>Date</th></tr></thead><tbody>'+trades.map(t=>'<tr><td>'+esc(t.kolName||short(t.wallet))+'</td><td>'+pill(t.action==='buy'?'ACHAT':'VENTE',t.action==='buy'?'good':'warn')+'</td><td><b>'+esc(t.name||'Token')+'</b><small class="subtle">,'↗','Résultats','Voir si les signaux du bot ont été pertinents'],['alerts','♧','Alertes','Retrouver les alertes envoyées'],['settings','⚙','Paramètres','Vérifier les réglages et les connexions']];
+ view.innerHTML='<div class="section-heading"><div><h2>Plus</h2><p class="muted">Les trois pages utiles en dehors du scanner.</p></div></div><div class="simple-menu">'+items.map(x=>'<button class="panel simple-menu-item" data-go="'+x[0]+'"><span class="module-icon">'+x[1]+'</span><span><b>'+x[2]+'</b><small>'+x[3]+'</small></span><span class="module-state">→</span></button>').join('')+'</div>';
+}
+function renderSettings(){
+ const sources=Object.values(state.overview.sources||{});
+ const connected=sources.filter(x=>x.connected).length;
+ const total=sources.length;
+ const telegram=state.overview.sources?.telegram;
+ view.innerHTML='<div class="section-heading"><div><h2>Paramètres</h2><p class="muted">État général du bot. Les réglages techniques restent dans FadeHost.</p></div></div><div class="simple-status"><article class="panel stat"><span>Scanner</span><strong>'+pill(state.overview.scannerRunning?'Actif':'À vérifier',state.overview.scannerRunning?'good':'warn')+'</strong></article><article class="panel stat"><span>Telegram</span><strong>'+pill(telegram?.connected?'Connecté':telegram?.configured?'Configuré':'Non configuré',telegram?.connected?'good':'warn')+'</strong></article><article class="panel stat"><span>Sources de données</span><strong>'+connected+' / '+total+'</strong></article></div><p class="footnote">Aucun achat automatique n’est effectué. Les clés et paramètres techniques ne sont jamais modifiés depuis cette page.</p>';
+}
+function render(page=state.page){
+ state.page=page;title.textContent=labels[page]||labels.overview;
+ nav.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.view===page));
+ try{
+  ({overview:renderOverview,scanner:()=>renderScanner('scanner'),opportunities:()=>renderScanner('opportunities'),watchlist:renderWatchlist,analysis:renderDetail,smart:renderSmart,security:renderSecurity,social:renderSocial,creators:renderCreators,backtest:renderBacktest,historical:renderHistorical,smartIntel:renderWalletIntel,walletGraph:renderWalletGraph,quality:renderQuality,alerts:renderAlerts,settings:renderSettings,more:renderMore}[page]||renderOverview)();
+  if(state.loadErrors.length)view.insertAdjacentHTML('afterbegin','<div class="notice"><b>Actualisation partielle</b><p>'+state.loadErrors.map(esc).join('<br>')+'</p><small>Nouvelle tentative automatique dans 30 secondes.</small></div>');
+ }catch(error){
+  console.error('[MEME RADAR UI]',error);
+  view.innerHTML='<div class="panel empty-panel"><div class="empty-icon">!</div><h2>Actualisation en cours</h2><p>'+esc(error.message||error)+'</p><small>Nouvelle tentative automatique dans 30 secondes.</small></div>';
+ }
+}
+let dashboardLoadPromise=null;
+function setSyncStatus(label,kind='neutral'){
+ const badge=$('#sync-status');
+ if(!badge)return;
+ badge.className='pill '+kind;
+ badge.innerHTML='<i></i>'+esc(label);
+}
+async function load(options={}){
+ if(dashboardLoadPromise)return dashboardLoadPromise;
+ const full=options.full!==false;
+ setSyncStatus('Actualisation…','neutral');
+ dashboardLoadPromise=(async()=>{
+  const coreJobs=[['Vue générale','/api/overview'],['Tokens','/api/tokens?limit=200'],['Alertes','/api/alerts'],['Watchlist','/api/watchlist']];
+  const coreResults=await Promise.allSettled(coreJobs.map(([,url])=>api(url)));
+  state.loadErrors=[];
+  for(let i=0;i<coreResults.length;i++){
+   const result=coreResults[i];
+   if(result.status==='rejected'){state.loadErrors.push(coreJobs[i][0]+': '+(result.reason?.message||'Erreur inconnue'));continue;}
+   const data=result.value;
+   if(i===0)state.overview=data;
+   if(i===1)state.tokens=data.tokens||[];
+   if(i===2)state.alerts=data.alerts||[];
+   if(i===3)state.watchlist=data.watchlist||[];
+  }
+  const coreFailures=coreResults.filter(x=>x.status==='rejected').length;
+  setSyncStatus(coreFailures?'Données partielles':state.overview.scannerRunning?'Scanner actif':'Scanner à vérifier',coreFailures?'warn':state.overview.scannerRunning?'good':'warn');
+  render(state.page);
+  if(!full)return;
+  const secondaryJobs=[['Wallets','/api/wallets'],['Créateurs','/api/intelligence/creators'],['Wallet intelligence','/api/intelligence/wallets'],['Backtest','/api/backtest'],['Benchmark historique','/api/backtest/historical'],['Apprentissage continu','/api/learning'],['Nouveaux lancements','/api/launches'],['Graphe wallets','/api/intelligence/wallet-graph'],['Qualité des données','/api/data-quality']];
+  const results=await Promise.allSettled(secondaryJobs.map(([,url])=>api(url)));
+  for(let i=0;i<results.length;i++){
+   const result=results[i];
+   if(result.status==='rejected'){state.loadErrors.push(secondaryJobs[i][0]+': '+(result.reason?.message||'Erreur inconnue'));continue;}
+   const data=result.value;
+   if(i===0){state.wallets=data.wallets||[];state.autoWallets=data.autoWallets||[];}
+   if(i===1){state.creators=data.creators||[];state.creatorFundingClusters=data.fundingClusters||[];}
+   if(i===2){state.walletIntel=data.wallets||[];state.walletClusters=data.clusters||[];}
+   if(i===3)state.backtest=data;
+   if(i===4)state.historical=data;
+   if(i===5)state.learning=data;
+   if(i===6)state.launches=data.tokens||[];
+   if(i===7)state.walletGraph=data;
+   if(i===8)state.dataQuality=data;
+  }
+  setSyncStatus(state.loadErrors.length?'Données partielles':state.overview.scannerRunning?'Scanner actif':'Scanner à vérifier',state.loadErrors.length?'warn':state.overview.scannerRunning?'good':'warn');
+  render(state.page);
+ })();
+ try{return await dashboardLoadPromise;}
+ finally{dashboardLoadPromise=null;}
+}
+async function openToken(mint,social=false){try{const d=await api('/api/token/'+encodeURIComponent(mint));state.selected=d.token;if(social){const s=await api('/api/token/'+encodeURIComponent(mint)+'?social=true');state.selected=s.token;state.selected.socialData=s.social;}await load();state.selected=state.tokens.find(t=>t.mint===mint)||state.selected;render('analysis');}catch(e){alert(e.message);}}
+async function scan(){const b=$('#run-scan')||$('#refresh-tokens');if(b){b.disabled=true;b.textContent='Scan…';}try{await api('/api/scan',{method:'POST',body:'{}'});await load();}catch(e){alert(e.message);}finally{const x=$('#run-scan')||$('#refresh-tokens');if(x){x.disabled=false;x.textContent='Actualiser';}}}
+nav.addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b)render(b.dataset.view);});
+view.addEventListener('click',async e=>{const t=e.target.closest('[data-token]');if(t)return openToken(t.dataset.token);const w=e.target.closest('[data-watch]');if(w){try{if(state.watchlist.includes(w.dataset.watch))await api('/api/watchlist/'+encodeURIComponent(w.dataset.watch),{method:'DELETE'});else await api('/api/watchlist',{method:'POST',body:JSON.stringify({mint:w.dataset.watch})});await load();}catch(x){alert(x.message);}return;}const go=e.target.closest('[data-go]');if(go)return render(go.dataset.go);const rm=e.target.closest('[data-remove-wallet]');if(rm){await api('/api/wallets/'+encodeURIComponent(rm.dataset.removeWallet),{method:'DELETE'});await load();}});
+view.addEventListener('input',e=>{if(e.target.id==='search-token'){state.search=e.target.value;refreshTable();}});view.addEventListener('change',e=>{if(e.target.id==='sort-token'){state.sort=e.target.value;refreshTable();}});
+view.addEventListener('submit',async e=>{if(e.target.id==='wallet-form'){e.preventDefault();const f=e.target;try{await api('/api/wallets',{method:'POST',body:JSON.stringify({address:f.address.value.trim(),label:f.label.value.trim()})});await load();}catch(x){alert(x.message);}}});
+$('#logout').addEventListener('click',async()=>{await fetch('/api/logout',{method:'POST'});location.replace('/login');});
+
+let dashboardRefreshTimer=null;
+let dashboardBooted=false;
+async function bootDashboard(){
+ if(dashboardBooted)return;
+ dashboardBooted=true;
+ view.innerHTML='<div class="panel empty-panel"><div class="empty-icon">◎</div><h2>Connexion au scanner</h2><p>Chargement des données et de l’état de surveillance…</p></div>';
+ try{await load();}catch(error){console.error('[MEME RADAR boot]',error);view.innerHTML='<div class="panel empty-panel"><h2>Connexion impossible</h2><p>'+esc(error.message||error)+'</p><button class="primary" id="retry-dashboard">Réessayer</button></div>';}
+ dashboardRefreshTimer=setInterval(()=>{if(!document.hidden)load({full:false}).catch(error=>console.warn('[MEME RADAR refresh]',error));},30000);
+}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&dashboardBooted)load({full:false}).catch(error=>console.warn('[MEME RADAR resume]',error));});
+view.addEventListener('click',e=>{if(e.target.closest('#retry-dashboard')){dashboardBooted=false;bootDashboard();}});
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bootDashboard,{once:true});
+else bootDashboard();
++esc(t.symbol||'—')+' · '+esc(short(t.mint))+'</small></td><td>'+Number(t.solAmount||0).toFixed(3)+' SOL</td><td>'+date(t.at)+'</td></tr>').join('')+'</tbody></table></div>':'')+'<p class="footnote">Les rangs et performances viennent du fournisseur et restent des mesures passées. Les portefeuilles affichés sont reconstruits à partir du flux collecté depuis son activation, pas une lecture exhaustive des soldes on-chain. Les mentions X ne sont pas scrapées; les achats/ventes publics des wallets sont suivis.</p>';
+}
 function renderMore(){
- const items=[['backtest','↗','Résultats','Voir si les signaux du bot ont été pertinents'],['alerts','♧','Alertes','Retrouver les alertes envoyées'],['settings','⚙','Paramètres','Vérifier les réglages et les connexions']];
+ const items=[['experts','◎','Experts & portefeuilles','Suivre les 50 KOL et leurs mouvements on-chain'],['backtest','↗','Résultats','Voir si les signaux du bot ont été pertinents'],['alerts','♧','Alertes','Retrouver les alertes envoyées'],['settings','⚙','Paramètres','Vérifier les réglages et les connexions']];
  view.innerHTML='<div class="section-heading"><div><h2>Plus</h2><p class="muted">Les trois pages utiles en dehors du scanner.</p></div></div><div class="simple-menu">'+items.map(x=>'<button class="panel simple-menu-item" data-go="'+x[0]+'"><span class="module-icon">'+x[1]+'</span><span><b>'+x[2]+'</b><small>'+x[3]+'</small></span><span class="module-state">→</span></button>').join('')+'</div>';
 }
 function renderSettings(){
