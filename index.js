@@ -6,7 +6,7 @@ const helmet=require('helmet');
 const cookieParser=require('cookie-parser');
 const {Bot,InlineKeyboard}=require('grammy');
 const {MemeScanner}=require('./lib/scanner');
-const PORT=Number(process.env.PORT||3000),CODE=String(process.env.DASHBOARD_ACCESS_CODE||''),SECRET=String(process.env.DASHBOARD_SESSION_SECRET||''),URL=String(process.env.DASHBOARD_URL||'').replace(/\/$/,'');
+const PORT=Number(process.env.PORT||8080),CODE=String(process.env.DASHBOARD_ACCESS_CODE||''),SECRET=String(process.env.DASHBOARD_SESSION_SECRET||''),URL=String(process.env.DASHBOARD_URL||'').replace(/\/$/,'');
 const PROD=process.env.NODE_ENV==='production',COOKIE='meme_radar_session',TEN_YEARS=10*365*24*60*60*1000;
 if(!CODE.trim()||SECRET.length<32){console.error('DASHBOARD_ACCESS_CODE (non vide) et DASHBOARD_SESSION_SECRET (32+) sont requis.');process.exit(1);}
 if(PROD&&!URL.startsWith('https://')){console.error('DASHBOARD_URL doit être en HTTPS en production.');process.exit(1);}
