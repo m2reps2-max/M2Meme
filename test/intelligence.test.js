@@ -51,3 +51,22 @@ test('wallet intelligence does not invent a result when the one-hour snapshot is
  assert.equal(result.wallets[0].performance.matchedBuys,0);
  assert.equal(result.wallets[0].performance.average1hReturnPct,null);
 });
+
+test('creator intelligence distinguishes launch-event wallets from metadata proxies',()=>{
+ const creator='CreatorWallet111111111111111111111111111111';
+ const metadata='MetadataWallet11111111111111111111111111111';
+ const authority='MintAuthority1111111111111111111111111111';
+ const state={tokens:{
+  a:{mint:'a',creator:metadata,security:{data:{mintAuthority:authority}}},
+  b:{mint:'b',creator,creatorObservedAtLaunch:true},
+  c:{mint:'c',security:{data:{freezeAuthority:authority}}}
+ }};
+ const groups=require('../lib/intelligence').creatorIntel.call({state});
+ const real=groups.find(x=>x.address===creator);
+ const proxy=groups.find(x=>x.address===authority);
+ assert.equal(real.attribution,'creator_wallet_from_launch_event');
+ assert.equal(real.tokenCount,1);
+ assert.equal(proxy.attribution,'authority_onchain_proxy');
+ assert.equal(proxy.tokenCount,2);
+ assert.equal(groups.some(x=>x.address===metadata),false);
+});
