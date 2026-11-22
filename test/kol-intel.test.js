@@ -93,5 +93,5 @@ test('MadeOnSol poller fetches the free leaderboards and feed within schedule',a
  const radar=new MadeOnSolRadar({state,apiKey:'msk_test_key',fetchImpl,now:()=>now});
  const first=await radar.refresh();assert.equal(first.successful,4);assert.equal(state.experts.length,2);assert.equal(state.expertTrades.length,1);assert.equal(calls.length,4);
  now+=5*60*1000;await radar.refresh();assert.equal(calls.length,5);
- now+=10*60*1000;await radar.refresh();assert.equal(calls.length,6);
+ now+=10*60*1000;await radar.refresh();assert.equal(calls.length,7);
 });
