@@ -46,3 +46,16 @@ test('trade intelligence flags same-block bursts and reports early buyer coverag
   assert.ok(result.flags.some(x => x.code === 'SAME_BLOCK_BUY_BURST'));
   assert.ok(result.flags.some(x => x.code === 'EARLY_BUYER_BURST'));
 });
+
+test('trade analysis returns auditable bundle-like and five-second buyer clusters',()=>{
+  const start=Date.parse('2026-11-22T10:00:00.000Z');
+  const rows=[
+    ['a','buy',0,100,700],['b','buy',350,120,700],['c','buy',800,90,700],
+    ['d','buy',1200,80,701],['e','buy',1700,75,702],['f','sell',2200,30,703]
+  ];
+  const result=analyzePoolTrades({data:rows.map(([wallet,kind,offset,volume,block],i)=>({id:'cluster'+i,attributes:{tx_from_address:wallet,kind,block_timestamp:new Date(start+offset).toISOString(),volume_in_usd:String(volume),block_number:block}}))},new Date(start).toISOString());
+  assert.equal(result.bundleCandidates.length,1);
+  assert.equal(result.bundleCandidates[0].uniqueBuyers,3);
+  assert.ok(result.burstCandidates.some(x=>x.uniqueBuyers>=3));
+  assert.ok(result.flags.some(x=>x.code==='BUNDLE_LIKE_BURST'));
+});
