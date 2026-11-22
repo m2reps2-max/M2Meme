@@ -6,6 +6,7 @@ const helmet=require('helmet');
 const cookieParser=require('cookie-parser');
 const {Bot,InlineKeyboard}=require('grammy');
 const {MemeScanner}=require('./lib/scanner');
+const {buildExpertSnapshot,MadeOnSolRadar}=require('./lib/kol-intel');
 const {resolveTelegramToken}=require('./lib/telegram-config');
 const {scoreWalletDiscovery}=require('./lib/wallet-discovery');
 const {COINS:HISTORICAL_COINS}=require('./lib/historical-benchmark');
@@ -29,7 +30,16 @@ function origin(req,res,next){const o=req.get('origin');if(o){try{if(new URL(o).
 function loginLimit(req,res,next){const key=String(req.ip||'unknown'),now=Date.now();if(now-lastLoginCleanup>60000||fails.size>2000){for(const [ip,row] of fails)if(row.until<=now)fails.delete(ip);lastLoginCleanup=now;}if(fails.size>=5000&&!fails.has(key))return res.status(429).json({error:'Trop de tentatives. Réessaie plus tard.'});let x=fails.get(key)||{n:0,until:now+900000};if(x.until<now)x={n:0,until:now+900000};if(x.n>=8)return res.status(429).json({error:'Trop de tentatives. Réessaie plus tard.'});req.bad=()=>{x.n++;fails.set(key,x);};req.good=()=>fails.delete(key);next();}
 const TELEGRAM_TOKEN=resolveTelegramToken(process.env);
 let bot=null;if(TELEGRAM_TOKEN){bot=new Bot(TELEGRAM_TOKEN);const kb=()=>URL?new InlineKeyboard().url('Ouvrir MEME RADAR',URL):null;bot.command('start',ctx=>ctx.reply('Bienvenue sur MEME RADAR.',kb()?{reply_markup:kb()}:undefined));bot.command('dashboard',ctx=>ctx.reply(URL?'Ouvre ton dashboard privé : '+URL:'Configure DASHBOARD_URL pour recevoir le lien du dashboard.'));bot.command('help',ctx=>ctx.reply('Commandes : /start /dashboard /scan /opportunities /help. Recherche uniquement, aucun achat automatique.'));}
-const scanner=new MemeScanner({dataFile:path.join(__dirname,'data','store.json'),bot,telegramChatId:process.env.TELEGRAM_CHAT_ID});let lastManual=0;
+const scanner=new MemeScanner({dataFile:path.join(__dirname,'data','store.json'),bot,telegramChatId:process.env.TELEGRAM_CHAT_ID});
+const expertRadar=new MadeOnSolRadar({state:scanner.state,apiKey:process.env.MADEONSOL_API_KEY});
+let expertTimer=null,expertStartupTimer=null,lastManual=0;
+async function refreshExperts(){
+ try{
+  const result=await scanner.runBackgroundTask('experts',()=>expertRadar.refresh(),195);
+  if(result?.configured){scanner.save();if(result.errors?.length)console.warn('[expert radar]',result.errors.join(' | '));}
+  return result;
+ }catch(error){console.warn('[expert radar]',String(error.message||error).slice(0,180));return {error:error.message};}
+}
 app.post('/internal/actions/historical-benchmark',(req,res)=>{
  const expected=String(process.env.MEME_RADAR_ACTIONS_TOKEN||'');
  if(expected.length<32)return res.status(503).json({error:'Import GitHub Actions non configuré.'});
@@ -66,6 +76,7 @@ app.get('/api/wallets',(_q,r)=>r.json({ok:true,wallets:scanner.state.wallets.map
 app.get('/api/intelligence/creators',(_q,r)=>r.json({ok:true,creators:scanner.creatorIntel(),fundingClusters:scanner.creatorFundingClusters()}));
 app.get('/api/intelligence/wallets',(_q,r)=>{const data=scanner.walletIntel();r.json({ok:true,wallets:data.wallets,clusters:data.clusters});});
 app.get('/api/intelligence/wallet-graph',(_q,r)=>r.json({ok:true,...scanner.walletGraphIntel()}));
+app.get('/api/intelligence/experts',(_q,r)=>r.json({ok:true,...buildExpertSnapshot(scanner.state,scanner.state.tokens)}));
 app.get('/api/data-quality',(_q,r)=>r.json({ok:true,...scanner.dataQualitySummary()}));
 app.get('/api/backtest',(_q,r)=>r.json({ok:true,...scanner.backtest()}));
 app.get('/api/learning',(_q,r)=>r.json({ok:true,...scanner.learningSummary()}));
@@ -92,5 +103,5 @@ memoryLogTimer=setInterval(()=>{
  if(rssMiB>=220&&Date.now()-lastMemoryWarningAt>=30000){lastMemoryWarningAt=Date.now();console.warn('[process] memory pressure warning: RSS reached',rssMiB,'MiB (hosting limit may be 256 MiB)');}
 },10000);
 memoryLogTimer.unref();
-const server=app.listen(PORT,'0.0.0.0',()=>{console.log('MEME RADAR listening on '+PORT);scanner.start().catch(e=>console.error('[scanner]',e.message));if(bot){console.log('[telegram] Starting grammY long polling…');bot.start().then(()=>console.log('[telegram] Polling stopped cleanly')).catch(e=>console.error('[telegram polling] Startup/runtime failure:',e.message));}else{console.warn('[telegram] Bot disabled: set TELEGRAM_BOT_TOKEN (or legacy BOT_TOKEN) in the hosting environment.');}});server.requestTimeout=20000;server.headersTimeout=25000;server.keepAliveTimeout=5000;
-async function shutdown(){scanner.stop();if(bot)await bot.stop();server.close(()=>process.exit(0));setTimeout(()=>process.exit(1),10000).unref();}process.once('SIGTERM',shutdown);process.once('SIGINT',shutdown);
+const server=app.listen(PORT,'0.0.0.0',()=>{console.log('MEME RADAR listening on '+PORT);scanner.start().catch(e=>console.error('[scanner]',e.message));expertStartupTimer=setTimeout(()=>refreshExperts(),180000);expertTimer=setInterval(()=>refreshExperts(),300000);if(bot){console.log('[telegram] Starting grammY long polling…');bot.start().then(()=>console.log('[telegram] Polling stopped cleanly')).catch(e=>console.error('[telegram polling] Startup/runtime failure:',e.message));}else{console.warn('[telegram] Bot disabled: set TELEGRAM_BOT_TOKEN (or legacy BOT_TOKEN) in the hosting environment.');}});server.requestTimeout=20000;server.headersTimeout=25000;server.keepAliveTimeout=5000;
+async function shutdown(){clearTimeout(expertStartupTimer);clearInterval(expertTimer);scanner.stop();if(bot)await bot.stop();server.close(()=>process.exit(0));setTimeout(()=>process.exit(1),10000).unref();}process.once('SIGTERM',shutdown);process.once('SIGINT',shutdown);
