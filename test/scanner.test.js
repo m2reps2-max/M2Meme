@@ -337,3 +337,10 @@ test('seuls les acheteurs réellement observés dans une fenêtre initiale compl
  const complete=s.score({...base,tradeIntel:{earlyWindow:{complete:true},earlyBuyers:[{wallet:'w1',buys:3,buyVolumeUsd:300},{wallet:'w2',buys:2,buyVolumeUsd:200}]}});
  assert.equal(complete.factors.earlyBuyerSignal,70);
 });
+
+
+test('un volume 24h absent ne rend pas le facteur marché disponible',()=>{
+ const s=make();
+ const a=s.score({txns:{h1:{buys:20,sells:10}},volume:{h1:5000},liquidityUsd:10000,fdv:50000,ageHours:2});
+ assert.equal(a.factors.market,undefined);
+});
