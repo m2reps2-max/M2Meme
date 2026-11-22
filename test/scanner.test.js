@@ -293,7 +293,7 @@ test('un lancement sans pool est explicitement en attente de marché et ne resse
  const a=scanner.score({mint:'NewLaunch11111111111111111111111111111111',launchSource:'Pump.fun',launchAgeHours:0.02,pumpCreatedAt:new Date().toISOString()});
  assert.equal(a.coverage,5);
  assert.equal(a.readiness,'awaiting_market');
- assert.equal(a.readinessLabel,'Marché en attente');
+ assert.equal(a.readinessLabel,'Pré-marché · pool absent');
  assert.equal(a.marketLinked,false);
  assert.ok(a.readinessReason.includes('aucun pool'));
  assert.ok(a.missingFactors.includes('market'));
