@@ -71,3 +71,23 @@ test('documented rug case studies are sourced and never counted as quantitative 
  assert.match(tws.evidenceUrl,/certik\.com/);
  assert.ok(shar.identityNote.includes('aucune adresse mint'));
 });
+
+test('historical alert performance is aggregated with equal weight per token in each cohort',()=>{
+ const metric=(signals,averageReturnPct,positive15Pct,loss20Pct)=>({signals,averageReturnPct,positive15Pct,loss20Pct});
+ const result=getHistoricalBenchmark.call({state:{historicalBenchmarks:{
+  BONK:{symbol:'BONK',cohort:'cycle_winner',completed:true,terminalReturnPct:100,maxDrawdownPct:-30,signalCount:8,alertCount:3,historicalSignalPerformance:{'1d':{alerts:metric(2,20,50,0),allSignals:metric(5,10,40,20)}}},
+  FARTCOIN:{symbol:'FARTCOIN',cohort:'cycle_winner',completed:true,terminalReturnPct:200,maxDrawdownPct:-40,signalCount:6,alertCount:2,historicalSignalPerformance:{'1d':{alerts:metric(1,40,100,0),allSignals:metric(4,5,25,25)}}},
+  CHILLGUY:{symbol:'CHILLGUY',cohort:'boom_bust',completed:true,terminalReturnPct:-70,maxDrawdownPct:-85,signalCount:4,alertCount:1,historicalSignalPerformance:{'1d':{alerts:metric(1,-60,0,100),allSignals:metric(3,-10,33,33)}}}
+ }}}});
+ const winners=result.signalPerformanceByCohort.cycle_winner.byHorizon['1d'];
+ assert.equal(winners.alerts.tokens,2);
+ assert.equal(winners.alerts.signals,3);
+ assert.equal(winners.alerts.averageTokenReturnPct,30);
+ assert.equal(winners.alerts.averageTokenPositive15Pct,75);
+ assert.equal(winners.allSignals.averageTokenReturnPct,7.5);
+ assert.equal(winners.averagePerTokenAlertLiftPct,22.5);
+ const bust=result.signalPerformanceByCohort.boom_bust.byHorizon['1d'];
+ assert.equal(bust.alerts.averageTokenReturnPct,-60);
+ assert.equal(bust.alerts.averageTokenLoss20Pct,100);
+ assert.match(result.limitations,/poids égal par token/i);
+});
