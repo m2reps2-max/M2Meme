@@ -1,6 +1,6 @@
 'use strict';
 const $=s=>document.querySelector(s), view=$('#view'), nav=$('#nav'), title=$('#page-title');
-const state={overview:{},tokens:[],alerts:[],watchlist:[],wallets:[],selected:null,page:'overview',sort:'score',search:''};
+const state={overview:{},tokens:[],alerts:[],watchlist:[],wallets:[],selected:null,page:'overview',sort:'score',search:'',loadErrors:[]};
 const labels={overview:'Vue générale',scanner:'Live Scanner',opportunities:'Opportunités',watchlist:'Watchlist',analysis:'Analyse du token',smart:'Smart Money',security:'Sécurité',social:'Social Intelligence',alerts:'Alertes & historique',settings:'Paramètres'};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const date=v=>v?new Date(v).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'—';
@@ -20,12 +20,37 @@ function renderSecurity(){const a=state.tokens.filter(t=>t.security?.checkedAt||
 function renderSocial(){const a=state.tokens.filter(t=>(t.socials||[]).length||(t.links||[]).length||t.socialData);view.innerHTML='<h2>Social Intelligence</h2><p class="muted">Liens de sites et profils fournis par DexScreener. Aucune collecte de mentions ou de statistiques sociales.</p>'+tokenTable(a);}
 function renderAlerts(){view.innerHTML='<div class="section-heading"><h2>Alertes & historique</h2><button class="secondary" id="telegram-test">Tester Telegram</button></div>'+state.alerts.map(a=>'<article class="panel alert-row"><div>'+pill('Score '+a.score+'/100','good')+' <b>'+esc(a.symbol)+'</b><p>'+esc(a.message)+'</p><small>'+date(a.at)+' · couverture '+a.coverage+'%</small></div><button class="mini-btn" data-token="'+esc(a.mint)+'">Détails</button></article>').join('')||'<p class="muted">Aucune alerte pour le moment.</p>';}
 function renderSettings(){view.innerHTML='<h2>Paramètres & intégrations</h2><p>Aucun fournisseur payant ni aucune clé API payante. Configure seulement les variables indiquées ci-dessous dans FadeHost.</p><div class="env-list">'+['DASHBOARD_ACCESS_CODE','DASHBOARD_SESSION_SECRET','DASHBOARD_URL','BOT_TOKEN','TELEGRAM_CHAT_ID','SOLANA_RPC_URL (facultatif)','ALERT_MIN_SCORE','SCAN_INTERVAL_MS','MIN_LIQUIDITY_USD'].map(x=>'<div><b>'+x+'</b></div>').join('')+'</div>'+sourceCards()+'<p class="footnote">Trading automatique désactivé. Aucune clé privée ni signature de transaction utilisée.</p>';}
-function render(page=state.page){state.page=page;title.textContent=labels[page]||labels.overview;nav.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.view===page));({overview:renderOverview,scanner:()=>renderScanner('scanner'),opportunities:()=>renderScanner('opportunities'),watchlist:renderWatchlist,analysis:renderDetail,smart:renderSmart,security:renderSecurity,social:renderSocial,alerts:renderAlerts,settings:renderSettings}[page]||renderOverview)();}
-async function load(){const r=await Promise.all([api('/api/overview'),api('/api/tokens?limit=200'),api('/api/alerts'),api('/api/watchlist'),api('/api/wallets')]);state.overview=r[0];state.tokens=r[1].tokens||[];state.alerts=r[2].alerts||[];state.watchlist=r[3].watchlist||[];state.wallets=r[4].wallets||[];render(state.page);}
+function render(page=state.page){
+ state.page=page;title.textContent=labels[page]||labels.overview;
+ nav.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.view===page));
+ try{
+  ({overview:renderOverview,scanner:()=>renderScanner('scanner'),opportunities:()=>renderScanner('opportunities'),watchlist:renderWatchlist,analysis:renderDetail,smart:renderSmart,security:renderSecurity,social:renderSocial,alerts:renderAlerts,settings:renderSettings}[page]||renderOverview)();
+  if(state.loadErrors.length)view.insertAdjacentHTML('afterbegin','<div class="notice"><b>Chargement partiel des données</b><p>'+state.loadErrors.map(esc).join('<br>')+'</p><button class="mini-btn" id="retry-load">Réessayer</button></div>');
+ }catch(error){
+  console.error('[MEME RADAR UI]',error);
+  view.innerHTML='<div class="panel empty-panel"><div class="empty-icon">!</div><h2>Erreur d’affichage</h2><p>'+esc(error.message||error)+'</p><button class="primary" id="retry-load">Réessayer</button></div>';
+ }
+}
+async function load(){
+ const jobs=[['Vue générale','/api/overview'],['Tokens','/api/tokens?limit=200'],['Alertes','/api/alerts'],['Watchlist','/api/watchlist'],['Wallets','/api/wallets']];
+ const results=await Promise.allSettled(jobs.map(([,url])=>api(url)));
+ state.loadErrors=[];
+ for(let i=0;i<results.length;i++){
+  const result=results[i],name=jobs[i][0];
+  if(result.status==='rejected'){state.loadErrors.push(name+': '+(result.reason?.message||'Erreur inconnue'));continue;}
+  const data=result.value;
+  if(i===0)state.overview=data;
+  if(i===1)state.tokens=data.tokens||[];
+  if(i===2)state.alerts=data.alerts||[];
+  if(i===3)state.watchlist=data.watchlist||[];
+  if(i===4)state.wallets=data.wallets||[];
+ }
+ render(state.page);
+}
 async function openToken(mint,social=false){try{const d=await api('/api/token/'+encodeURIComponent(mint));state.selected=d.token;if(social){const s=await api('/api/token/'+encodeURIComponent(mint)+'?social=true');state.selected=s.token;state.selected.socialData=s.social;}await load();state.selected=state.tokens.find(t=>t.mint===mint)||state.selected;render('analysis');}catch(e){alert(e.message);}}
 async function scan(){const b=$('#run-scan')||$('#refresh-tokens');if(b){b.disabled=true;b.textContent='Scan…';}try{await api('/api/scan',{method:'POST',body:'{}'});await load();}catch(e){alert(e.message);}finally{const x=$('#run-scan')||$('#refresh-tokens');if(x){x.disabled=false;x.textContent='Actualiser';}}}
 nav.addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b)render(b.dataset.view);});
-view.addEventListener('click',async e=>{const t=e.target.closest('[data-token]');if(t)return openToken(t.dataset.token);const w=e.target.closest('[data-watch]');if(w){try{if(state.watchlist.includes(w.dataset.watch))await api('/api/watchlist/'+encodeURIComponent(w.dataset.watch),{method:'DELETE'});else await api('/api/watchlist',{method:'POST',body:JSON.stringify({mint:w.dataset.watch})});await load();}catch(x){alert(x.message);}return;}const go=e.target.closest('[data-go]');if(go)return render(go.dataset.go);if(e.target.closest('#run-scan')||e.target.closest('#refresh-tokens'))return scan();if(e.target.closest('#refresh-watchlist'))return load();if(e.target.closest('#detail-refresh')&&state.selected)return openToken(state.selected.mint);if(e.target.closest('#check-social')&&state.selected)return openToken(state.selected.mint,true);if(e.target.closest('#telegram-test')){try{await api('/api/telegram/test',{method:'POST',body:'{}'});alert('Test Telegram envoyé.');}catch(x){alert(x.message);}return;}const rm=e.target.closest('[data-remove-wallet]');if(rm){await api('/api/wallets/'+encodeURIComponent(rm.dataset.removeWallet),{method:'DELETE'});await load();}});
+view.addEventListener('click',async e=>{const t=e.target.closest('[data-token]');if(t)return openToken(t.dataset.token);const w=e.target.closest('[data-watch]');if(w){try{if(state.watchlist.includes(w.dataset.watch))await api('/api/watchlist/'+encodeURIComponent(w.dataset.watch),{method:'DELETE'});else await api('/api/watchlist',{method:'POST',body:JSON.stringify({mint:w.dataset.watch})});await load();}catch(x){alert(x.message);}return;}const go=e.target.closest('[data-go]');if(go)return render(go.dataset.go);if(e.target.closest('#run-scan')||e.target.closest('#refresh-tokens'))return scan();if(e.target.closest('#refresh-watchlist'))return load();if(e.target.closest('#retry-load'))return load().catch(x=>alert(x.message));if(e.target.closest('#detail-refresh')&&state.selected)return openToken(state.selected.mint);if(e.target.closest('#check-social')&&state.selected)return openToken(state.selected.mint,true);if(e.target.closest('#telegram-test')){try{await api('/api/telegram/test',{method:'POST',body:'{}'});alert('Test Telegram envoyé.');}catch(x){alert(x.message);}return;}const rm=e.target.closest('[data-remove-wallet]');if(rm){await api('/api/wallets/'+encodeURIComponent(rm.dataset.removeWallet),{method:'DELETE'});await load();}});
 view.addEventListener('input',e=>{if(e.target.id==='search-token'){state.search=e.target.value;refreshTable();}});view.addEventListener('change',e=>{if(e.target.id==='sort-token'){state.sort=e.target.value;refreshTable();}});
 view.addEventListener('submit',async e=>{if(e.target.id==='wallet-form'){e.preventDefault();const f=e.target;try{await api('/api/wallets',{method:'POST',body:JSON.stringify({address:f.address.value.trim(),label:f.label.value.trim()})});await load();}catch(x){alert(x.message);}}});
-$('#logout').addEventListener('click',async()=>{await fetch('/api/logout',{method:'POST'});location.replace('/login');});$('#refresh-app')?.addEventListener('click',()=>load().catch(e=>alert(e.message)));api('/api/me').then(load).catch(()=>location.replace('/login'));setInterval(()=>load().catch(()=>{}),60000);
+$('#logout').addEventListener('click',async()=>{await fetch('/api/logout',{method:'POST'});location.replace('/login');});$('#refresh-app')?.addEventListener('click',()=>load().catch(e=>alert(e.message)));render('overview');api('/api/me').then(load).catch(()=>location.replace('/login'));setInterval(()=>load().catch(()=>{}),60000);
