@@ -25,9 +25,11 @@ test('agrège plusieurs comptes token appartenant au même wallet',()=>{
  assert.equal(x.effectiveOwnersTop20,1.85);
 });
 
-test('retombe sur les comptes bruts si les propriétaires ne sont pas disponibles',()=>{
+test('ne présente pas la concentration des comptes comme une concentration de wallets si les propriétaires sont inconnus',()=>{
  const x=analyzeLargestHolders([{amount:'800'},{amount:'200'}],[null,null],'1000');
- assert.equal(x.top10HolderPercent,100);
+ assert.equal(x.top10HolderPercent,null);
+ assert.equal(x.top10AccountPercent,100);
+ assert.equal(x.top20HolderPercent,null);
  assert.equal(x.top1OwnerPercent,null);
  assert.equal(x.ownerConcentrationAvailable,false);
 });
