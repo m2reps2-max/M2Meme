@@ -47,7 +47,9 @@ test('SQLite archive stores cold tokens, restores them in bounded batches and re
     const batch = archive.takeForScan(2, 900000);
     assert.equal(batch.length, 2);
     assert.equal(batch[0].mint, rows[0].mint);
-    assert.equal(archive.takeForScan(2, 900000).length, 0);
+    const nextBatch = archive.takeForScan(2, 900000);
+    assert.equal(nextBatch.length, 2);
+    assert.equal(new Set([...batch, ...nextBatch].map(token => token.mint)).size, 4);
     assert.equal(archive.removeMany([rows[0].mint]), 1);
     assert.equal(archive.summary().tokens, 5);
   } finally {
