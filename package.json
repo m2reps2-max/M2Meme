@@ -1,12 +1,12 @@
 {
   "name": "meme-radar",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "private": true,
   "description": "Free Solana meme coin discovery dashboard and Telegram intelligence bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "check": "node --check index.js && node --check lib/scanner.js && node --check lib/intelligence.js && node --check lib/historical-benchmark.js && node --check lib/learning.js && node --check public/dashboard.js && node --check lib/holder-intel.js && node --check lib/external-security.js && node --check lib/launch-stream.js && node --check lib/market-intel.js && node --check lib/narratives.js",
+    "check": "node --check index.js && node --check lib/scanner.js && node --check lib/intelligence.js && node --check lib/historical-benchmark.js && node --check lib/learning.js && node --check public/dashboard.js && node --check lib/holder-intel.js && node --check lib/external-security.js && node --check lib/launch-stream.js && node --check lib/market-intel.js && node --check lib/narratives.js && node --check lib/gecko-discovery.js && node --check lib/social-radar.js",
     "test": "node --test"
   },
   "engines": {
