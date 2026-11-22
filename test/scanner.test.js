@@ -380,7 +380,7 @@ test('une opportunité Telegram exige une sécurité vérifiée; sinon le signal
 
 test('un token Token-2022 non audité ne reçoit pas le facteur sécurité complet',()=>{
  const s=make();
- const a=s.score({txns:{h1:{buys:20,sells:10}},volume:{h1:5000,h24:20000},liquidityUsd:10000,fdv:50000,ageHours:2,security:{checkedAt:new Date().toISOString(),data:{freezeAuthorityActive:false,mintAuthorityActive:false,isInitialized:true,isToken2022:true,ownerConcentrationAvailable:true,top10HolderPercent:20}}});
+ const a=s.score({txns:{h1:{buys:20,sells:10}},volume:{h1:5000,h24:20000},liquidityUsd:10000,fdv:50000,ageHours:2,pairAddress:'token-2022-pool',security:{checkedAt:new Date().toISOString(),data:{freezeAuthorityActive:false,mintAuthorityActive:false,isInitialized:true,isToken2022:true,ownerConcentrationAvailable:true,top10HolderPercent:20}}});
  assert.equal(a.factors.security,undefined);
  assert.ok(a.flags.some(x=>x.code==='TOKEN_2022_REVIEW'));
  assert.equal(a.readiness,'partial');
