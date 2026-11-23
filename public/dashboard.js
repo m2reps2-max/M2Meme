@@ -196,7 +196,7 @@ async function load(options={}){
    if(i===8)state.walletReputation=data;
    if(i===9)state.dataQuality=data;
    if(i===10)state.walletSignalBacktest=data;
-   if(i===11)state.selectionPerformance=data;\n
+   if(i===11)state.selectionPerformance=data;
   }
   setSyncStatus(state.loadErrors.length?'Données partielles':state.overview.scannerRunning?'Scanner actif':'Scanner à vérifier',state.loadErrors.length?'warn':state.overview.scannerRunning?'good':'warn');
   render(state.page);
