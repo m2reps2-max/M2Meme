@@ -190,7 +190,7 @@ const pageDataJobs={
  quality:[['data-quality','Qualité des données','/api/data-quality',d=>{state.dataQuality=d;}]],
  launches:[['launches','Nouveaux lancements','/api/launches',d=>{state.launches=d.tokens||[];}]],
  experts:[['experts','Experts','/api/intelligence/experts',d=>{state.experts=d;}],['wallet-signal-backtest','Validation wallets','/api/intelligence/wallet-signal-backtest',d=>{state.walletSignalBacktest=d;}]],
- backtest:[['backtest','Backtest','/api/backtest',d=>{state.backtest=d;}],['learning','Apprentissage','/api/learning',d=>{state.learning=d;}],['selection-performance','Cohorte Sélection','/api/selection-performance',d=>{state.selectionPerformance=d;}]],
+ backtest:[['learning','Apprentissage','/api/learning',d=>{state.learning=d;}],['selection-performance','Cohorte Sélection','/api/selection-performance',data=>{state.selectionPerformance=data;}]],
  results:[['selection-performance','Cohorte Sélection','/api/selection-performance',d=>{state.selectionPerformance=d;}]],
  historical:[['historical','Benchmark historique','/api/backtest/historical',d=>{state.historical=d;}]]
 };
