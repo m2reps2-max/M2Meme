@@ -100,7 +100,7 @@ test('results page displays prospective shortlist cohorts separately from generi
  assert.match(js,/Qualité réelle de la Sélection/);
  assert.match(js,/Échantillon témoin/);
  assert.match(js,/api\/selection-performance/);
- assert.match(js,/selectionPerformance=data/);
+ assert.match(js,/state\.selectionPerformance=performance/);
 });
 
 test('HTML closing-tag helper is shared by all dashboard renderers',()=>{
@@ -180,7 +180,7 @@ test('simple settings page exposes scanner thresholds and publication switches',
  assert.match(js,/name="publishRisks"/);
  assert.match(js,/api\('\/api\/scanner-settings'/);
  assert.match(js,/scanner-settings-preset/);
- assert.match(html,/scanner-settings-v1/);
+ assert.match(html,/lazy-loading-v1/);
 });
 test('scanner settings remain in the existing persisted state and are applied to alert selection',()=>{
  const normalizer=fs.readFileSync(path.join(root,'lib/state-normalizer.js'),'utf8');
