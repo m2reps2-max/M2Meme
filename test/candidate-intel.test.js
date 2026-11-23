@@ -51,3 +51,12 @@ test('social scoring flags repeated public snippets without claiming proof', () 
   assert.ok(result.reasons.some(reason => reason.includes('possible amplification')));
   assert.ok(result.reasons.some(reason => reason.includes('concentrées')));
 });
+
+test('same-slot Smart Money clusters add a bounded warning and modest score penalty',()=>{
+  const baseline=evaluateCandidateIntel({walletReputation:{sameSlotClusteredWallets:0}});
+  const clustered=evaluateCandidateIntel({walletReputation:{sameSlotClusteredWallets:2}});
+  assert.equal(clustered.adjustment,-4);
+  assert.ok(clustered.flags.some(flag=>flag.code==='SMART_MONEY_SLOT_CLUSTER'));
+  assert.ok(clustered.reasons.some(reason=>reason.includes('même slot')));
+  assert.equal(baseline.flags.some(flag=>flag.code==='SMART_MONEY_SLOT_CLUSTER'),false);
+});
