@@ -1,6 +1,14 @@
 # MEME RADAR — version gratuite
 
-Dashboard privé de recherche de meme coins Solana. Le projet utilise des sources publiques gratuites : DexScreener, GeckoTerminal, Reddit RSS, Bluesky public search, PumpPortal (créations/migrations) et le RPC public Solana. Telegram est facultatif. Aucun fournisseur payant, aucune clé API payante, aucun wallet de trading et aucune signature de transaction.
+Dashboard privé de recherche de meme coins Solana. Le projet utilise des sources publiques gratuites : DexScreener, GeckoTerminal, Bluesky public search, X (optionnel via session personnelle), PumpPortal (créations/migrations) et le RPC public Solana. Telegram est facultatif. Aucun fournisseur payant, aucune clé API payante, aucun wallet de trading et aucune signature de transaction.
+
+### Connecteur X facultatif (session personnelle)
+
+Le connecteur X est désactivé tant que `X_AUTH_TOKEN` et `X_CT0` ne sont pas configurés dans les variables privées de FadeHost. Il utilise le SDK Node.js `x-agent-sdk` (MIT), sans runtime Python : une seule session, une recherche par cycle social de 15 minutes, trois requêtes configurables qui tournent d'un cycle à l'autre, 20 publications maximum par recherche et cache de dix minutes. Le code n'effectue aucune publication, aucun like, aucun repost et aucun suivi.
+
+Configure les deux variables privées `X_AUTH_TOKEN` (cookie `auth_token`) et `X_CT0` (cookie `ct0`). Ne colle jamais ces valeurs dans le dépôt, un chat ou les logs; révoque la session si elle est exposée. `X_SEARCH_QUERIES` peut contenir jusqu'à trois recherches séparées par des points-virgules.
+
+Ce connecteur utilise l'API web privée non documentée de X. Il peut casser, être limité ou entraîner une restriction du compte. L'activation est volontaire; respecte les règles de X et ses limites. Une seule session est utilisée, sans rotation de comptes ni contournement des limites.
 
 ## Fonctions disponibles sans payer
 
@@ -24,7 +32,7 @@ Dashboard privé de recherche de meme coins Solana. Le projet utilise des source
 | Surveillance des acheteurs découverts | Jusqu'à 5 wallets automatiques, 3 transactions récentes chacun toutes les 10 minutes | Rien |
 | Liens de sites et réseaux sociaux | Métadonnées DexScreener | Rien |
 | Découverte de nouveaux pools sur plusieurs DEX Solana | GeckoTerminal Public API (`/networks/solana/new_pools`) | Rien |
-| Mentions et sentiment communautaire indicatif | Flux RSS Reddit + recherche publique Bluesky + relais Nostr NIP-50, sans clé | Rien |
+| Mentions et sentiment communautaire indicatif | Recherche publique Bluesky + relais Nostr NIP-50; Reddit RSS désactivé; X facultatif via SDK Node `x-agent-sdk` à session unique | X_AUTH_TOKEN + X_CT0 |
 | Analyse des transactions récentes, diversité acheteurs, concentration, bursts 5 secondes et clusters same-block de type bundle | GeckoTerminal pool trades (jusqu'à 300 transactions observées), persistées dans l'historique wallet avec source et déduplication par signature | Rien |
 | Graphe des wallets | Financeurs communs des créateurs observés et achats rapprochés répétés sur plusieurs tokens; niveaux de preuve distincts | Rien |
 | Ajustement limité du score avec qualité des transactions et signal social public | Module local candidate-intel, GeckoTerminal + Reddit + Bluesky | Rien |
