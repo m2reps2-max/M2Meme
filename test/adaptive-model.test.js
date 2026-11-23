@@ -78,3 +78,15 @@ test('adaptive holdout reports net performance at multiple independent horizons'
  }
  assert.ok(model.holdout.horizons['1h'].top.tokens>=15);
 });
+
+test('multi-horizon comparisons use identical resolved token cohorts for all three rankings',()=>{
+ const tokens=fixture();
+ for(let i=0;i<tokens.length;i++){}
+ for(let i=0;i<300;i+=2)delete tokens['mint-'+String(i).padStart(4,'0')].forecasts[0].outcomes['7d'];
+ const model=buildAdaptiveModel(tokens);
+ const sevenDay=model.holdout.horizons['7d'];
+ assert.equal(sevenDay.comparisonSampleSize,30);
+ assert.equal(sevenDay.top.tokens,sevenDay.staticScoreTop.tokens);
+ assert.equal(sevenDay.top.tokens,sevenDay.randomSameSize.tokens);
+ assert.equal(sevenDay.top.tokens,15);
+});
