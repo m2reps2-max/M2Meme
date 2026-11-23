@@ -2,6 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { constantTimeEqual, validateHistoricalPayload, validateArchiveLearningPayload, mergeHistoricalBenchmarks } = require('../lib/actions-ingest');
+const { buildAdaptiveModel } = require('../lib/adaptive-model');
 
 const allowed = new Set(['BONK', 'WIF']);
 const completed = { symbol: 'BONK', completed: true, terminalReturnPct: 20, maxDrawdownPct: -30, signals: [], fetchedAt: new Date().toISOString() };
@@ -43,4 +44,29 @@ test('archive learning ingest accepts bounded aggregates and rejects malformed o
   assert.equal(validateArchiveLearningPayload(payload).ok, true);
   assert.equal(validateArchiveLearningPayload({ ...payload, summary: { ...summary, archiveTokensScanned: 999999 } }).ok, false);
   assert.equal(validateArchiveLearningPayload({ ...payload, summary: { ...summary, horizons: { ...summary.horizons, '1h': { ...metric, averageReturnPct: Infinity } } } }).ok, false);
+});
+
+test('archive learning ingest validates a real adaptive model and rejects unsafe model coefficients',()=>{
+  const tokens={};
+  for(let i=0;i<300;i++){
+    const x=i%100,mint='archive-'+String(i).padStart(4,'0');
+    tokens[mint]={mint,forecasts:[{
+      at:Date.UTC(2026,0,1)+i*60000,score:100-x,
+      features:{activity:x,momentum:x*.8+(i%7),market:x*.7+(i%5),liquidityQuality:x*.6+(i%11),security:x*.5+(i%13)},
+      outcomes:{'15m':{returnPct:(x-50)*.8},'1h':{returnPct:(x-50)*1.5},'6h':{returnPct:(x-50)*1.2},'24h':{returnPct:(x-50)*.7},'7d':{returnPct:(x-50)*.4}}
+    }]};
+  }
+  const adaptiveModel=buildAdaptiveModel(tokens);
+  const metric={resolved:12,averageReturnPct:8.5,positive15Pct:50,loss20Pct:16.7};
+  const summary={
+    archiveTokensScanned:50000,tokensWithForecasts:1200,forecasts:9000,uniqueResolvedTokens1h:800,
+    horizons:Object.fromEntries(['15m','1h','6h','24h','7d'].map(key=>[key,metric])),
+    scoreBands:Object.fromEntries(['0-44','45-64','65-79','80-100'].map(key=>[key,metric])),
+    bySource:{'Pump.fun':metric},walkForward:{trainingTokens:640,validationTokens:160,validation:metric},
+    adaptiveModel,limitations:'Cold archive only.'
+  };
+  const payload={schemaVersion:1,generatedAt:new Date().toISOString(),summary};
+  assert.equal(adaptiveModel.enabled,true);
+  assert.equal(validateArchiveLearningPayload(payload).ok,true);
+  assert.equal(validateArchiveLearningPayload({...payload,summary:{...summary,adaptiveModel:{...adaptiveModel,coefficients:{activity:999}}}}).ok,false);
 });
