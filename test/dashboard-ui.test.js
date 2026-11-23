@@ -57,8 +57,8 @@ test('wallet reputation page exposes point-in-time backtest and outcomes against
 
 test('Radar shortlist is capped at five best and five watch candidates with strict data gates',()=>{
  assert.match(selection,/\.slice\(0,5\)/);
- assert.ok(selection.includes('Number(t.analysis?.coverage||0)>=80'));
- assert.ok(selection.includes('Number(t.liquidityUsd||0)>=10000'));
+ assert.ok(selection.includes('Number(t.analysis?.coverage||0)>=minCoverage'));
+ assert.ok(selection.includes('liquidity>=minLiquidityUsd'));
  assert.match(selection,/risk!=='high'/);
  assert.match(js,/Aucun candidat assez solide/);
  assert.match(js,/pré-marchés à 5 % ne sont pas présentés comme des opportunités/);
@@ -158,10 +158,10 @@ test('dashboard UI action endpoints exist on the server',()=>{
 
 test('API origin guard accepts the configured public dashboard origin behind FadeHost proxy',()=>{
  const server=fs.readFileSync(path.join(root,'index.js'),'utf8');
- assert.match(server,/new URL\(CONFIG\.dashboardUrl\)\.origin/);
- assert.match(server,/x-forwarded-host/);
- assert.match(server,/x-forwarded-proto/);
- assert.match(server,/sec-fetch-site/);
+ assert.match(server,/isTrustedDashboardRequest/);
+ assert.match(server,/forwardedHost:req.get\('x-forwarded-host'\)/);
+ assert.match(server,/forwardedProto:req.get\('x-forwarded-proto'\)/);
+ assert.match(server,/fetchSite:req.get\('sec-fetch-site'\)/);
  assert.doesNotMatch(server,/new URL\(o\)\.host!==req\.get\('host'\)/);
 });
 
@@ -189,12 +189,12 @@ test('simple settings page exposes scanner thresholds and publication switches',
  assert.match(js,/id="scanner-settings-form"/);
  assert.match(js,/name="preset"/);
  assert.match(js,/name="minScore"/);
- assert.match(js,/name="minLiquidityUsd"/);
+ assert.match(js,/name="minLiquidityUsd"/);\n assert.match(js,/name="minVolume1hUsd"/);\n assert.match(js,/name="minCoverage"/);\n assert.match(js,/name="minTransactions1h"/);\n assert.match(js,/name="minBuyRatioPct"/);\n assert.match(js,/name="maxFdvLiquidityRatio"/);\n assert.match(js,/name="requireComprehensiveSecurity"/);
  assert.match(js,/name="publishOpportunities"/);
  assert.match(js,/name="publishRisks"/);
  assert.match(js,/api\('\/api\/scanner-settings'/);
  assert.match(js,/scanner-settings-preset/);
- assert.match(html,/telegram-channel-picker-v1/);
+ assert.match(html,/elite-detection-v1/);
 });
 test('scanner settings remain in the existing persisted state and are applied to alert selection',()=>{
  const normalizer=fs.readFileSync(path.join(root,'lib/state-normalizer.js'),'utf8');
