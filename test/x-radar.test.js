@@ -42,3 +42,34 @@ test('rotates one bounded query per cycle', () => {
   assert.equal(radar.queries().length, 3);
   assert.equal(DEFAULT_QUERIES.length, 3);
 });
+
+
+test('uses one bounded X search and caches its result', async () => {
+  let searches = 0;
+  let options;
+  const now = Date.now();
+  const radar = new XSocialRadar({
+    env: { X_AUTH_TOKEN: 'test-auth', X_CT0: 'test-csrf' },
+    clientFactory: async value => {
+      options = value;
+      return {
+        search: async (query, count, product) => {
+          searches++;
+          assert.equal(count, 20);
+          assert.equal(product, 'Latest');
+          assert.ok(query.length > 0);
+          return [{ id: '42', text: 'A new Solana token', author: 'builder', created_at: new Date(now - 30000).toISOString(), likes: 3, retweets: 2, replies: 1, url: 'https://x.com/builder/status/42' }];
+        }
+      };
+    }
+  });
+  const first = await radar.search();
+  const second = await radar.search();
+  assert.equal(searches, 1);
+  assert.equal(first.available, true);
+  assert.equal(second.posts[0].id, '42');
+  assert.equal(first.mentions1h, 1);
+  assert.equal(first.uniqueAuthors24h, 1);
+  assert.equal(first.engagement24h, 6);
+  assert.equal(options.retries, 1);
+});
