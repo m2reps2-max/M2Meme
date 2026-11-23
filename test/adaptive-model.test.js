@@ -10,7 +10,7 @@ function fixture(count=200){
   const features={activity:x,momentum:x*.8+(i%7),market:x*.7+(i%5),liquidityQuality:x*.6+(i%11),security:x*.5+(i%13)};
   tokens['mint-'+String(i).padStart(4,'0')]={mint:'mint-'+String(i).padStart(4,'0'),forecasts:[{
    at:Date.UTC(2026,0,1)+i*60000,score:100-x,features,
-   outcomes:{'1h':{returnPct:(x-50)*1.5,label:x>=60?'win':x<=35?'loss':'flat'}}
+   outcomes:{'15m':{returnPct:(x-50)*0.8},'1h':{returnPct:(x-50)*1.5,label:x>=60?'win':x<=35?'loss':'flat'},'6h':{returnPct:(x-50)*1.2},'24h':{returnPct:(x-50)*0.7}}
   }]};
  }
  return tokens;
@@ -44,4 +44,15 @@ test('adaptive model ignores forecasts without four point-in-time factors or res
  const model=buildAdaptiveModel(tokens);
  assert.equal(model.observations,0);
  assert.equal(model.enabled,false);
+});
+
+test('adaptive holdout reports independent performance at multiple horizons',()=>{
+ const model=buildAdaptiveModel(fixture());
+ assert.ok(model.holdout.horizons);
+ for(const horizon of ['15m','1h','6h','24h','7d']){
+  assert.ok(model.holdout.horizons[horizon]);
+  assert.ok(model.holdout.horizons[horizon].top.tokens>=0);
+  assert.equal(typeof model.holdout.horizons[horizon].upliftVsStaticPctPoints==='number'||model.holdout.horizons[horizon].upliftVsStaticPctPoints===null,true);
+ }
+ assert.ok(model.holdout.horizons['1h'].top.tokens>=10);
 });
