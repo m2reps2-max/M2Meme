@@ -32,7 +32,7 @@ test('archive learning ingest accepts bounded aggregates and rejects malformed o
     archiveTokensScanned: 50000,
     tokensWithForecasts: 1200,
     forecasts: 9000,
-    firstResolvedTokens: 800,
+    uniqueResolvedTokens1h: 800,
     horizons: Object.fromEntries(['15m', '1h', '6h', '24h', '7d'].map(key => [key, metric])),
     scoreBands: Object.fromEntries(['0-44', '45-64', '65-79', '80-100'].map(key => [key, metric])),
     bySource: { 'Pump.fun': metric },
