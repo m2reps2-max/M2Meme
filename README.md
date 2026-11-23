@@ -167,6 +167,16 @@ Ne partage jamais ces secrets dans une conversation et ne les commits pas sur Gi
 - `GET /health/ready` : readiness du processus scanner.
 - `GET /api/system/health` : détails des sources, réservé à une session authentifiée.
 
+## Diffusion Telegram multi-canaux
+
+Le dashboard propose une page **Canaux** : ajoute un identifiant numérique de chat (par exemple `-1001234567890`) ou le nom public d'un canal (par exemple `@moncanal`), puis active ou désactive sa diffusion. Le bot doit être administrateur du canal avec le droit de publier. Jusqu'à 10 canaux peuvent être configurés. Tous reçoivent les mêmes alertes qualifiées depuis un seul scanner; ajouter un canal ne déclenche aucun scan supplémentaire.
+
+Les anciens déploiements qui utilisent `TELEGRAM_CHAT_ID` sont migrés vers un canal principal au premier démarrage, sans effacer les autres données. Une fois la configuration des canaux modifiée dans le dashboard, la liste enregistrée devient la référence, y compris si tous les canaux sont désactivés ou supprimés.
+
+Les alertes Telegram sont volontairement courtes : nom, score M2/100, verdict en français, données marché essentielles, raison principale, adresse du token et lien DexScreener. Le score est une note heuristique de qualité des signaux observés, **pas une probabilité de hausse ni une promesse de rendement**. Les catégories sont : 90–100 exceptionnel, 80–89 très prometteur, 70–79 prometteur, 55–69 à surveiller, 0–54 peu intéressant. Une alerte de risque critique affiche un avertissement et ne peut pas être transformée en signal positif par son score.
+
+La page **Résultats** mesure les tokens de la sélection principale : taux ayant atteint au moins +15 % à environ 1 h, rendements moyens et baisses importantes aux horizons disponibles. Une entrée par mint est suivie; les observations manquantes sont affichées séparément et ne sont pas comptées comme des pertes. Ces résultats utilisent les prix observés, sans frais, slippage ni garantie qu'une transaction aurait pu être exécutée.
+
 ## Telegram
 
 Commandes : `/start`, `/dashboard`, `/scan`, `/opportunities`, `/help`. Le bot démarre en long polling au lancement du serveur si `TELEGRAM_BOT_TOKEN` (ou `BOT_TOKEN`) est renseigné. Les alertes sont envoyées uniquement si le token et `TELEGRAM_CHAT_ID` sont renseignés.
