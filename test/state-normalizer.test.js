@@ -75,8 +75,8 @@ test('launchpad discovery cursors and pending transaction queues are bounded and
  const {normalizeLaunchpadDiscovery}=require('../lib/state-normalizer');
  const state=normalizeLaunchpadDiscovery({
   nextProgram:-3,
-  cursors:{'raydium-launchlab':'valid-signature',bad:{signature:'x'}},
-  pending:{'raydium-launchlab':[{signature:'sig-1',slot:'123',attempts:9},null,{signature:'',attempts:0}],bad:[{signature:'ignored'}]},
+  cursors:{'raydium-launchlab':'valid-signature','../bad':'x'},
+  pending:{'raydium-launchlab':[{signature:'sig-1',slot:'123',attempts:9},null,{signature:'',attempts:0}],'../bad':[{signature:'ignored'}]},
   metrics:{launches:'4',processed:-2,gaps:'3',errors:'1'}
  });
  assert.equal(state.nextProgram,0);
