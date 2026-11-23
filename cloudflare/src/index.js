@@ -74,7 +74,7 @@ async function handleRequest(request, env) {
   if (!authorized(request, env)) return json({ error: "Unauthorized" }, 401);
 
   if (request.method === "GET" && url.pathname === "/v1/status") {
-    const latest = await env.DB.prepare("SELECT ran_at, pools_received, inserted_count, skipped_count, status FROM scan_runs ORDER BY id DESC LIMIT 1").first();
+    const latest = await env.DB.prepare("SELECT ran_at, pools_received, upserted_count, skipped_count, status FROM scan_runs ORDER BY id DESC LIMIT 1").first();
     const count = await env.DB.prepare("SELECT COUNT(*) AS total FROM discovered_tokens").first();
     return json({ ok: true, totalDiscovered: count?.total || 0, latestScan: latest || null });
   }
@@ -90,7 +90,7 @@ async function handleRequest(request, env) {
       return json(await discover(env));
     } catch (error) {
       const message = String(error?.message || error).slice(0, 300);
-      await env.DB.prepare("INSERT INTO scan_runs (ran_at, source, pools_received, inserted_count, skipped_count, status, error) VALUES (?, 'geckoterminal', 0, 0, 0, 'error', ?)").bind(new Date().toISOString(), message).run();
+      await env.DB.prepare("INSERT INTO scan_runs (ran_at, source, pools_received, upserted_count, skipped_count, status, error) VALUES (?, 'geckoterminal', 0, 0, 0, 'error', ?)").bind(new Date().toISOString(), message).run();
       return json({ ok: false, error: message }, 502);
     }
   }
@@ -108,7 +108,7 @@ export default {
   async scheduled(_event, env, ctx) {
     ctx.waitUntil(discover(env).catch(async error => {
       const message = String(error?.message || error).slice(0, 300);
-      await env.DB.prepare("INSERT INTO scan_runs (ran_at, source, pools_received, inserted_count, skipped_count, status, error) VALUES (?, 'geckoterminal', 0, 0, 0, 'error', ?)").bind(new Date().toISOString(), message).run();
+      await env.DB.prepare("INSERT INTO scan_runs (ran_at, source, pools_received, upserted_count, skipped_count, status, error) VALUES (?, 'geckoterminal', 0, 0, 0, 'error', ?)").bind(new Date().toISOString(), message).run();
       console.error("[scheduled discovery]", message);
     }));
   }
