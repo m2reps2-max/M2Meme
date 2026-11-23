@@ -1,6 +1,12 @@
 # MEME RADAR — version gratuite
 
-Dashboard privé de recherche de meme coins Solana. Le projet utilise des sources publiques gratuites : DexScreener, GeckoTerminal, Reddit RSS, Bluesky public search, PumpPortal (créations/migrations) et le RPC public Solana. Telegram est facultatif. Aucun fournisseur payant, aucune clé API payante, aucun wallet de trading et aucune signature de transaction.
+Dashboard privé de recherche de meme coins Solana. Le projet utilise des sources publiques gratuites : DexScreener, GeckoTerminal, Bluesky public search, X (optionnel via session personnelle), PumpPortal (créations/migrations) et le RPC public Solana. Telegram est facultatif. Aucun fournisseur payant, aucune clé API payante, aucun wallet de trading et aucune signature de transaction.
+
+### Connecteur X facultatif (session personnelle)
+
+Le connecteur X est désactivé tant que `X_COOKIES` n'est pas configuré. Il utilise `twscrape` (MIT) dans un processus Python séparé : une seule session, trois recherches maximum par cycle, quinze publications maximum par recherche, cache de dix minutes, aucune rotation de comptes. Les cookies ne sont transmis au processus via stdin et ne sont jamais écrits dans le dépôt ni dans les logs. Configure `X_COOKIES` dans les variables privées de l'hébergeur avec uniquement `auth_token=...; ct0=...`. Installe Python 3 puis `pip install -r requirements-social.txt`; si Python ou le paquet manque, le reste du bot continue normalement et le statut X indique l'erreur. `X_SEARCH_QUERIES` peut contenir jusqu'à trois recherches séparées par des points-virgules. `PYTHON_BIN` permet de préciser le chemin de l'interpréteur.
+
+Les recherches utilisent des interfaces internes non documentées de X et peuvent casser, être limitées ou entraîner une restriction de compte. L'activation est volontaire; respecte les règles de X, ses limites et les paramètres de ton compte. N'utilise pas plusieurs comptes pour contourner des limitations. Ne partage jamais les cookies dans un chat, un ticket ou GitHub; révoque la session si elle est exposée.
 
 ## Fonctions disponibles sans payer
 
@@ -24,7 +30,7 @@ Dashboard privé de recherche de meme coins Solana. Le projet utilise des source
 | Surveillance des acheteurs découverts | Jusqu'à 5 wallets automatiques, 3 transactions récentes chacun toutes les 10 minutes | Rien |
 | Liens de sites et réseaux sociaux | Métadonnées DexScreener | Rien |
 | Découverte de nouveaux pools sur plusieurs DEX Solana | GeckoTerminal Public API (`/networks/solana/new_pools`) | Rien |
-| Mentions et sentiment communautaire indicatif | Flux RSS Reddit + recherche publique Bluesky + relais Nostr NIP-50, sans clé | Rien |
+| Mentions et sentiment communautaire indicatif | Recherche publique Bluesky + relais Nostr NIP-50; Reddit RSS désactivé; X facultatif via un collecteur Python `twscrape` à session unique | X_COOKIES + Python 3 + `pip install -r requirements-social.txt` |
 | Analyse des transactions récentes, diversité acheteurs, concentration, bursts 5 secondes et clusters same-block de type bundle | GeckoTerminal pool trades (jusqu'à 300 transactions observées), persistées dans l'historique wallet avec source et déduplication par signature | Rien |
 | Graphe des wallets | Financeurs communs des créateurs observés et achats rapprochés répétés sur plusieurs tokens; niveaux de preuve distincts | Rien |
 | Ajustement limité du score avec qualité des transactions et signal social public | Module local candidate-intel, GeckoTerminal + Reddit + Bluesky | Rien |
