@@ -16,6 +16,9 @@ jobs:
   archive-learning:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      MEME_RADAR_INGEST_URL: https://m2meme.fadehost.app/internal/actions/archive-learning
+      MEME_RADAR_ACTIONS_TOKEN: ${{ secrets.MEME_RADAR_ACTIONS_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,10 +28,12 @@ jobs:
         with:
           node-version: 22
 
+      - name: Skip safely when the shared secret is not configured
+        if: env.MEME_RADAR_ACTIONS_TOKEN == ''
+        run: echo "::notice::Archive learning skipped. Configure MEME_RADAR_ACTIONS_TOKEN in GitHub Actions and FadeHost to enable it."
+
       - name: Analyze cold SQLite archive outside FadeHost
-        env:
-          MEME_RADAR_INGEST_URL: https://m2meme.fadehost.app/internal/actions/archive-learning
-          MEME_RADAR_ACTIONS_TOKEN: ${{ secrets.MEME_RADAR_ACTIONS_TOKEN }}
+        if: env.MEME_RADAR_ACTIONS_TOKEN != ''
         run: node scripts/run-actions-archive-learning.js
 
       - name: Preserve archive learning report
