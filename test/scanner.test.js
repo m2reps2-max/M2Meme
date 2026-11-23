@@ -450,3 +450,15 @@ test('un token pré-marché explique explicitement sa couverture de 5 pour cent'
  assert.ok(a.readinessReason.includes('uniquement au timing'));
  assert.ok(a.missingFactorReasons.some(x=>x.key==='market'&&x.reason==='aucun pool DEX relié'));
 });
+
+test('GeckoTerminal discovery coverage is exposed in the source status',()=>{
+ const scanner=make();
+ scanner.state.sources.geckoTerminal={ok:true,at:new Date().toISOString(),pools:78,uniqueTokens:64,pagesSucceeded:4,pagesAttempted:4,pagesConfigured:4,rateLimited:false};
+ const status=scanner.status().geckoTerminal;
+ assert.equal(status.pools,78);
+ assert.equal(status.uniqueTokens,64);
+ assert.equal(status.pagesSucceeded,4);
+ assert.equal(status.pagesConfigured,4);
+ assert.match(status.mode,/64 tokens distincts \/ 78 pools/);
+ assert.match(status.mode,/4\/4 pages/);
+});
