@@ -19,7 +19,7 @@ test('organic demand requires a meaningful sample and reports uncertainty',()=>{
  assert.equal(empty.status,'insufficient_data');
  assert.equal(empty.adjustment,0);
  const rows=[];
- for(let i=0;i<30;i++){const wallet=[w1,w2,w3,w4][i%4];rows.push({wallet,direction:i%2?'sell':'buy',at:new Date(100000+i*1000).toISOString(),volumeUsd:10,slot:i});}
+ for(let i=0;i<30;i++){const wallet=[w1,w2,w3,w4][i%4];rows.push({wallet,direction:Math.floor(i/4)%2?'sell':'buy',at:new Date(100000+i*1000).toISOString(),volumeUsd:10,slot:i});}
  const result=analyzeOrganicDemand({tradeIntel:{observedTrades:rows,tradeCount:30,earlyWindow:{complete:false}}});
  assert.ok(result.buyerSellerOverlap>=3);
  assert.ok(result.reasons.length>0);
