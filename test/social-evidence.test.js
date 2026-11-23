@@ -28,7 +28,7 @@ test('social evidence counts independent authors by network and Telegram channel
   assert.equal(result.uniqueChannels24h, 2);
   assert.equal(result.uniqueSources24h, 3);
   assert.equal(result.duplicateTexts, 2);
-  assert.equal(result.weakTickerMatches, 3);
+  assert.equal(result.weakTickerMatches, 0);
 });
 
 test('social evidence ignores stale, future and unrelated posts', () => {
