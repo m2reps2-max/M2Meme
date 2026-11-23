@@ -32,7 +32,7 @@ Dashboard privé de recherche de meme coins Solana. Le projet utilise des source
 | Continuité RPC Solana | Endpoint configuré en priorité, puis bascule automatique vers deux RPC publics alternatifs avec cooldown par fournisseur | Rien |
 | Cohortes historiques gagnants / survivants / boom-bust | Bougies publiques GeckoTerminal, replay proxy journalier, rendements fixes à 1j/3j/7j après chaque signal, rendement final et drawdown | Rien |
 | Enrichissement automatique du meilleur candidat GeckoTerminal et d'un créateur observé à la fois | Quotas publics maîtrisés, une analyse de pool par cycle et un financement créateur toutes les 15 minutes au maximum | Rien |
-| Alertes Telegram | Telegram Bot API | Bot token + chat ID facultatifs |
+| Alertes Telegram | Telegram Bot API | Bot token + canaux configurés dans le dashboard (ancien chat ID migré) |
 | Dashboard et état actif | Express + JSON compact pour les 1 200 tokens chauds et les données opérationnelles | Variables d'accès + stockage persistant FadeHost |
 | Archive froide des tokens | SQLite natif Node.js, jusqu'à 50 000 tokens archivés, chargement par lots | Aucune clé API ni dépendance native à compiler |
 
@@ -152,7 +152,7 @@ Ne partage jamais ces secrets dans une conversation et ne les commits pas sur Gi
 
 ### Facultatives
 - `TELEGRAM_BOT_TOKEN` : token obtenu auprès de @BotFather (variable recommandée). L'ancienne variable `BOT_TOKEN` reste acceptée.
-- `TELEGRAM_CHAT_ID` : identifiant du chat ou canal destinataire. Le bot doit avoir accès au chat.
+- `TELEGRAM_CHAT_ID` : identifiant historique facultatif, migré comme canal principal si aucun canal n'a encore été configuré. Les nouveaux canaux se gèrent directement dans le dashboard.
 - `SOLANA_RPC_URL` : endpoint RPC Solana alternatif. Si vide, le projet utilise automatiquement `https://api.mainnet.solana.com`.
 - `PORT` : laisse la valeur attendue par FadeHost (souvent injectée automatiquement).
 - `SCAN_INTERVAL_MS` : intervalle du scanner, par défaut 60000 (60 secondes).
