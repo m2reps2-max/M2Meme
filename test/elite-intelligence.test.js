@@ -24,7 +24,7 @@ test('organic demand requires a meaningful sample and reports uncertainty',()=>{
  assert.ok(result.buyerSellerOverlap>=3);
  assert.ok(result.reasons.length>0);
  assert.ok(result.confidence==='low'||result.confidence==='moderate');
- assert.match(result.limitations,/ne démontre/);
+ assert.match(result.limitations,/jamais une preuve/);
 });
 
 test('wallet network identifies repeated wallets across tokens without asserting identity',()=>{
