@@ -55,6 +55,54 @@ test('un lancement LaunchLab/Meteora est intégré au scanner et reste idempoten
  assert.deepEqual(scanner.state.tokens[legacyMint].sources,['launchpad_letsbonk']);
 });
 
+test('le scanner vérifie une seule route de vente en lecture seule et respecte son cache',async()=>{
+ const scanner=make();
+ const mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
+ const token={mint,name:'Sell Route Test',symbol:'SRT',pairAddress:'PairAddress',liquidityUsd:25000,priceUsd:0.0001,jupiterPrice:{priceUsd:0.0001,decimals:9,checkedAt:new Date().toISOString()},security:{data:{supply:'1000000000'}},analysis:{score:78,hardBlocked:false}};
+ scanner.state.tokens[mint]=token;
+ const originalFetch=global.fetch;
+ let calls=0,requestUrl=null;
+ global.fetch=async(url,options)=>{
+  calls++;requestUrl=new URL(url);
+  assert.equal(options.headers['x-api-key'],undefined);
+  return {ok:true,status:200,headers:{get:()=>null},text:async()=>JSON.stringify({router:'metis',outAmount:'98500000',priceImpactPct:'0.015',routePlan:[{swapInfo:{label:'Raydium'}}]})};
+ };
+ try{
+  const first=await scanner.refreshSellabilityQuotes([token]);
+  assert.equal(first.checked,1);
+  assert.equal(token.sellability.status,'route_available');
+  assert.equal(token.sellability.transactionRequested,false);
+  assert.equal(token.sellability.executionSimulated,false);
+  assert.equal(requestUrl.searchParams.get('inputMint'),mint);
+  assert.equal(requestUrl.searchParams.has('taker'),false);
+  const second=await scanner.refreshSellabilityQuotes([token]);
+  assert.equal(second.skipped,true);
+  assert.equal(calls,1,'un devis récent ne doit pas être redemandé à chaque scan');
+  const analysis=scanner.score(token);
+  assert.equal(analysis.hardBlocked,false);
+ }finally{
+  global.fetch=originalFetch;
+ }
+});
+
+test('une absence de route Jupiter est un avertissement, jamais un blocage honeypot automatique',async()=>{
+ const scanner=make();
+ const mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
+ const token={mint,pairAddress:'PairAddress',liquidityUsd:20000,priceUsd:0.001,jupiterPrice:{priceUsd:0.001,decimals:9},analysis:{score:72,hardBlocked:false}};
+ scanner.state.tokens[mint]=token;
+ const originalFetch=global.fetch;
+ global.fetch=async()=>({ok:false,status:400,headers:{get:()=>null},text:async()=>JSON.stringify({error:'No routes found',errorCode:'NO_ROUTES_FOUND'})});
+ try{
+  await scanner.refreshSellabilityQuotes([token]);
+  assert.equal(token.sellability.status,'no_route');
+  const analysis=scanner.score(token);
+  assert.equal(analysis.hardBlocked,false);
+  assert.ok(analysis.flags.some(flag=>flag.code==='SELL_ROUTE_UNAVAILABLE'));
+ }finally{
+  global.fetch=originalFetch;
+ }
+});
+
 test('un fichier de données corrompu est récupéré depuis la sauvegarde valide',()=>{
  const scanner=make();
  scanner.state.tokens.first={mint:'first',symbol:'FIRST'};
