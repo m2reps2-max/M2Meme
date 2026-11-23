@@ -3,7 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   validChatId, normalizeTelegramChannels, addTelegramChannel,
-  updateTelegramChannel, removeTelegramChannel, scoreVerdict, buildTelegramAlertKeyboard, formatTelegramAlert
+  updateTelegramChannel, removeTelegramChannel, upsertTelegramChannel, scoreVerdict, buildTelegramAlertKeyboard, formatTelegramAlert
 } = require('../lib/telegram-channels');
 
 test('accepts numeric Telegram chat ids and public channel usernames', () => {
@@ -62,4 +62,32 @@ test('builds a direct Phantom token-page button only for valid Solana mints',()=
   });
   assert.equal(buildTelegramAlertKeyboard({mint:'not-a-solana-mint'}),null);
   assert.equal(buildTelegramAlertKeyboard({mint:''}),null);
+});
+
+test('discovers a channel automatically when Telegram promotes the bot to administrator', () => {
+  const chat = { id: -1001234567890, type: 'channel', title: 'M2 Signals', username: 'm2_signals' };
+  const result = upsertTelegramChannel([], chat, { status: 'administrator', can_post_messages: true }, '2026-11-23T12:00:00.000Z');
+  assert.equal(result.ok, true);
+  assert.equal(result.channel.chatId, '-1001234567890');
+  assert.equal(result.channel.label, 'M2 Signals');
+  assert.equal(result.channel.username, 'm2_signals');
+  assert.equal(result.channel.enabled, true);
+  assert.equal(result.channel.canPostMessages, true);
+});
+
+test('does not activate a channel until the bot can publish messages', () => {
+  const result = upsertTelegramChannel([], { id: -1001234567890, type: 'channel', title: 'Read only' }, { status: 'member' });
+  assert.equal(result.ok, true);
+  assert.equal(result.channel.enabled, false);
+  assert.equal(result.channel.canPostMessages, false);
+  assert.match(result.channel.lastError, /administrateur/);
+});
+
+test('keeps a disconnected channel visible but disables publication', () => {
+  const connected = upsertTelegramChannel([], { id: -1001234567890, type: 'channel', title: 'M2 Signals' }, { status: 'administrator', can_post_messages: true });
+  const disconnected = upsertTelegramChannel(connected.channels, { id: -1001234567890, type: 'channel', title: 'M2 Signals' }, { status: 'left' });
+  assert.equal(disconnected.ok, true);
+  assert.equal(disconnected.channel.enabled, false);
+  assert.equal(disconnected.channel.status, 'left');
+  assert.equal(disconnected.channels.length, 1);
 });
