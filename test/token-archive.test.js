@@ -75,6 +75,30 @@ test('archive scan candidates are not marked until the caller confirms the refre
   }
 });
 
+
+test('stale archive scans rotate by oldest last scan before score priority', { skip: !sqliteAvailable }, () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'meme-radar-archive-fairness-'));
+  const archive = new TokenArchive({ file: path.join(dir, 'tokens.sqlite'), maxTokens: 1000 });
+  try {
+    const now = Date.now();
+    const tokens = [
+      { mint: 'FairMintOld111111111111111111111111111111', updatedAt: new Date(now).toISOString(), analysis: { score: 20 } },
+      { mint: 'FairMintRecent1111111111111111111111111111', updatedAt: new Date(now).toISOString(), analysis: { score: 99 } },
+      { mint: 'FairMintMiddle111111111111111111111111111', updatedAt: new Date(now).toISOString(), analysis: { score: 80 } }
+    ];
+    archive.putMany(tokens);
+    archive.markScanned([tokens[0].mint], new Date(now - 180000).toISOString());
+    archive.markScanned([tokens[1].mint], new Date(now - 60000).toISOString());
+    archive.markScanned([tokens[2].mint], new Date(now - 120000).toISOString());
+    const selected = archive.selectForScan(1, 60000);
+    assert.equal(selected.length, 1);
+    assert.equal(selected[0].mint, tokens[0].mint, 'the oldest scan is revisited first even when its score is lower');
+  } finally {
+    archive.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('cold archive forecast export uses bounded keyset pages and returns only compact forecasts', { skip: !sqliteAvailable }, () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'meme-radar-archive-export-'));
   const archive = new TokenArchive({ file: path.join(dir, 'tokens.sqlite'), maxTokens: 1000 });
