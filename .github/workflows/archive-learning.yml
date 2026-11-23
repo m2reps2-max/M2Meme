@@ -3,7 +3,7 @@ name: MEME RADAR cold archive learning
 on:
   workflow_dispatch:
   schedule:
-    - cron: '41 4 * * 1'
+    - cron: '41 4 */2 * *'
 
 permissions:
   contents: read
