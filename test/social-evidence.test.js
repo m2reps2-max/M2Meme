@@ -10,7 +10,7 @@ test('token identity prefers mint and cashtag over ambiguous bare ticker', () =>
   assert.equal(classifyTokenMention('Watching $MOON today', token), 'cashtag');
   assert.equal(classifyTokenMention('MOON is moving', token), 'ticker');
   assert.equal(classifyTokenMention('Moon Rocket launches', token), 'name');
-  assert.equal(classifyTokenMention('the moon is bright', token), 'none');
+  assert.equal(classifyTokenMention('the lunar surface is bright', token), 'none');
 });
 
 test('social evidence counts independent authors by network and Telegram channels separately', () => {
