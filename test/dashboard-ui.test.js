@@ -11,11 +11,11 @@ const selection=fs.readFileSync(path.join(root,'lib/selection.js'),'utf8');
 test('main dashboard navigation has only four simple sections',()=>{
  const nav=html.match(/<nav id="nav"[\s\S]*?<\/nav>/)?.[0]||'';
  const views=[...nav.matchAll(/data-view="([^"]+)"/g)].map(x=>x[1]);
- assert.deepEqual(views,['overview','scanner','watchlist','more']);
+ assert.deepEqual(views,['overview','channels','results','settings']);
  assert.match(nav,/Accueil/);
- assert.match(nav,/Sélection/);
- assert.match(nav,/Favoris/);
- assert.match(nav,/Plus/);
+ assert.match(nav,/Canaux/);
+ assert.match(nav,/Résultats/);
+ assert.match(nav,/Réglages/);
 });
 
 test('Plus menu exposes only results, alerts and settings',()=>{
@@ -33,9 +33,9 @@ test('home shows only essential stats and keeps advanced modules out of sight',(
  const end=js.indexOf('\nfunction renderScanner',start);
  assert.ok(start>=0&&end>start);
  const source=js.slice(start,end);
- assert.match(source,/Sélectionnés/);
- assert.match(source,/Favoris/);
- assert.match(source,/À surveiller/);
+ assert.match(source,/Tokens suivis/);
+ assert.match(source,/Canaux actifs/);
+ assert.match(source,/Candidats retenus/);
  assert.doesNotMatch(source,/sourceCards\(\)|Nouveaux lancements|Graphe wallets|Qualité des données|Wallets suivis/);
 });
 
@@ -138,7 +138,7 @@ test('opening token details preserves the enriched token response without a full
 });
 test('dashboard UI action endpoints exist on the server',()=>{
  const server=fs.readFileSync(path.join(root,'index.js'),'utf8');
- for(const route of ["app.post('/api/scan'","app.post('/api/watchlist'","app.delete('/api/watchlist/:mint'","app.post('/api/wallets'","app.delete('/api/wallets/:address'","app.get('/api/token/:mint'","app.post('/api/logout'"])assert.ok(server.includes(route),route);
+ for(const route of ["app.post('/api/scan'","app.post('/api/watchlist'","app.delete('/api/watchlist/:mint'","app.post('/api/wallets'","app.delete('/api/wallets/:address'","app.get('/api/token/:mint'","app.post('/api/logout'","app.get('/api/telegram/channels'","app.post('/api/telegram/channels'","app.patch('/api/telegram/channels/:chatId'","app.delete('/api/telegram/channels/:chatId'","app.post('/api/telegram/channels/test'"])assert.ok(server.includes(route),route);
 });
 
 
@@ -158,4 +158,14 @@ test('empty shortlist explains its rejection causes without relaxing selection r
  assert.match(js,/missingMarketTimestamp/);
  assert.match(js,/staleMarketOver15m/);
  assert.match(selection,/securityComprehensive===true/);
+});
+
+test('simple dashboard exposes channel management and real selection success metrics',()=>{
+ assert.match(js,/function renderChannels\(\)/);
+ assert.match(js,/data-channel-test/);
+ assert.match(js,/data-channel-toggle/);
+ assert.match(js,/data-channel-remove/);
+ assert.match(js,/function renderResults\(\)/);
+ assert.match(js,/positive15Pct/);
+ assert.match(js,/state\.selectionPerformance\?\.groups\?\.best/);
 });
