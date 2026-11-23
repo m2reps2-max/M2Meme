@@ -97,7 +97,7 @@ test('secondary dashboard datasets load only when their page is opened',()=>{
  assert.match(js,/paper:\[\['paper-trading'/);
  assert.match(js,/smart:\[\['wallets'/);
  assert.match(js,/walletGraph:\[\['wallet-graph'/);
- assert.match(js,/backtest:\[\['backtest'/);
+ assert.match(js,/backtest:\[\['learning'/);
  assert.match(js,/await ensurePageData\(state\.page\)/);
  assert.match(js,/navigate\(target\.dataset\.view\)/);
  const core=js.slice(js.indexOf('const coreJobs='),js.indexOf('const coreResults=',js.indexOf('const coreJobs=')));
