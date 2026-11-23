@@ -462,3 +462,18 @@ test('GeckoTerminal discovery coverage is exposed in the source status',()=>{
  assert.match(status.mode,/64 tokens distincts \/ 78 pools/);
  assert.match(status.mode,/4\/4 pages/);
 });
+
+
+test('GeckoTerminal status exposes the new trending discovery telemetry',()=>{
+ const s=make();
+ s.state.geckoTrendingLastAttemptAt='2026-11-23T19:00:00.000Z';
+ s.state.geckoTrendingLastSuccessAt='2026-11-23T19:00:01.000Z';
+ s.state.geckoTrendingLastError=null;
+ s.state.sources.geckoTerminal={ok:true,at:'2026-11-23T19:00:02.000Z',pools:12,uniqueTokens:10,pagesSucceeded:4,pagesConfigured:4,trendingPools:7,trendingLastSuccessAt:s.state.geckoTrendingLastSuccessAt,trendingLastError:null};
+ const status=s.status().geckoTerminal;
+ assert.equal(status.trendingPools,7);
+ assert.equal(status.trendingLastAttemptAt,s.state.geckoTrendingLastAttemptAt);
+ assert.equal(status.trendingLastSuccessAt,s.state.geckoTrendingLastSuccessAt);
+ assert.equal(status.trendingLastError,null);
+ assert.match(status.mode,/tendance 1h : 7 pools/);
+});
