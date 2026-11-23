@@ -24,6 +24,7 @@ function tokenAddress(pool) {
 }
 
 function numeric(value) {
+  if (value === null || value === undefined || value === "") return null;
   const n = Number(value);
   return Number.isFinite(n) && n >= 0 ? n : null;
 }
@@ -37,7 +38,7 @@ async function discover(env) {
   const payload = await response.json();
   const pools = Array.isArray(payload?.data) ? payload.data.slice(0, 100) : [];
   const now = new Date().toISOString();
-  let inserted = 0;
+  let upserted = 0;
   let skipped = 0;
 
   for (const pool of pools) {
@@ -55,14 +56,14 @@ async function discover(env) {
     const result = await env.DB.prepare(
       "INSERT INTO discovered_tokens (mint, pool_address, name, price_usd, liquidity_usd, volume_24h_usd, first_seen_at, last_seen_at, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'geckoterminal') ON CONFLICT(mint) DO UPDATE SET pool_address = excluded.pool_address, name = CASE WHEN excluded.name <> '' THEN excluded.name ELSE discovered_tokens.name END, price_usd = COALESCE(excluded.price_usd, discovered_tokens.price_usd), liquidity_usd = COALESCE(excluded.liquidity_usd, discovered_tokens.liquidity_usd), volume_24h_usd = COALESCE(excluded.volume_24h_usd, discovered_tokens.volume_24h_usd), last_seen_at = excluded.last_seen_at"
     ).bind(address, poolAddress, name, price, reserve, volume24h, now, now).run();
-    if (result.meta?.changes === 1) inserted++;
+    if (result.meta?.changes > 0) upserted++;
   }
 
   await env.DB.prepare(
-    "INSERT INTO scan_runs (ran_at, source, pools_received, inserted_count, skipped_count, status) VALUES (?, 'geckoterminal', ?, ?, ?, 'ok')"
-  ).bind(now, pools.length, inserted, skipped).run();
+    "INSERT INTO scan_runs (ran_at, source, pools_received, upserted_count, skipped_count, status) VALUES (?, 'geckoterminal', ?, ?, ?, 'ok')"
+  ).bind(now, pools.length, upserted, skipped).run();
 
-  return { ok: true, ranAt: now, poolsReceived: pools.length, inserted, skipped };
+  return { ok: true, ranAt: now, poolsReceived: pools.length, upserted, skipped };
 }
 
 async function handleRequest(request, env) {
