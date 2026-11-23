@@ -1,6 +1,6 @@
 'use strict';
 const $=s=>document.querySelector(s), view=$('#view'), nav=$('#nav'), title=$('#page-title');
-const state={overview:{},selection:{best:[],observe:[],eligible:0},channels:[],tokens:[],alerts:[],watchlist:[],wallets:[],autoWallets:[],creators:[],creatorFundingClusters:[],walletIntel:[],walletClusters:[],experts:{},walletGraph:null,walletReputation:null,walletSignalBacktest:null,paperTrading:null,dataQuality:null,launches:[],backtest:null,historical:null,learning:null,selectionPerformance:null,scannerSettings:null,selected:null,page:'overview',sort:'score',search:'',loadErrors:[]};
+const state={overview:{},selection:{best:[],observe:[],eligible:0},channels:[],telegramConnectUrl:null,tokens:[],alerts:[],watchlist:[],wallets:[],autoWallets:[],creators:[],creatorFundingClusters:[],walletIntel:[],walletClusters:[],experts:{},walletGraph:null,walletReputation:null,walletSignalBacktest:null,paperTrading:null,dataQuality:null,launches:[],backtest:null,historical:null,learning:null,selectionPerformance:null,scannerSettings:null,selected:null,page:'overview',sort:'score',search:'',loadErrors:[]};
 const labels={overview:'Accueil',channels:'Canaux Telegram',results:'Résultats',scanner:'Sélection',opportunities:'Opportunités',watchlist:'Favoris',analysis:'Détails du token',smart:'Wallets suivis',security:'Sécurité',social:'Liens du token',alerts:'Alertes',settings:'Réglages',creators:'Créateurs',backtest:'Résultats',smartIntel:'Activité des wallets',walletGraph:'Graphe wallets',quality:'Qualité des données',more:'Plus',launches:'Nouveaux lancements',experts:'Experts & portefeuilles',paper:'Paper trading'};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const date=v=>v?new Date(v).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'—';
@@ -150,8 +150,9 @@ function renderPaper(){
 function renderChannels(){
  const channels=state.channels||[];
  const botReady=Boolean(state.overview.sources?.telegram?.configured);
- const rows=channels.length?channels.map(channel=>'<article class="panel channel-row"><div class="channel-main"><b>'+esc(channel.label||channel.chatId)+'</b><small class="subtle">'+esc(channel.chatId)+'</small><small class="subtle">'+(channel.lastError?'Dernier envoi : '+esc(channel.lastError):channel.lastSentAt?'Dernier envoi : '+date(channel.lastSentAt):'Aucune publication envoyée pour le moment')+'</small></div><div class="channel-actions"><button class="mini-btn" data-channel-test="'+esc(channel.chatId)+'">Tester</button><button class="mini-btn" data-channel-toggle="'+esc(channel.chatId)+'" data-enabled="'+(!channel.enabled)+'">'+(channel.enabled?'Désactiver':'Activer')+'</button><button class="mini-btn danger-btn" data-channel-remove="'+esc(channel.chatId)+'">Supprimer</button></div><span class="pill '+(channel.enabled?'good':'neutral')+'">'+(channel.enabled?'Actif':'Inactif')+'</span></article>').join(''):'<div class="panel empty-panel"><h2>Aucun canal ajouté</h2><p>Ajoute ton canal Telegram. Le bot doit en être administrateur pour publier.</p></div>';
- view.innerHTML='<div class="section-heading"><div><h2>Canaux Telegram</h2><p class="muted">Ajoute un canal, active la diffusion et le bot publiera les trouvailles retenues.</p></div></div><article class="panel channel-setup"><p>'+pill(botReady?'Bot Telegram configuré':'Bot Telegram à configurer',botReady?'good':'warn')+'</p><form id="channel-form" class="channel-form"><label>Identifiant du canal<input name="chatId" placeholder="@moncanal ou -1001234567890" required maxlength="64"></label><label>Nom (facultatif)<input name="label" placeholder="Canal principal" maxlength="60"></label><button class="primary" type="submit">Ajouter le canal</button></form><small class="footnote">Ajoute le bot comme administrateur du canal avec le droit de publier des messages. Maximum 10 canaux. Un seul scan alimente tous les canaux activés.</small></article><div class="section-heading"><div><h3>Mes canaux ('+channels.length+'/10)</h3></div></div><div class="channel-list">'+rows+'</div>';
+ const rows=channels.length?channels.map(channel=>'<article class="panel channel-row"><div class="channel-main"><b>'+esc(channel.label||channel.chatId)+'</b><small class="subtle">'+(channel.username?'@'+esc(channel.username)+' · ':'')+esc(channel.chatId)+'</small><small class="subtle">'+(channel.status==='left'||channel.status==='kicked'?'Bot retiré du canal':channel.canPostMessages===false?'Droit de publication manquant':channel.lastError?'Dernier envoi : '+esc(channel.lastError):channel.lastSentAt?'Dernier envoi : '+date(channel.lastSentAt):'Canal connecté · prêt à recevoir les alertes')+'</small></div><div class="channel-actions"><button class="mini-btn" data-channel-test="'+esc(channel.chatId)+'" '+(channel.canPostMessages===false?'disabled':'')+'>Tester</button><button class="mini-btn" data-channel-toggle="'+esc(channel.chatId)+'" data-enabled="'+(!channel.enabled)+'">'+(channel.enabled?'Désactiver':'Activer')+'</button><button class="mini-btn danger-btn" data-channel-remove="'+esc(channel.chatId)+'">Supprimer</button></div><span class="pill '+(channel.enabled?'good':'neutral')+'">'+(channel.enabled?'Actif':channel.status==='left'||channel.status==='kicked'?'Déconnecté':'Inactif')+'</span></article>').join(''):'<div class="panel empty-panel"><h2>Aucun canal connecté</h2><p>Appuie sur le bouton ci-dessous : Telegram te proposera de choisir un canal.</p></div>';
+ const connect=botReady&&state.telegramConnectUrl?'<a class="primary" href="'+esc(state.telegramConnectUrl)+'" target="_blank" rel="noopener">＋ Connecter un canal avec Telegram</a>':'<p class="footnote">Configure le token du bot dans FadeHost pour activer la connexion Telegram.</p>';
+ view.innerHTML='<div class="section-heading"><div><h2>Canaux Telegram</h2><p class="muted">Connecte tes canaux directement depuis Telegram, sans saisir leur identifiant.</p></div><button class="secondary" data-channel-refresh>Actualiser</button></div><article class="panel channel-setup"><p>'+pill(botReady?'Bot Telegram configuré':'Bot Telegram à configurer',botReady?'good':'warn')+'</p>'+connect+'<small class="footnote">Telegram ouvre le sélecteur de canaux. Choisis ton canal et confirme l’ajout du bot avec le droit « Publier des messages ». Le canal apparaîtra ici automatiquement. Maximum 10 canaux ; un seul scan alimente tous les canaux activés.</small></article><div class="section-heading"><div><h3>Mes canaux ('+channels.length+'/10)</h3></div></div><div class="channel-list">'+rows+'</div>';
 }
 function renderResults(){
  const best=state.selectionPerformance?.groups?.best||{};
@@ -240,7 +241,7 @@ async function load(options={}){
  if(dashboardLoadPromise)return dashboardLoadPromise;
  setSyncStatus('Actualisation…','neutral');
  dashboardLoadPromise=(async()=>{
-  const coreJobs=[['Vue générale','/api/overview'],['Tokens','/api/tokens?limit=200'],['Alertes','/api/alerts'],['Watchlist','/api/watchlist'],['Sélection','/api/selection'],['Canaux','/api/telegram/channels'],['Réglages','/api/scanner-settings']];
+  const coreJobs=[['Vue générale','/api/overview'],['Tokens','/api/tokens?limit=200'],['Alertes','/api/alerts'],['Watchlist','/api/watchlist'],['Sélection','/api/selection'],['Canaux','/api/telegram/channels'],['Réglages','/api/scanner-settings'],['Lien Telegram','/api/telegram/connect']];
   const coreResults=await Promise.allSettled(coreJobs.map(([,url])=>api(url)));
   state.loadErrors=state.loadErrors.filter(message=>!coreJobs.some(([label])=>message.startsWith(label+':')));
   for(let i=0;i<coreResults.length;i++){
@@ -253,7 +254,7 @@ async function load(options={}){
    if(i===3)state.watchlist=data.watchlist||[];
    if(i===4)state.selection=data;
    if(i===5)state.channels=data.channels||[];
-   if(i===6)state.scannerSettings=data.settings||null;
+   if(i===6)state.scannerSettings=data.settings||null;\n   if(i===7)state.telegramConnectUrl=data.connectUrl||null;
   }
   const coreFailures=coreResults.filter(x=>x.status==='rejected').length;
   setSyncStatus(coreFailures?'Données partielles':state.overview.scannerRunning?'Scanner actif':'Scanner à vérifier',coreFailures?'warn':state.overview.scannerRunning?'good':'warn');
@@ -316,7 +317,7 @@ nav.addEventListener('click',e=>{const target=e.target.closest?.('[data-view]');
 view.addEventListener('click',async e=>{
  const target=e.target.closest?.('button');
  if(!target)return;
- if(target.id==='refresh-tokens')return scan(target);
+ if(target.id==='refresh-tokens')return scan(target);\n if(target.hasAttribute('data-channel-refresh'))return runButtonAction(target,'Actualisation…',async()=>{const data=await api('/api/telegram/channels');state.channels=data.channels||[];render('channels');setSyncStatus('Canaux actualisés','good');});
  if(target.id==='retry-dashboard'){dashboardBooted=false;return bootDashboard();}
  if(target.hasAttribute('data-token'))return openToken(target.dataset.token,false,target);
  if(target.hasAttribute('data-watch'))return toggleWatch(target.dataset.watch,target);
@@ -330,10 +331,6 @@ view.addEventListener('click',async e=>{
 view.addEventListener('input',e=>{if(e.target.id==='search-token'){state.search=e.target.value;refreshTable();}});
 view.addEventListener('change',e=>{if(e.target.id==='sort-token'){state.sort=e.target.value;refreshTable();}if(e.target.id==='scanner-settings-preset'){const presets={prudent:[85,10000],balanced:[78,5000],large:[70,2500]};const preset=presets[e.target.value];if(preset){const form=e.target.form;form.elements.minScore.value=preset[0];form.elements.minLiquidityUsd.value=preset[1];}}});
 view.addEventListener('submit',async e=>{
- if(e.target.id==='channel-form'){
-  e.preventDefault();const form=e.target;const button=e.submitter||form.querySelector('button[type="submit"]');
-  return runButtonAction(button,'Ajout…',async()=>{const data=await api('/api/telegram/channels',{method:'POST',body:JSON.stringify({chatId:form.elements.chatId.value.trim(),label:form.elements.label.value.trim()})});state.channels=data.channels||[];render('channels');setSyncStatus('Canal ajouté','good');});
- }
  if(e.target.id==='scanner-settings-form'){
   e.preventDefault();const form=e.target;const button=e.submitter||form.querySelector('button[type="submit"]');
   return runButtonAction(button,'Enregistrement…',async()=>{
