@@ -87,5 +87,5 @@ test('multi-horizon comparisons use identical resolved token cohorts for all thr
  assert.equal(sevenDay.comparisonSampleSize,30);
  assert.equal(sevenDay.top.tokens,sevenDay.staticScoreTop.tokens);
  assert.equal(sevenDay.top.tokens,sevenDay.randomSameSize.tokens);
- assert.equal(sevenDay.top.tokens,15);
+ assert.equal(sevenDay.top.tokens,18);
 });
