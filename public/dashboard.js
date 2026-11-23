@@ -127,7 +127,7 @@ function renderPaper(){
  +'<p class="footnote">Hypothèses : 100 $ par position, maximum 5 positions, frais 0,3 % par côté, slippage 0,5 % par côté, stop −25 %, objectif +60 %, durée maximale 24 h. Les entrées exigent un prix Jupiter récent et un écart inférieur ou égal à 15 % avec DexScreener. Ce sont des simulations, pas des prix d’exécution garantis.</p>';
 }
 function renderMore(){
- const items=[['experts','◎','Wallets & performances','Analyser les wallets observés via Helius'],['backtest','↗','Résultats','Voir si les signaux du bot ont été pertinents'],['alerts','♧','Alertes','Retrouver les alertes envoyées'],['settings','⚙','Paramètres','Vérifier les réglages et les connexions']];
+ const items=[['paper','◷','Paper trading','Simuler les résultats des 5 meilleurs candidats'],['experts','◎','Wallets & performances','Analyser les wallets observés via Helius'],['backtest','↗','Résultats','Voir si les signaux du bot ont été pertinents'],['alerts','♧','Alertes','Retrouver les alertes envoyées'],['settings','⚙','Paramètres','Vérifier les réglages et les connexions']];
  view.innerHTML='<div class="section-heading"><div><h2>Plus</h2><p class="muted">Les pages utiles en dehors du scanner.</p></div></div><div class="simple-menu">'+items.map(x=>'<button class="panel simple-menu-item" data-go="'+x[0]+'"><span class="module-icon">'+x[1]+'</span><span><b>'+x[2]+'</b><small>'+x[3]+'</small></span><span class="module-state">→</span></button>').join('')+'</div>';
 }
 function renderSettings(){
