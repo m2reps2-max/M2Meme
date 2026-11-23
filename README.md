@@ -32,7 +32,7 @@ Ce connecteur utilise l'API web privée non documentée de X. Il peut casser, ê
 | Surveillance des acheteurs découverts | Jusqu'à 5 wallets automatiques, 3 transactions récentes chacun toutes les 10 minutes | Rien |
 | Liens de sites et réseaux sociaux | Métadonnées DexScreener | Rien |
 | Découverte de nouveaux pools sur plusieurs DEX Solana | GeckoTerminal Public API (`/networks/solana/new_pools`) | Rien |
-| Mentions et sentiment communautaire indicatif | Recherche publique Bluesky + relais Nostr NIP-50; Reddit RSS désactivé; X facultatif via un collecteur Python `twscrape` à session unique | X_COOKIES + Python 3 + `pip install -r requirements-social.txt` |
+| Mentions et sentiment communautaire indicatif | Recherche publique Bluesky + relais Nostr NIP-50; Reddit RSS désactivé; X facultatif via SDK Node `x-agent-sdk` à session unique | X_AUTH_TOKEN + X_CT0 |
 | Analyse des transactions récentes, diversité acheteurs, concentration, bursts 5 secondes et clusters same-block de type bundle | GeckoTerminal pool trades (jusqu'à 300 transactions observées), persistées dans l'historique wallet avec source et déduplication par signature | Rien |
 | Graphe des wallets | Financeurs communs des créateurs observés et achats rapprochés répétés sur plusieurs tokens; niveaux de preuve distincts | Rien |
 | Ajustement limité du score avec qualité des transactions et signal social public | Module local candidate-intel, GeckoTerminal + Reddit + Bluesky | Rien |
