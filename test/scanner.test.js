@@ -49,6 +49,10 @@ test('un lancement LaunchLab/Meteora est intégré au scanner et reste idempoten
  assert.equal(second.launchSlot,123);
  assert.equal(second.sources.filter(x=>x==='launchpad_letsbonk').length,1);
  assert.equal(second.launchCohort.source,'LetsBonk');
+ const legacyMint='TokenLegacy11111111111111111111111111111111';
+ scanner.state.tokens[legacyMint]={mint:legacyMint,symbol:'OLD'};
+ assert.doesNotThrow(()=>scanner.ingestLaunchpad({...event,mint:legacyMint}));
+ assert.deepEqual(scanner.state.tokens[legacyMint].sources,['launchpad_letsbonk']);
 });
 
 test('un fichier de données corrompu est récupéré depuis la sauvegarde valide',()=>{
