@@ -127,7 +127,7 @@ async function main() {
           if (!sourceBuckets.has(source) && sourceBuckets.size < 30) sourceBuckets.set(source, bucket());
           if (sourceBuckets.has(source)) add(sourceBuckets.get(source), oneHour);
           const at = Number(forecast.at);
-          if (Number.isFinite(at) && (!first || at < first.at)) first = { mint: item.mint, at, score: hasScore ? score : null, outcome: oneHour, features: forecast.features && typeof forecast.features === 'object' ? forecast.features : null, outcomes: Object.fromEntries(HORIZONS.filter(key => Number.isFinite(Number(forecast.outcomes?.[key]?.returnPct))).map(key => [key, { returnPct: Number(forecast.outcomes[key].returnPct) }])) };
+          if (Number.isFinite(at) && (!first || at < first.at)) first = { mint: item.mint, at, score: hasScore ? score : null, outcome: oneHour, features: forecast.features && typeof forecast.features === 'object' ? forecast.features : null, outcomes: Object.fromEntries(HORIZONS.filter(key => forecast.outcomes?.[key]?.returnPct !== null && forecast.outcomes?.[key]?.returnPct !== undefined && Number.isFinite(Number(forecast.outcomes[key].returnPct))).map(key => [key, { returnPct: Number(forecast.outcomes[key].returnPct) }])) };
         }
       }
       if (first) {
