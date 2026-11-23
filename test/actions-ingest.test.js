@@ -36,7 +36,7 @@ test('archive learning ingest accepts bounded aggregates and rejects malformed o
     horizons: Object.fromEntries(['15m', '1h', '6h', '24h', '7d'].map(key => [key, metric])),
     scoreBands: Object.fromEntries(['0-44', '45-64', '65-79', '80-100'].map(key => [key, metric])),
     bySource: { 'Pump.fun': metric },
-    walkForward: { trainingTokens: 640, validationTokens: 160, validation: metric }
+    walkForward: { trainingTokens: 640, validationTokens: 160, validation: metric },\n    limitations: 'Cold archive only.'
   };
   const payload = { schemaVersion: 1, generatedAt: new Date().toISOString(), summary };
   assert.equal(validateArchiveLearningPayload(payload).ok, true);
