@@ -66,7 +66,7 @@ Le scanner enrichit automatiquement un pool GeckoTerminal candidat par cycle, en
 
 ## Découverte multi-DEX gratuite
 
-À chaque cycle, MEME RADAR interroge séquentiellement les pages 1 à 4 de `https://api.geckoterminal.com/api/v2/networks/solana/new_pools`, soit jusqu'à environ 80 pools récents par cycle avant déduplication. Le nombre de pages est configurable via `GECKO_NEW_POOL_PAGES` (1 à 5, valeur par défaut 4; maximum théorique environ 100 pools). Chaque page est traitée puis libérée avant la suivante : le scanner ne conserve pas plusieurs réponses API volumineuses en mémoire. Les pools sont dédupliqués par adresse de pool et les tokens par mint; le dashboard expose pages réussies, pools uniques et tokens distincts. En cas de HTTP 429, la pagination s'arrête immédiatement pour éviter d'aggraver la limite de débit. GeckoTerminal est une API publique sans clé, limitée à environ 10 appels/minute; avec un scan par minute, quatre pages consomment environ quatre appels par cycle, auxquels s'ajoutent les éventuels appels d'enrichissement. Les pools détectés sont ensuite enrichis par DexScreener dès qu'une paire est disponible.
+À chaque cycle, MEME RADAR interroge séquentiellement quatre pages GeckoTerminal par défaut (jusqu'à environ 80 pools récents avant déduplication). Pour éviter de rester bloqué sur les seules pages les plus récentes, les pages parcourues tournent sur une fenêtre persistante de 10 pages : par défaut, le scanner couvre les pages 1–4, puis 5–8, puis 9–10 avant de recommencer. La taille du lot reste configurable via `GECKO_NEW_POOL_PAGES` (1 à 5) et la fenêtre via `GECKO_NEW_POOL_PAGE_WINDOW` (1 à 10, défaut 10). Le curseur est sauvegardé avec l'état du scanner et survit aux redémarrages. Chaque page est traitée puis libérée avant la suivante : aucune réponse API volumineuse n'est conservée en parallèle. Les pools sont dédupliqués par adresse de pool et les tokens par mint; le dashboard expose le nombre de pages réussies et la fenêtre visitée. En cas de HTTP 429, la pagination du cycle s'arrête immédiatement. GeckoTerminal est une API publique sans clé, limitée à environ 10 appels/minute; avec un scan par minute, quatre pages consomment environ quatre appels par cycle, auxquels s'ajoutent les éventuels appels d'enrichissement. Les pools détectés sont ensuite enrichis par DexScreener dès qu'une paire est disponible.
 
 ## Social intelligence (public/free sources)
 
@@ -160,7 +160,8 @@ Ne partage jamais ces secrets dans une conversation et ne les commits pas sur Gi
 - `SOLANA_RPC_URL` : endpoint RPC Solana alternatif. Si vide, le projet utilise automatiquement `https://api.mainnet.solana.com`.
 - `PORT` : laisse la valeur attendue par FadeHost (souvent injectée automatiquement).
 - `SCAN_INTERVAL_MS` : intervalle du scanner, par défaut 60000 (60 secondes).
-- `GECKO_NEW_POOL_PAGES` : nombre de pages GeckoTerminal à parcourir par cycle (1 à 5), par défaut 4; augmente la découverte de nouveaux pools, mais utilise davantage le quota public.
+- `GECKO_NEW_POOL_PAGES` : nombre de pages GeckoTerminal à parcourir par cycle (1 à 5), par défaut 4.
+- `GECKO_NEW_POOL_PAGE_WINDOW` : fenêtre totale de pagination GeckoTerminal parcourue en rotation (1 à 10), par défaut 10; augmente la couverture historique sans augmenter le nombre de requêtes par cycle.
 - `ALERT_MIN_SCORE` : score minimal d'alerte, par défaut 78.
 - `MIN_LIQUIDITY_USD` : liquidité minimale, par défaut 5000 USD.
 
