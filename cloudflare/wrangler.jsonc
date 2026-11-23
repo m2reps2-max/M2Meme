@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "m2meme-edge-discovery",
+  "main": "./src/index.js",
+  "compatibility_date": "2026-11-23",
+  "workers_dev": true,
+  "observability": { "enabled": true },
+  "triggers": { "crons": ["*/5 * * * *"] },
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "m2meme-discovery",
+    "database_id": "REPLACE_WITH_CLOUDFLARE_D1_DATABASE_ID",
+    "migrations_dir": "./migrations"
+  }]
+}
