@@ -83,3 +83,44 @@ test('keeps lifetime realized PnL when the bounded recent-trade history is trimm
   assert.ok(state.paperTrading.realizedPnlUsd > 200);
   assert.equal(result.realizedPnlUsd, Number(state.paperTrading.realizedPnlUsd.toFixed(2)));
 });
+
+
+test('captures point-in-time selection factors and reports realized paper-trade feedback by score band', () => {
+  const state = fixture();
+  const candidate = {
+    ...selection().best[0],
+    analysis: {
+      score: 82, learnedScore: 77,
+      factors: { activity: 88, momentum: 72, market: 65, liquidityQuality: 91, security: 95 }
+    }
+  };
+  stepPaperTrading(state, { best: [candidate] }, now);
+  const opened = state.paperTrading.positions[0];
+  assert.equal(opened.entrySnapshot.score, 82);
+  assert.equal(opened.entrySnapshot.learnedScore, 77);
+  assert.equal(opened.entrySnapshot.features.activity, 88);
+  state.tokens[mint].history.push({ at: new Date(now + 60000).toISOString(), priceUsd: 1.8 });
+  const result = stepPaperTrading(state, { best: [] }, now + 60000);
+  assert.equal(state.paperTrading.trades[0].entrySnapshot.score, 82);
+  assert.equal(result.learningFeedback.sampleSize, 1);
+  assert.equal(result.learningFeedback.byScore['75–84'].trades, 1);
+  assert.equal(result.learningFeedback.status, 'insufficient_sample');
+  assert.equal(result.learningFeedback.automaticModelTraining, false);
+});
+
+test('paper-trade feedback ignores legacy trades without entry snapshots and deduplicates repeated mints', () => {
+  const { buildPaperLearningSummary } = require('../lib/paper-trading');
+  const book = {
+    trades: [
+      { mint: 'a', openedAt: '2026-01-01T00:00:00Z', pnlPct: 10, entrySnapshot: { score: 80, features: { activity: 90 } } },
+      { mint: 'a', openedAt: '2026-01-02T00:00:00Z', pnlPct: -50, entrySnapshot: { score: 80, features: { activity: 90 } } },
+      { mint: 'legacy', pnlPct: 30 }
+    ],
+    closedTradeCount: 3
+  };
+  const feedback = buildPaperLearningSummary(book);
+  assert.equal(feedback.sampleSize, 1);
+  assert.equal(feedback.overall.averageNetReturnPct, 10);
+  assert.equal(feedback.byFactor.activity.high.trades, 1);
+  assert.equal(feedback.lifetimeClosedTrades, 3);
+});
