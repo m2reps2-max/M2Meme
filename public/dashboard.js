@@ -174,6 +174,12 @@ function render(page=state.page){
  }
 }
 let dashboardLoadPromise=null;
+function setSyncStatus(label,kind='neutral'){
+ const badge=$('#sync-status');
+ if(!badge)return;
+ badge.className='pill '+kind;
+ badge.innerHTML='<i></i>'+esc(label);
+}
 const pageDataPromises=new Map(),pageDataLoadedAt=new Map();
 const pageDataJobs={
  paper:[['paper-trading','Paper trading','/api/paper-trading',d=>{state.paperTrading=d;}]],
