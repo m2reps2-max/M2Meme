@@ -33,6 +33,28 @@ test('un lancement Pump.fun conserve le créateur et son horodatage',()=>{
  assert.ok(token.launchAgeHours>=0);
 });
 
+test('un lancement LaunchLab/Meteora est intégré au scanner et reste idempotent',()=>{
+ const scanner=make();
+ const mint='So11111111111111111111111111111111111111112';
+ const creator='Bcdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
+ const event={mint,creator,name:'Launchpad Cat',symbol:'LPCAT',launchpadId:'letsbonk',launchpadName:'LetsBonk',programId:'LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj',signature:'launch-signature',slot:123,blockTime:new Date().toISOString()};
+ const first=scanner.ingestLaunchpad(event);
+ const second=scanner.ingestLaunchpad(event);
+ assert.equal(first.mint,mint);
+ assert.equal(second.launchSource,'LetsBonk');
+ assert.equal(second.creator,creator);
+ assert.equal(second.creatorObservedAtLaunch,true);
+ assert.equal(second.launchpadId,'letsbonk');
+ assert.equal(second.launchSignature,'launch-signature');
+ assert.equal(second.launchSlot,123);
+ assert.equal(second.sources.filter(x=>x==='launchpad_letsbonk').length,1);
+ assert.equal(second.launchCohort.source,'LetsBonk');
+ const legacyMint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
+ scanner.state.tokens[legacyMint]={mint:legacyMint,symbol:'OLD'};
+ assert.doesNotThrow(()=>scanner.ingestLaunchpad({...event,mint:legacyMint}));
+ assert.deepEqual(scanner.state.tokens[legacyMint].sources,['launchpad_letsbonk']);
+});
+
 test('un fichier de données corrompu est récupéré depuis la sauvegarde valide',()=>{
  const scanner=make();
  scanner.state.tokens.first={mint:'first',symbol:'FIRST'};

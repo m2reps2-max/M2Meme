@@ -70,3 +70,19 @@ test('normalizer can preserve every token when the disk archive is unavailable',
  const fallback=normalizeState({tokens},{maxTokens:Infinity});
  assert.equal(Object.keys(fallback.tokens).length,1205);
 });
+
+test('launchpad discovery cursors and pending transaction queues are bounded and sanitized',()=>{
+ const {normalizeLaunchpadDiscovery}=require('../lib/state-normalizer');
+ const state=normalizeLaunchpadDiscovery({
+  nextProgram:-3,
+  cursors:{'raydium-launchlab':'valid-signature','../bad':'x'},
+  pending:{'raydium-launchlab':[{signature:'sig-1',slot:'123',attempts:9},null,{signature:'',attempts:0}],'../bad':[{signature:'ignored'}]},
+  seen:{'raydium-launchlab':['sig-1','sig-1','sig-2']},
+  metrics:{launches:'4',processed:-2,gaps:'3',errors:'1'}
+ });
+ assert.equal(state.nextProgram,0);
+ assert.deepEqual(state.cursors,{'raydium-launchlab':'valid-signature'});
+ assert.deepEqual(state.seen,{'raydium-launchlab':['sig-1','sig-2']});
+ assert.deepEqual(state.pending['raydium-launchlab'],[{signature:'sig-1',slot:123,attempts:3}]);
+ assert.deepEqual(state.metrics,{launches:4,processed:0,gaps:3,errors:1});
+});
