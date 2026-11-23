@@ -68,6 +68,27 @@ test('identifies partner frontends sharing the same Meteora and LaunchLab progra
   assert.equal(parseLaunchpadTransaction(launchLabTx).launchpadId, 'stonkfun');
 });
 
+test('recognizes every verified LaunchLab and Meteora DBC initialize variant', () => {
+  for (const discriminator of ['afaf6d1f0d989bed', '4399af27da102620', '25be7ede2c9aab11']) {
+    const result = parseLaunchpadTransaction(txFor({
+      programId: launchLab.programId,
+      discriminator,
+      accounts: ['payer', creator, 'global', '4Bu96XjU84XjPDSpveTVf6LYGCkfW5FK7SNkREWcEfV4', 'authority', 'pool', mint, 'quote']
+    }));
+    assert.equal(result.mint, mint);
+    assert.equal(result.launchpadId, 'raydium-launchlab');
+  }
+  for (const discriminator of ['8c55d7b06636684f', 'a976334e916edc9b']) {
+    const result = parseLaunchpadTransaction(txFor({
+      programId: meteora.programId,
+      discriminator,
+      accounts: ['config', 'authority', creator, mint, 'quote', 'pool']
+    }));
+    assert.equal(result.mint, mint);
+    assert.equal(result.launchpadId, 'meteora-dbc');
+  }
+});
+
 test('ignores non-launch instructions, failed transactions and invalid mint accounts', () => {
   const accounts = ['payer', creator, 'global', 'config', 'authority', 'pool', mint, 'quote'];
   const wrong = txFor({ programId: launchLab.programId, discriminator: '0000000000000000', accounts });
@@ -109,6 +130,35 @@ test('polls launchpad programs incrementally and processes only newly observed s
   assert.equal(found.length, 1);
   assert.equal(found[0].mint, mint);
   assert.equal(state.launchpadDiscovery.metrics.launches, 1);
+  assert.equal(state.launchpadDiscovery.pending['raydium-launchlab'].length, 0);
+});
+
+test('keeps a launch queued when ingestion fails and retries it on the next visit', async () => {
+  const state = {};
+  const oldSignature = 'cursor-before-launch';
+  const newSignature = 'launch-to-retry';
+  let rows = [{ signature: oldSignature, slot: 10 }];
+  const launch = txFor({
+    programId: launchLab.programId,
+    discriminator: 'afaf6d1f0d989bed',
+    accounts: ['payer', creator, 'global', 'config', 'authority', 'pool', mint, 'quote'],
+    signature: newSignature
+  });
+  const rpc = async (method, params) => {
+    if (method === 'getSignaturesForAddress') return params[0] === launchLab.programId ? rows : [{ signature: 'other-program-cursor' }];
+    if (method === 'getTransaction') return launch;
+    throw new Error('unexpected RPC method');
+  };
+  await pollLaunchpadDiscovery(state, rpc, () => {}, { now: 1000 });
+  await pollLaunchpadDiscovery(state, rpc, () => {}, { now: 2000 });
+  rows = [{ signature: newSignature, slot: 11 }, { signature: oldSignature, slot: 10 }];
+  const failed = await pollLaunchpadDiscovery(state, rpc, () => { throw new Error('temporary persistence failure'); }, { now: 3000 });
+  assert.equal(failed.error, 'temporary persistence failure');
+  assert.equal(state.launchpadDiscovery.pending['raydium-launchlab'].length, 1);
+  assert.equal(state.launchpadDiscovery.pending['raydium-launchlab'][0].signature, newSignature);
+  await pollLaunchpadDiscovery(state, rpc, () => {}, { now: 4000 });
+  const retried = await pollLaunchpadDiscovery(state, rpc, () => {}, { now: 5000 });
+  assert.equal(retried.launches, 1);
   assert.equal(state.launchpadDiscovery.pending['raydium-launchlab'].length, 0);
 });
 
