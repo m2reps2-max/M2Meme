@@ -88,6 +88,10 @@ test('maps Jupiter no-route responses separately from rate limits and server fai
     fetchImpl: async () => response({ error: 'No routes found', errorCode: 'NO_ROUTES_FOUND' }, 400)
   });
   assert.equal(missing.status, 'no_route');
+  const notTradable = await fetchJupiterSellQuote(mint, '1000', {
+    fetchImpl: async () => response({ error: 'Token is not tradable', errorCode: 'TOKEN_NOT_TRADABLE' }, 400)
+  });
+  assert.equal(notTradable.status, 'no_route');
   await assert.rejects(
     () => fetchJupiterSellQuote(mint, '1000', { fetchImpl: async () => response({ error: 'rate limited' }, 429) }),
     /Jupiter HTTP 429/
