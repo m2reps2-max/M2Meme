@@ -61,6 +61,13 @@ test('detects Meteora DBC and labels the Moonshot partner config', () => {
   assert.equal(result.creator, creator);
 });
 
+test('identifies partner frontends sharing the same Meteora and LaunchLab programs', () => {
+  const dbc = txFor({ programId: meteora.programId, discriminator: '8c55d7b06636684f', accounts: ['GKDMxu34q8MWqqj2mVVV3pEw2zkFC7LxYjvPXNjBQLMi', 'authority', creator, mint, 'quote', 'pool'] });
+  assert.equal(parseLaunchpadTransaction(dbc).launchpadId, 'bags');
+  const launchLabTx = txFor({ programId: launchLab.programId, discriminator: 'afaf6d1f0d989bed', accounts: ['payer', creator, 'global', '6BwHHDg3u1854jC8PDLXvR4spTcLNaoBxLJNGC4nTESt', 'authority', 'pool', mint, 'quote'] });
+  assert.equal(parseLaunchpadTransaction(launchLabTx).launchpadId, 'stonkfun');
+});
+
 test('ignores non-launch instructions, failed transactions and invalid mint accounts', () => {
   const accounts = ['payer', creator, 'global', 'config', 'authority', 'pool', mint, 'quote'];
   const wrong = txFor({ programId: launchLab.programId, discriminator: '0000000000000000', accounts });
