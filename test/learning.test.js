@@ -142,3 +142,16 @@ test('a stale cold-archive model is not used for live candidate ranking',()=>{
  assert.equal(result.adaptiveModel.source,'active_cache');
  assert.equal(result.adaptiveModelSources.archive.fresh,false);
 });
+
+test('a validated active-cache model takes priority over a validated cold-archive model',()=>{
+ const tokens={};
+ for(let i=0;i<300;i++){
+  const x=i%100,mint='active-'+String(i).padStart(4,'0');
+  tokens[mint]={mint,forecasts:[{at:Date.UTC(2026,0,1)+i*60000,score:100-x,features:{activity:x,momentum:x*.8+(i%7),market:x*.7+(i%5),liquidityQuality:x*.6+(i%11),security:x*.5+(i%13)},outcomes:{'1h':{returnPct:(x-50)*1.5}}}]};
+ }
+ const archived={status:'validated',enabled:true,observations:500,trainingTokens:400,validationTokens:100,coefficients:{activity:.4,momentum:.3,market:.2,security:.1},means:{activity:50,momentum:50,market:50,security:50},stds:{activity:20,momentum:20,market:20,security:20},features:[],holdout:{selectedTokens:30,upliftVsStaticPctPoints:8,upliftVsRandomPctPoints:7}};
+ const scanner={state:{tokens,archiveLearning:{adaptiveModel:archived},archiveLearningGeneratedAt:new Date().toISOString()}};
+ const result=learningSummary.call(scanner);
+ assert.equal(result.adaptiveModel.enabled,true);
+ assert.equal(result.adaptiveModel.source,'active_cache');
+});
