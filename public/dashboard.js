@@ -1,7 +1,7 @@
 'use strict';
 const $=s=>document.querySelector(s), view=$('#view'), nav=$('#nav'), title=$('#page-title');
-const state={overview:{},selection:{best:[],observe:[],eligible:0},tokens:[],alerts:[],watchlist:[],wallets:[],autoWallets:[],creators:[],creatorFundingClusters:[],walletIntel:[],walletClusters:[],experts:{},walletGraph:null,walletReputation:null,walletSignalBacktest:null,paperTrading:null,dataQuality:null,launches:[],backtest:null,historical:null,learning:null,selectionPerformance:null,selected:null,page:'overview',sort:'score',search:'',loadErrors:[]};
-const labels={overview:'Accueil',scanner:'Sélection',opportunities:'Opportunités',watchlist:'Favoris',analysis:'Détails du token',smart:'Wallets suivis',security:'Sécurité',social:'Liens du token',alerts:'Alertes',settings:'Réglages',creators:'Créateurs',backtest:'Résultats',smartIntel:'Activité des wallets',walletGraph:'Graphe wallets',quality:'Qualité des données',more:'Plus',launches:'Nouveaux lancements',experts:'Experts & portefeuilles',paper:'Paper trading'};
+const state={overview:{},selection:{best:[],observe:[],eligible:0},channels:[],tokens:[],alerts:[],watchlist:[],wallets:[],autoWallets:[],creators:[],creatorFundingClusters:[],walletIntel:[],walletClusters:[],experts:{},walletGraph:null,walletReputation:null,walletSignalBacktest:null,paperTrading:null,dataQuality:null,launches:[],backtest:null,historical:null,learning:null,selectionPerformance:null,selected:null,page:'overview',sort:'score',search:'',loadErrors:[]};
+const labels={overview:'Accueil',channels:'Canaux Telegram',results:'Résultats',scanner:'Sélection',opportunities:'Opportunités',watchlist:'Favoris',analysis:'Détails du token',smart:'Wallets suivis',security:'Sécurité',social:'Liens du token',alerts:'Alertes',settings:'Réglages',creators:'Créateurs',backtest:'Résultats',smartIntel:'Activité des wallets',walletGraph:'Graphe wallets',quality:'Qualité des données',more:'Plus',launches:'Nouveaux lancements',experts:'Experts & portefeuilles',paper:'Paper trading'};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const date=v=>v?new Date(v).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'—';
 const usd=v=>Number(v)?new Intl.NumberFormat('fr-FR',{style:'currency',currency:'USD',maximumFractionDigits:Number(v)<1?6:0}).format(Number(v)):'—';
@@ -130,6 +130,23 @@ function renderPaper(){
  +'<article class="panel detail-card"><h3>Derniers trades simulés</h3><div class="table-wrap"><table><thead><tr><th>Token</th><th>P&amp;L net</th><th>Rendement</th><th>Sortie</th><th>Date</th></tr></thead><tbody>'+tradeRows+'</tbody></table></div></article>'
  +'<p class="footnote">Hypothèses : 100 $ par position, maximum 5 positions, frais 0,3 % par côté, slippage 0,5 % par côté, stop −25 %, objectif +60 %, durée maximale 24 h. Les entrées exigent un prix Jupiter récent et un écart inférieur ou égal à 15 % avec DexScreener. Ce sont des simulations, pas des prix d’exécution garantis.</p>';
 }
+function renderChannels(){
+ const channels=state.channels||[];
+ const botReady=Boolean(state.overview.sources?.telegram?.configured);
+ const rows=channels.length?channels.map(channel=>'<article class="panel channel-row"><div class="channel-main"><b>'+esc(channel.label||channel.chatId)+'</b><small class="subtle">'+esc(channel.chatId)+'</small><small class="subtle">'+(channel.lastError?'Dernier envoi : '+esc(channel.lastError):channel.lastSentAt?'Dernier envoi : '+date(channel.lastSentAt):'Aucune publication envoyée pour le moment')+'</small></div><div class="channel-actions"><button class="mini-btn" data-channel-test="'+esc(channel.chatId)+'">Tester</button><button class="mini-btn" data-channel-toggle="'+esc(channel.chatId)+'" data-enabled="'+(!channel.enabled)+'">'+(channel.enabled?'Désactiver':'Activer')+'</button><button class="mini-btn danger-btn" data-channel-remove="'+esc(channel.chatId)+'">Supprimer</button></div><span class="pill '+(channel.enabled?'good':'neutral')+'">'+(channel.enabled?'Actif':'Inactif')+'</span></article>').join(''):'<div class="panel empty-panel"><h2>Aucun canal ajouté</h2><p>Ajoute ton canal Telegram. Le bot doit en être administrateur pour publier.</p></div>';
+ view.innerHTML='<div class="section-heading"><div><h2>Canaux Telegram</h2><p class="muted">Ajoute un canal, active la diffusion et le bot publiera les trouvailles retenues.</p></div></div><article class="panel channel-setup"><p>'+pill(botReady?'Bot Telegram configuré':'Bot Telegram à configurer',botReady?'good':'warn')+'</p><form id="channel-form" class="channel-form"><label>Identifiant du canal<input name="chatId" placeholder="@moncanal ou -1001234567890" required maxlength="64"></label><label>Nom (facultatif)<input name="label" placeholder="Canal principal" maxlength="60"></label><button class="primary" type="submit">Ajouter le canal</button></form><small class="footnote">Ajoute le bot comme administrateur du canal avec le droit de publier des messages. Maximum 10 canaux. Un seul scan alimente tous les canaux activés.</small></article><div class="section-heading"><div><h3>Mes canaux ('+channels.length+'/10)</h3></div></div><div class="channel-list">'+rows+'</div>';
+}
+function renderResults(){
+ const best=state.selectionPerformance?.groups?.best||{};
+ const horizons=best.horizons||{};
+ const one=horizons['1h']||{},six=horizons['6h']||{},day=horizons['24h']||{},week=horizons['7d']||{};
+ const rate=one.positive15Pct==null?'—':one.positive15Pct+'%';
+ const average=one.averageReturnPct==null?'—':(one.averageReturnPct>0?'+':'')+one.averageReturnPct+'%';
+ const sample=Number(one.resolved)||0;
+ const sampleLabel=sample<30?'Échantillon encore limité':'Échantillon en cours de consolidation';
+ const metric=(label,value,detail)=>'<article class="panel stat"><span>'+label+'</span><strong>'+value+'</strong><small>'+detail+'</small></article>';
+ view.innerHTML='<div class="section-heading"><div><h2>Résultats de M2</h2><p class="muted">Est-ce que les trouvailles sélectionnées ont réellement progressé ?</p></div></div><article class="panel performance-hero"><p>Taux de réussite à 1 heure</p><strong>'+rate+'</strong><small>'+sample+' trouvailles évaluées · réussite = hausse d’au moins 15 % après environ 1 heure.</small></article><div class="stat-grid simple-stats">'+metric('Rendement moyen à 1 h',average,'Variation moyenne du prix')+metric('Hausse à 6 h',six.positive15Pct==null?'—':six.positive15Pct+'%',(six.resolved||0)+' évaluées')+metric('Hausse à 24 h',day.positive15Pct==null?'—':day.positive15Pct+'%',(day.resolved||0)+' évaluées')+'</div><article class="panel detail-card"><h3>Suivi dans le temps</h3><div class="table-wrap"><table><thead><tr><th>Durée</th><th>Évaluées</th><th>Hausse ≥15 %</th><th>Rendement moyen</th><th>Baisses ≤−20 %</th></tr></thead><tbody>'+[['1 heure',one],['6 heures',six],['24 heures',day],['7 jours',week]].map(([label,x])=>'<tr><td>'+label+'</td><td>'+(x.resolved||0)+'</td><td>'+(x.positive15Pct==null?'—':x.positive15Pct+'%')+'</td><td>'+(x.averageReturnPct==null?'—':(x.averageReturnPct>0?'+':'')+x.averageReturnPct+'%')+'</td><td>'+(x.loss20Pct==null?'—':x.loss20Pct+'%')+'</td></tr>').join('')+'</tbody></table></div><p class="footnote">'+sampleLabel+'. Une seule entrée par token sélectionné; les observations manquantes ne sont pas comptées comme des pertes. Les résultats sont basés sur les prix observés, sans frais, slippage ni garantie d’exécution. Le score M2 n’est pas une probabilité de hausse.</p></article><article class="panel detail-card"><h3>Le bot apprend-il ?</h3><p>Pour l’instant, M2 mesure les résultats et compare les catégories de signaux. Il ne modifie pas automatiquement ses critères sur un petit échantillon : cela évite de surapprendre quelques gagnants.</p><p class="muted">Dernière mise à jour : '+date(state.selectionPerformance?.updatedAt)+'</p></article>';
+}
 function renderMore(){
  const items=[['paper','◷','Paper trading','Simuler les résultats des 5 meilleurs candidats'],['experts','◎','Wallets & performances','Analyser les wallets observés via Helius'],['backtest','↗','Résultats','Voir si les signaux du bot ont été pertinents'],['alerts','♧','Alertes','Retrouver les alertes envoyées'],['settings','⚙','Paramètres','Vérifier les réglages et les connexions']];
  view.innerHTML='<div class="section-heading"><div><h2>Plus</h2><p class="muted">Les pages utiles en dehors du scanner.</p></div></div><div class="simple-menu">'+items.map(x=>'<button class="panel simple-menu-item" data-go="'+x[0]+'"><span class="module-icon">'+x[1]+'</span><span><b>'+x[2]+'</b><small>'+x[3]+'</small></span><span class="module-state">→</span></button>').join('')+'</div>';
@@ -145,7 +162,7 @@ function render(page=state.page){
  state.page=page;title.textContent=labels[page]||labels.overview;
  nav.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.view===page));
  try{
-  ({overview:renderOverview,scanner:()=>renderScanner('scanner'),opportunities:()=>renderScanner('opportunities'),watchlist:renderWatchlist,analysis:renderDetail,smart:renderSmart,security:renderSecurity,social:renderSocial,creators:renderCreators,backtest:renderBacktest,historical:renderHistorical,smartIntel:renderWalletIntel,walletGraph:renderWalletGraph,quality:renderQuality,alerts:renderAlerts,settings:renderSettings,more:renderMore,paper:renderPaper,experts:renderExperts}[page]||renderOverview)();
+  ({overview:renderOverview,scanner:()=>renderScanner('scanner'),opportunities:()=>renderScanner('opportunities'),watchlist:renderWatchlist,analysis:renderDetail,smart:renderSmart,security:renderSecurity,social:renderSocial,creators:renderCreators,backtest:renderBacktest,historical:renderHistorical,smartIntel:renderWalletIntel,walletGraph:renderWalletGraph,quality:renderQuality,alerts:renderAlerts,settings:renderSettings,channels:renderChannels,results:renderResults,more:renderMore,paper:renderPaper,experts:renderExperts}[page]||renderOverview)();
   if(state.loadErrors.length)view.insertAdjacentHTML('afterbegin','<div class="notice"><b>Actualisation partielle</b><p>'+state.loadErrors.map(esc).join('<br>')+'</p><small>Nouvelle tentative automatique dans 30 secondes.</small></div>');
  }catch(error){
   console.error('[MEME RADAR UI]',error);
@@ -164,7 +181,7 @@ async function load(options={}){
  const full=options.full!==false;
  setSyncStatus('Actualisation…','neutral');
  dashboardLoadPromise=(async()=>{
-  const coreJobs=[['Vue générale','/api/overview'],['Tokens','/api/tokens?limit=200'],['Alertes','/api/alerts'],['Watchlist','/api/watchlist'],['Experts','/api/intelligence/experts'],['Sélection','/api/selection'],['Paper trading','/api/paper-trading']];
+  const coreJobs=[['Vue générale','/api/overview'],['Tokens','/api/tokens?limit=200'],['Alertes','/api/alerts'],['Watchlist','/api/watchlist'],['Experts','/api/intelligence/experts'],['Sélection','/api/selection'],['Paper trading','/api/paper-trading'],['Canaux','/api/telegram/channels']];
   const coreResults=await Promise.allSettled(coreJobs.map(([,url])=>api(url)));
   state.loadErrors=[];
   for(let i=0;i<coreResults.length;i++){
@@ -178,6 +195,7 @@ async function load(options={}){
    if(i===4)state.experts=data;
    if(i===5)state.selection=data;
    if(i===6)state.paperTrading=data;
+   if(i===7)state.channels=data.channels||[];
   }
   const coreFailures=coreResults.filter(x=>x.status==='rejected').length;
   setSyncStatus(coreFailures?'Données partielles':state.overview.scannerRunning?'Scanner actif':'Scanner à vérifier',coreFailures?'warn':state.overview.scannerRunning?'good':'warn');
@@ -266,12 +284,19 @@ view.addEventListener('click',async e=>{
  if(target.hasAttribute('data-token'))return openToken(target.dataset.token,false,target);
  if(target.hasAttribute('data-watch'))return toggleWatch(target.dataset.watch,target);
  if(target.hasAttribute('data-go'))return render(target.dataset.go);
+ if(target.hasAttribute('data-channel-test'))return runButtonAction(target,'Test…',async()=>{await api('/api/telegram/channels/test',{method:'POST',body:JSON.stringify({chatId:target.dataset.channelTest})});setSyncStatus('Message test envoyé','good');});
+ if(target.hasAttribute('data-channel-toggle'))return runButtonAction(target,'Mise à jour…',async()=>{const id=target.dataset.channelToggle;const data=await api('/api/telegram/channels/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify({enabled:target.dataset.enabled==='true'})});state.channels=data.channels||[];render('channels');setSyncStatus('Canal mis à jour','good');});
+ if(target.hasAttribute('data-channel-remove'))return runButtonAction(target,'Suppression…',async()=>{const id=target.dataset.channelRemove;const data=await api('/api/telegram/channels/'+encodeURIComponent(id),{method:'DELETE'});state.channels=data.channels||[];render('channels');setSyncStatus('Canal supprimé','good');});
  if(target.hasAttribute('data-remove-wallet'))return removeWallet(target.dataset.removeWallet,target);
  if(target.hasAttribute('data-paper-toggle'))return runButtonAction(target,'Mise à jour…',async()=>{const data=await api('/api/paper-trading/config',{method:'POST',body:JSON.stringify({enabled:target.dataset.paperToggle==='true'})});state.paperTrading=data;render('paper');setSyncStatus(data.enabled?'Simulation reprise':'Simulation en pause','good');});
 });
 view.addEventListener('input',e=>{if(e.target.id==='search-token'){state.search=e.target.value;refreshTable();}});
 view.addEventListener('change',e=>{if(e.target.id==='sort-token'){state.sort=e.target.value;refreshTable();}});
 view.addEventListener('submit',async e=>{
+ if(e.target.id==='channel-form'){
+  e.preventDefault();const form=e.target;const button=e.submitter||form.querySelector('button[type="submit"]');
+  return runButtonAction(button,'Ajout…',async()=>{const data=await api('/api/telegram/channels',{method:'POST',body:JSON.stringify({chatId:form.elements.chatId.value.trim(),label:form.elements.label.value.trim()})});state.channels=data.channels||[];render('channels');setSyncStatus('Canal ajouté','good');});
+ }
  if(e.target.id!=='wallet-form')return;
  e.preventDefault();
  const form=e.target;
