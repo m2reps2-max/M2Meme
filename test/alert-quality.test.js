@@ -62,7 +62,7 @@ test('missing holder security evidence and warning flags block opportunity publi
 });
 
 test('weak buyer ratio and insufficient transaction count block opportunity publication',()=>{
- const result=qualifyOpportunity(eliteCandidate({txns:{h1:{buys:5,sells:15}}}),{});
+ const result=qualifyOpportunity(eliteCandidate({txns:{h1:{buys:4,sells:12}}}),{});
  assert.ok(result.reasons.includes('Activité transactionnelle insuffisante'));
  assert.ok(result.reasons.includes('Pression acheteuse insuffisante'));
 });
