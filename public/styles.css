@@ -127,3 +127,18 @@ footer{color:#7787a2;border-color:#26344b}
 /* Simple Telegram channel setup */
 .channel-setup{padding:18px;margin:12px 0 22px}.channel-form{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:12px;align-items:end}.channel-form label{display:grid;gap:6px;color:var(--muted);font-size:12px}.channel-form input{width:100%;min-width:0;border:1px solid #34445f;border-radius:9px;background:#0b1423;color:var(--text);padding:12px}.channel-list{display:grid;gap:10px}.channel-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:14px;padding:15px 17px}.channel-main b,.channel-main small{display:block}.channel-main small{margin-top:3px}.channel-actions{display:flex;gap:7px;flex-wrap:wrap}.danger-btn{color:#ffaaaa;border-color:#67404a}.channel-row .pill{justify-self:end}.detail-card{padding:18px}.performance-hero{margin:12px 0 18px}.performance-hero strong{font-variant-numeric:tabular-nums}.footnote{color:var(--muted);font-size:11px;line-height:1.55}
 @media(max-width:720px){.channel-form{grid-template-columns:1fr}.channel-form .primary{width:100%}.channel-row{grid-template-columns:minmax(0,1fr) auto;gap:9px;padding:13px}.channel-row .pill{grid-column:2;grid-row:1;justify-self:end}.channel-actions{grid-column:1/-1}.channel-actions button{flex:1}.channel-main small{overflow-wrap:anywhere}.detail-card{padding:14px}}
+
+
+/* Simple scanner settings */
+.scanner-settings-card{padding:20px;margin:12px 0 18px}
+.scanner-settings-form{display:grid;gap:18px}
+.settings-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+.settings-fields label{display:grid;gap:7px;color:var(--muted);font-size:12px}
+.settings-fields input,.settings-fields select{width:100%;min-width:0;min-height:43px;border:1px solid #34445f;border-radius:9px;background:#0b1423;color:var(--text);padding:11px}
+.settings-toggles{display:flex;gap:22px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:15px}
+.settings-toggles label{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--text)}
+.settings-toggles input{width:17px;height:17px;accent-color:var(--accent)}
+.settings-save{display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid var(--line);padding-top:15px}
+.settings-save .footnote{max-width:520px;margin:0}
+@media(max-width:850px){.settings-fields{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.settings-fields{grid-template-columns:1fr}.settings-save{align-items:stretch;flex-direction:column}.settings-save .primary{width:100%}.settings-toggles{flex-direction:column;gap:13px}}

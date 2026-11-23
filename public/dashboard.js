@@ -1,6 +1,6 @@
 'use strict';
 const $=s=>document.querySelector(s), view=$('#view'), nav=$('#nav'), title=$('#page-title');
-const state={overview:{},selection:{best:[],observe:[],eligible:0},channels:[],tokens:[],alerts:[],watchlist:[],wallets:[],autoWallets:[],creators:[],creatorFundingClusters:[],walletIntel:[],walletClusters:[],experts:{},walletGraph:null,walletReputation:null,walletSignalBacktest:null,paperTrading:null,dataQuality:null,launches:[],backtest:null,historical:null,learning:null,selectionPerformance:null,selected:null,page:'overview',sort:'score',search:'',loadErrors:[]};
+const state={overview:{},selection:{best:[],observe:[],eligible:0},channels:[],tokens:[],alerts:[],watchlist:[],wallets:[],autoWallets:[],creators:[],creatorFundingClusters:[],walletIntel:[],walletClusters:[],experts:{},walletGraph:null,walletReputation:null,walletSignalBacktest:null,paperTrading:null,dataQuality:null,launches:[],backtest:null,historical:null,learning:null,selectionPerformance:null,scannerSettings:null,selected:null,page:'overview',sort:'score',search:'',loadErrors:[]};
 const labels={overview:'Accueil',channels:'Canaux Telegram',results:'Résultats',scanner:'Sélection',opportunities:'Opportunités',watchlist:'Favoris',analysis:'Détails du token',smart:'Wallets suivis',security:'Sécurité',social:'Liens du token',alerts:'Alertes',settings:'Réglages',creators:'Créateurs',backtest:'Résultats',smartIntel:'Activité des wallets',walletGraph:'Graphe wallets',quality:'Qualité des données',more:'Plus',launches:'Nouveaux lancements',experts:'Experts & portefeuilles',paper:'Paper trading'};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const date=v=>v?new Date(v).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'—';
@@ -159,7 +159,8 @@ function renderSettings(){
  const connected=sources.filter(x=>x.connected).length;
  const total=sources.length;
  const telegram=state.overview.sources?.telegram;
- view.innerHTML='<div class="section-heading"><div><h2>Paramètres</h2><p class="muted">État général du bot. Les réglages techniques restent dans FadeHost.</p></div></div><div class="simple-status"><article class="panel stat"><span>Scanner</span><strong>'+pill(state.overview.scannerRunning?'Actif':'À vérifier',state.overview.scannerRunning?'good':'warn')+'</strong></article><article class="panel stat"><span>Telegram</span><strong>'+pill(telegram?.connected?'Connecté':telegram?.configured?'Configuré':'Non configuré',telegram?.connected?'good':'warn')+'</strong></article><article class="panel stat"><span>Sources de données</span><strong>'+connected+' / '+total+'</strong></article></div><p class="footnote">Aucun achat automatique n’est effectué. Les clés et paramètres techniques ne sont jamais modifiés depuis cette page.</p>';
+ const settings=state.scannerSettings||{preset:'balanced',minScore:78,minLiquidityUsd:5000,publishOpportunities:true,publishRisks:true};
+ view.innerHTML='<div class="section-heading"><div><h2>Réglages du scanner</h2><p class="muted">Choisis ce que le bot repère et publie. Les clés restent protégées dans FadeHost.</p></div></div><div class="simple-status"><article class="panel stat"><span>Scanner</span><strong>'+pill(state.overview.scannerRunning?'Actif':'À vérifier',state.overview.scannerRunning?'good':'warn')+'</strong></article><article class="panel stat"><span>Telegram</span><strong>'+pill(telegram?.connected?'Connecté':telegram?.configured?'Configuré':'Non configuré',telegram?.connected?'good':'warn')+'</strong></article><article class="panel stat"><span>Sources actives</span><strong>'+connected+' / '+total+'</strong></article></div><article class="panel channel-setup scanner-settings-card"><form id="scanner-settings-form" class="scanner-settings-form"><div class="settings-fields"><label>Profil de détection<select name="preset" id="scanner-settings-preset"><option value="prudent" '+(settings.preset==='prudent'?'selected':'')+'>Prudent · moins d’alertes</option><option value="balanced" '+(settings.preset==='balanced'?'selected':'')+'>Équilibré · recommandé</option><option value="large" '+(settings.preset==='large'?'selected':'')+'>Large · plus de candidats</option><option value="custom" '+(settings.preset==='custom'?'selected':'')+'>Personnalisé</option></select></label><label>Score minimum (50 à 95)<input type="number" name="minScore" min="50" max="95" step="1" value="'+esc(settings.minScore)+'" required></label><label>Liquidité minimale en dollars<input type="number" name="minLiquidityUsd" min="500" max="1000000" step="500" value="'+esc(settings.minLiquidityUsd)+'" required></label></div><div class="settings-toggles"><label><input type="checkbox" name="publishOpportunities" '+(settings.publishOpportunities?'checked':'')+'> Publier les opportunités</label><label><input type="checkbox" name="publishRisks" '+(settings.publishRisks?'checked':'')+'> Publier les alertes de risque</label></div><div class="settings-save"><small class="footnote">Le profil Large augmente le nombre de candidats et peut réduire leur qualité moyenne. Aucun achat automatique n’est effectué.</small><button class="primary" type="submit">Enregistrer les réglages</button></div></form></article><p class="footnote">Les changements sont sauvegardés dans les données du bot et appliqués au prochain cycle de scan. Les identifiants et clés API ne sont jamais affichés ici.</p>';
 }
 function render(page=state.page){
  state.page=page;title.textContent=labels[page]||labels.overview;
@@ -184,7 +185,7 @@ async function load(options={}){
  const full=options.full!==false;
  setSyncStatus('Actualisation…','neutral');
  dashboardLoadPromise=(async()=>{
-  const coreJobs=[['Vue générale','/api/overview'],['Tokens','/api/tokens?limit=200'],['Alertes','/api/alerts'],['Watchlist','/api/watchlist'],['Experts','/api/intelligence/experts'],['Sélection','/api/selection'],['Paper trading','/api/paper-trading'],['Canaux','/api/telegram/channels']];
+  const coreJobs=[['Vue générale','/api/overview'],['Tokens','/api/tokens?limit=200'],['Alertes','/api/alerts'],['Watchlist','/api/watchlist'],['Experts','/api/intelligence/experts'],['Sélection','/api/selection'],['Paper trading','/api/paper-trading'],['Canaux','/api/telegram/channels'],['Réglages','/api/scanner-settings']];
   const coreResults=await Promise.allSettled(coreJobs.map(([,url])=>api(url)));
   state.loadErrors=[];
   for(let i=0;i<coreResults.length;i++){
@@ -199,6 +200,7 @@ async function load(options={}){
    if(i===5)state.selection=data;
    if(i===6)state.paperTrading=data;
    if(i===7)state.channels=data.channels||[];
+   if(i===8)state.scannerSettings=data.settings||null;
   }
   const coreFailures=coreResults.filter(x=>x.status==='rejected').length;
   setSyncStatus(coreFailures?'Données partielles':state.overview.scannerRunning?'Scanner actif':'Scanner à vérifier',coreFailures?'warn':state.overview.scannerRunning?'good':'warn');
@@ -294,11 +296,18 @@ view.addEventListener('click',async e=>{
  if(target.hasAttribute('data-paper-toggle'))return runButtonAction(target,'Mise à jour…',async()=>{const data=await api('/api/paper-trading/config',{method:'POST',body:JSON.stringify({enabled:target.dataset.paperToggle==='true'})});state.paperTrading=data;render('paper');setSyncStatus(data.enabled?'Simulation reprise':'Simulation en pause','good');});
 });
 view.addEventListener('input',e=>{if(e.target.id==='search-token'){state.search=e.target.value;refreshTable();}});
-view.addEventListener('change',e=>{if(e.target.id==='sort-token'){state.sort=e.target.value;refreshTable();}});
+view.addEventListener('change',e=>{if(e.target.id==='sort-token'){state.sort=e.target.value;refreshTable();}if(e.target.id==='scanner-settings-preset'){const presets={prudent:[85,10000],balanced:[78,5000],large:[70,2500]};const preset=presets[e.target.value];if(preset){const form=e.target.form;form.elements.minScore.value=preset[0];form.elements.minLiquidityUsd.value=preset[1];}}});
 view.addEventListener('submit',async e=>{
  if(e.target.id==='channel-form'){
   e.preventDefault();const form=e.target;const button=e.submitter||form.querySelector('button[type="submit"]');
   return runButtonAction(button,'Ajout…',async()=>{const data=await api('/api/telegram/channels',{method:'POST',body:JSON.stringify({chatId:form.elements.chatId.value.trim(),label:form.elements.label.value.trim()})});state.channels=data.channels||[];render('channels');setSyncStatus('Canal ajouté','good');});
+ }
+ if(e.target.id==='scanner-settings-form'){
+  e.preventDefault();const form=e.target;const button=e.submitter||form.querySelector('button[type="submit"]');
+  return runButtonAction(button,'Enregistrement…',async()=>{
+   const data=await api('/api/scanner-settings',{method:'PATCH',body:JSON.stringify({preset:form.elements.preset.value,minScore:Number(form.elements.minScore.value),minLiquidityUsd:Number(form.elements.minLiquidityUsd.value),publishOpportunities:form.elements.publishOpportunities.checked,publishRisks:form.elements.publishRisks.checked})});
+   state.scannerSettings=data.settings;await load({full:false});setSyncStatus('Réglages enregistrés','good');
+  });
  }
  if(e.target.id!=='wallet-form')return;
  e.preventDefault();
