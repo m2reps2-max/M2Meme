@@ -96,7 +96,7 @@ app.get('/api/intelligence/experts',(_q,r)=>r.json({ok:true,...buildHeliusWallet
 app.get('/api/data-quality',(_q,r)=>r.json({ok:true,...scanner.dataQualitySummary()}));
 app.get('/api/backtest',(_q,r)=>r.json({ok:true,...scanner.backtest()}));
 app.get('/api/paper-trading',(_q,r)=>r.json({ok:true,...getPaperTradingSummary(scanner.state,Date.now())}));
-app.post('/api/paper-trading/config',(q,r)=>{if(typeof q.body?.enabled!=='boolean')return r.status(400).json({error:'Le champ enabled doit être booléen.'});setPaperTradingEnabled(scanner.state,q.body.enabled);try{scanner.save();r.json({ok:true,...stepPaperTrading(scanner.state,buildSelection(scanner.state.tokens),Date.now())});}catch(error){r.status(500).json({error:'Impossible de sauvegarder la configuration paper trading.'});}});
+app.post('/api/paper-trading/config',(q,r)=>{if(typeof q.body?.enabled!=='boolean')return r.status(400).json({error:'Le champ enabled doit être booléen.'});setPaperTradingEnabled(scanner.state,q.body.enabled);try{const summary=stepPaperTrading(scanner.state,buildSelection(scanner.state.tokens),Date.now());scanner.save();r.json({ok:true,...summary});}catch(error){r.status(500).json({error:'Impossible de sauvegarder la configuration paper trading.'});}});
 app.get('/api/learning',(_q,r)=>r.json({ok:true,...scanner.learningSummary()}));
 app.get('/api/selection-performance',(_q,r)=>r.json({ok:true,...require('./lib/selection-cohort').buildSelectionPerformance(scanner.state)}));
 app.get('/api/backtest/historical',(_q,r)=>r.json({ok:true,...scanner.getHistoricalBenchmark()}));
