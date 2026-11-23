@@ -180,12 +180,32 @@ function setSyncStatus(label,kind='neutral'){
  badge.className='pill '+kind;
  badge.innerHTML='<i></i>'+esc(label);
 }
+const pageDataLoaders={
+ smart:async()=>{const data=await api('/api/wallets');state.wallets=data.wallets||[];state.autoWallets=data.autoWallets||[];},
+ creators:async()=>{const data=await api('/api/intelligence/creators');state.creators=data.creators||[];state.creatorFundingClusters=data.fundingClusters||[];},
+ backtest:async()=>{const [learning,performance]=await Promise.all([api('/api/learning'),api('/api/selection-performance')]);state.learning=learning;state.selectionPerformance=performance;},
+ walletGraph:async()=>{state.walletGraph=await api('/api/intelligence/wallet-graph');},
+ quality:async()=>{state.dataQuality=await api('/api/data-quality');},
+ smartIntel:async()=>{const data=await api('/api/intelligence/wallets');state.walletIntel=data.wallets||[];state.walletClusters=data.clusters||[];},
+ historical:async()=>{state.historical=await api('/api/backtest/historical');},
+ launches:async()=>{const data=await api('/api/launches');state.launches=data.tokens||[];},
+ experts:async()=>{const [experts,signals]=await Promise.all([api('/api/intelligence/experts'),api('/api/intelligence/wallet-signal-backtest')]);state.experts=experts;state.walletSignalBacktest=signals;},
+ paper:async()=>{state.paperTrading=await api('/api/paper-trading');},
+ results:async()=>{state.selectionPerformance=await api('/api/selection-performance');}
+};
+async function openPage(page){
+ render(page);
+ const loader=pageDataLoaders[page];
+ if(!loader)return;
+ setSyncStatus('Chargement…','neutral');
+ try{await loader();if(state.page===page)render(page);setSyncStatus(state.overview.scannerRunning?'Scanner actif':'Scanner à vérifier',state.overview.scannerRunning?'good':'warn');}
+ catch(error){console.error('[MEME RADAR page data]',page,error);if(state.page===page)view.insertAdjacentHTML('afterbegin','<div class="notice"><b>Données temporairement indisponibles</b><p>'+esc(error.message||error)+'</p></div>');setSyncStatus('Données indisponibles','warn');}
+}
 async function load(options={}){
  if(dashboardLoadPromise)return dashboardLoadPromise;
- const full=options.full!==false;
  setSyncStatus('Actualisation…','neutral');
  dashboardLoadPromise=(async()=>{
-  const coreJobs=[['Vue générale','/api/overview'],['Tokens','/api/tokens?limit=200'],['Alertes','/api/alerts'],['Watchlist','/api/watchlist'],['Experts','/api/intelligence/experts'],['Sélection','/api/selection'],['Paper trading','/api/paper-trading'],['Canaux','/api/telegram/channels'],['Réglages','/api/scanner-settings']];
+  const coreJobs=[['Vue générale','/api/overview'],['Tokens','/api/tokens?limit=200'],['Alertes','/api/alerts'],['Watchlist','/api/watchlist'],['Sélection','/api/selection'],['Canaux','/api/telegram/channels'],['Réglages','/api/scanner-settings']];
   const coreResults=await Promise.allSettled(coreJobs.map(([,url])=>api(url)));
   state.loadErrors=[];
   for(let i=0;i<coreResults.length;i++){
@@ -196,37 +216,14 @@ async function load(options={}){
    if(i===1)state.tokens=data.tokens||[];
    if(i===2)state.alerts=data.alerts||[];
    if(i===3)state.watchlist=data.watchlist||[];
-   if(i===4)state.experts=data;
-   if(i===5)state.selection=data;
-   if(i===6)state.paperTrading=data;
-   if(i===7)state.channels=data.channels||[];
-   if(i===8)state.scannerSettings=data.settings||null;
+   if(i===4)state.selection=data;
+   if(i===5)state.channels=data.channels||[];
+   if(i===6)state.scannerSettings=data.settings||null;
   }
   const coreFailures=coreResults.filter(x=>x.status==='rejected').length;
   setSyncStatus(coreFailures?'Données partielles':state.overview.scannerRunning?'Scanner actif':'Scanner à vérifier',coreFailures?'warn':state.overview.scannerRunning?'good':'warn');
   render(state.page);
-  if(!full)return;
-  const secondaryJobs=[['Wallets','/api/wallets'],['Créateurs','/api/intelligence/creators'],['Wallet intelligence','/api/intelligence/wallets'],['Backtest','/api/backtest'],['Benchmark historique','/api/backtest/historical'],['Apprentissage continu','/api/learning'],['Nouveaux lancements','/api/launches'],['Graphe wallets','/api/intelligence/wallet-graph'],['Réputation wallets','/api/intelligence/wallet-reputation'],['Qualité des données','/api/data-quality'],['Backtest wallets','/api/intelligence/wallet-signal-backtest'],['Cohorte Sélection','/api/selection-performance']];
-  const results=await Promise.allSettled(secondaryJobs.map(([,url])=>api(url)));
-  for(let i=0;i<results.length;i++){
-   const result=results[i];
-   if(result.status==='rejected'){state.loadErrors.push(secondaryJobs[i][0]+': '+(result.reason?.message||'Erreur inconnue'));continue;}
-   const data=result.value;
-   if(i===0){state.wallets=data.wallets||[];state.autoWallets=data.autoWallets||[];}
-   if(i===1){state.creators=data.creators||[];state.creatorFundingClusters=data.fundingClusters||[];}
-   if(i===2){state.walletIntel=data.wallets||[];state.walletClusters=data.clusters||[];}
-   if(i===3)state.backtest=data;
-   if(i===4)state.historical=data;
-   if(i===5)state.learning=data;
-   if(i===6)state.launches=data.tokens||[];
-   if(i===7)state.walletGraph=data;
-   if(i===8)state.walletReputation=data;
-   if(i===9)state.dataQuality=data;
-   if(i===10)state.walletSignalBacktest=data;
-   if(i===11)state.selectionPerformance=data;
-  }
-  setSyncStatus(state.loadErrors.length?'Données partielles':state.overview.scannerRunning?'Scanner actif':'Scanner à vérifier',state.loadErrors.length?'warn':state.overview.scannerRunning?'good':'warn');
-  render(state.page);
+
  })();
  try{return await dashboardLoadPromise;}
  finally{dashboardLoadPromise=null;}
@@ -280,7 +277,7 @@ async function removeWallet(address,button){
   setSyncStatus('Wallet supprimé','good');
  });
 }
-nav.addEventListener('click',e=>{const target=e.target.closest?.('[data-view]');if(target)render(target.dataset.view);});
+nav.addEventListener('click',e=>{const target=e.target.closest?.('[data-view]');if(target)openPage(target.dataset.view);});
 view.addEventListener('click',async e=>{
  const target=e.target.closest?.('button');
  if(!target)return;
@@ -288,7 +285,7 @@ view.addEventListener('click',async e=>{
  if(target.id==='retry-dashboard'){dashboardBooted=false;return bootDashboard();}
  if(target.hasAttribute('data-token'))return openToken(target.dataset.token,false,target);
  if(target.hasAttribute('data-watch'))return toggleWatch(target.dataset.watch,target);
- if(target.hasAttribute('data-go'))return render(target.dataset.go);
+ if(target.hasAttribute('data-go'))return openPage(target.dataset.go);
  if(target.hasAttribute('data-channel-test'))return runButtonAction(target,'Test…',async()=>{await api('/api/telegram/channels/test',{method:'POST',body:JSON.stringify({chatId:target.dataset.channelTest})});setSyncStatus('Message test envoyé','good');});
  if(target.hasAttribute('data-channel-toggle'))return runButtonAction(target,'Mise à jour…',async()=>{const id=target.dataset.channelToggle;const data=await api('/api/telegram/channels/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify({enabled:target.dataset.enabled==='true'})});state.channels=data.channels||[];render('channels');setSyncStatus('Canal mis à jour','good');});
  if(target.hasAttribute('data-channel-remove'))return runButtonAction(target,'Suppression…',async()=>{const id=target.dataset.channelRemove;const data=await api('/api/telegram/channels/'+encodeURIComponent(id),{method:'DELETE'});state.channels=data.channels||[];render('channels');setSyncStatus('Canal supprimé','good');});
