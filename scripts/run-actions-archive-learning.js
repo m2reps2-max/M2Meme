@@ -13,6 +13,7 @@ const BANDS = [
 const PAGE_SIZE = 200;
 const MAX_ARCHIVE_ROWS = 250000;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+const { buildAdaptiveModel } = require('../lib/adaptive-model');
 
 function bucket() {
   return { resolved: 0, sum: 0, positive: 0, losses: 0 };
@@ -41,6 +42,23 @@ function firstSignalMetrics(rows) {
   const result = bucket();
   for (const row of rows) add(result, row.outcome);
   return summarize(result);
+}
+
+function buildAdaptiveTokens(firstSignals) {
+  const tokens = Object.create(null);
+  for (const row of firstSignals || []) {
+    if (!row || typeof row.mint !== 'string' || !row.mint || !row.features || typeof row.features !== 'object') continue;
+    tokens[row.mint] = {
+      mint: row.mint,
+      forecasts: [{
+        at: row.at,
+        score: row.score,
+        features: row.features,
+        outcomes: row.outcomes || {}
+      }]
+    };
+  }
+  return tokens;
 }
 
 async function requestJson(url, token, options = {}) {
@@ -109,7 +127,7 @@ async function main() {
           if (!sourceBuckets.has(source) && sourceBuckets.size < 30) sourceBuckets.set(source, bucket());
           if (sourceBuckets.has(source)) add(sourceBuckets.get(source), oneHour);
           const at = Number(forecast.at);
-          if (Number.isFinite(at) && (!first || at < first.at)) first = { mint: item.mint, at, score: hasScore ? score : null, outcome: oneHour };
+          if (Number.isFinite(at) && (!first || at < first.at)) first = { mint: item.mint, at, score: hasScore ? score : null, outcome: oneHour, features: forecast.features && typeof forecast.features === 'object' ? forecast.features : null, outcomes: Object.fromEntries(HORIZONS.filter(key => forecast.outcomes?.[key]?.returnPct !== null && forecast.outcomes?.[key]?.returnPct !== undefined && Number.isFinite(Number(forecast.outcomes[key].returnPct))).map(key => [key, { returnPct: Number(forecast.outcomes[key].returnPct) }])) };
         }
       }
       if (first) {
@@ -125,6 +143,7 @@ async function main() {
   }
 
   const firstSignals = [...firstByMint.values()].sort((a, b) => a.at - b.at);
+  const adaptiveModel = buildAdaptiveModel(buildAdaptiveTokens(firstSignals));
   const splitAt = Math.floor(firstSignals.length * 0.8);
   const training = firstSignals.slice(0, splitAt);
   const validation = firstSignals.slice(splitAt);
@@ -133,6 +152,7 @@ async function main() {
     tokensWithForecasts,
     forecasts,
     uniqueResolvedTokens1h: firstSignals.length,
+    adaptiveModel,
     horizons: Object.fromEntries(HORIZONS.map(key => [key, summarize(horizonBuckets[key])])),
     scoreBands: Object.fromEntries(BANDS.map(([key]) => [key, summarize(scoreBuckets[key])])),
     bySource: Object.fromEntries([...sourceBuckets.entries()].map(([key, value]) => [key, summarize(value)])),
@@ -158,7 +178,9 @@ async function main() {
   console.log('[archive-learning] imported', JSON.stringify({ ...summary, bySource: Object.keys(summary.bySource).length }));
 }
 
-main().catch(error => {
+if (require.main === module) main().catch(error => {
   console.error('[archive-learning] fatal:', error.stack || error.message);
   process.exitCode = 1;
 });
+
+module.exports = { buildAdaptiveTokens };
