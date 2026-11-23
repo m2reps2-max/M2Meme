@@ -196,16 +196,16 @@ test('dashboard startup and 30-second refresh load only the seven essential data
  const start=js.indexOf('async function load(){');
  const end=js.indexOf('async function runButtonAction',start);
  const source=js.slice(start,end);
- assert.match(source,/const coreJobs=\\[/);
- assert.match(source,/\\['Vue générale','\\/api\\/overview'\\]/);
- assert.match(source,/\\['Tokens','\\/api\\/tokens\\?limit=200'\\]/);
- assert.match(source,/\\['Réglages','\\/api\\/scanner-settings'\\]/);
- assert.doesNotMatch(source,/secondaryJobs|wallet-graph|intelligence\\/creators|backtest\\/historical|data-quality/);
+ assert.match(source,/const coreJobs=\[/);
+ assert.match(source,/\['Vue générale','\/api\/overview'\]/);
+ assert.match(source,/\['Tokens','\/api\/tokens\?limit=200'\]/);
+ assert.match(source,/\['Réglages','\/api\/scanner-settings'\]/);
+ assert.doesNotMatch(source,/secondaryJobs|wallet-graph|intelligence\/creators|backtest\/historical|data-quality/);
 });
 test('advanced datasets are fetched only when their corresponding page is opened',()=>{
- assert.match(js,/const pageDataLoaders=\\{/);
+ assert.match(js,/const pageDataLoaders=\{/);
  for(const route of ['/api/wallets','/api/intelligence/creators','/api/learning','/api/selection-performance','/api/intelligence/wallet-graph','/api/data-quality','/api/intelligence/wallets','/api/backtest/historical','/api/launches','/api/intelligence/experts','/api/intelligence/wallet-signal-backtest','/api/paper-trading'])assert.ok(js.includes(route),route);
- assert.match(js,/async function openPage\\(page\\)/);
- assert.match(js,/pageLoadPromises\\.has\\(page\\)/);
- assert.match(js,/if\\(target\\.hasAttribute\\('data-go'\\)\\)return openPage/);
+ assert.match(js,/async function openPage\(page\)/);
+ assert.match(js,/pageLoadPromises\.has\(page\)/);
+ assert.match(js,/if\(target\.hasAttribute\('data-go'\)\)return openPage/);
 });
