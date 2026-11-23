@@ -183,7 +183,7 @@ La page **Résultats** mesure les tokens de la sélection principale : taux ayan
 
 ## Telegram
 
-Commandes : `/start`, `/dashboard`, `/scan`, `/opportunities`, `/help`. Le bot démarre en long polling au lancement du serveur si `TELEGRAM_BOT_TOKEN` (ou `BOT_TOKEN`) est renseigné. Les alertes sont envoyées uniquement si le token et `TELEGRAM_CHAT_ID` sont renseignés.
+Commandes : `/start`, `/dashboard`, `/scan`, `/opportunities`, `/help`. Le bot démarre en long polling au lancement du serveur si `TELEGRAM_BOT_TOKEN` (ou `BOT_TOKEN`) est renseigné. Les alertes sont envoyées si le token Telegram est configuré et qu'au moins un canal est activé dans le dashboard (ou migré depuis l'ancien `TELEGRAM_CHAT_ID`).
 
 ## Sécurité et données
 
