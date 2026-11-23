@@ -9,7 +9,7 @@
   "d1_databases": [{
     "binding": "DB",
     "database_name": "m2meme-discovery",
-    "database_id": "REPLACE_WITH_CLOUDFLARE_D1_DATABASE_ID",
+    "database_id": "52bdd222-8cd7-40de-87b8-eb1cc0a91a5e",
     "migrations_dir": "./migrations"
   }]
 }
