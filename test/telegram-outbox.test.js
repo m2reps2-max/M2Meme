@@ -26,6 +26,17 @@ test('restores an interrupted sending attempt as queued after restart', () => {
   assert.equal(rows[0].attempts, 1);
 });
 
+test('recovers the final interrupted attempt without exhausting the retry budget', () => {
+  const rows = normalizeTelegramOutbox([{
+    id: 'last:chat', alertId: 'last', chatId: 'chat', message: 'Hello',
+    status: 'sending', attempts: MAX_ATTEMPTS, createdAt: '2026-11-23T12:00:00.000Z'
+  }]);
+  assert.equal(rows[0].attempts, MAX_ATTEMPTS - 1);
+  const claimed = claimDueTelegramOutbox(rows, Date.now(), 1);
+  assert.equal(claimed.length, 1);
+  assert.equal(claimed[0].attempts, MAX_ATTEMPTS);
+});
+
 test('claims only due messages and increments attempts before network delivery', () => {
   const rows = [
     createTelegramOutboxEntry({ alertId: 'due', chatId: 'chat', message: 'now', now: '2026-11-23T12:00:00.000Z' }),
