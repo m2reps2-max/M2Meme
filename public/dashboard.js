@@ -254,7 +254,8 @@ async function load(options={}){
    if(i===3)state.watchlist=data.watchlist||[];
    if(i===4)state.selection=data;
    if(i===5)state.channels=data.channels||[];
-   if(i===6)state.scannerSettings=data.settings||null;\n   if(i===7)state.telegramConnectUrl=data.connectUrl||null;
+   if(i===6)state.scannerSettings=data.settings||null;
+   if(i===7)state.telegramConnectUrl=data.connectUrl||null;
   }
   const coreFailures=coreResults.filter(x=>x.status==='rejected').length;
   setSyncStatus(coreFailures?'Données partielles':state.overview.scannerRunning?'Scanner actif':'Scanner à vérifier',coreFailures?'warn':state.overview.scannerRunning?'good':'warn');
