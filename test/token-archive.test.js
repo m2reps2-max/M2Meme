@@ -57,3 +57,45 @@ test('SQLite archive stores cold tokens, restores them in bounded batches and re
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('archive scan candidates are not marked until the caller confirms the refresh', { skip: !sqliteAvailable }, () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'meme-radar-archive-lease-'));
+  const archive = new TokenArchive({ file: path.join(dir, 'tokens.sqlite'), maxTokens: 1000 });
+  try {
+    const token = { mint: 'LeaseMint11111111111111111111111111111111', updatedAt: new Date().toISOString(), analysis: { score: 88 } };
+    archive.putMany([token]);
+    assert.equal(archive.selectForScan(5, 900000).length, 1);
+    assert.equal(archive.selectForScan(5, 900000).length, 1, 'unconfirmed candidates remain retryable');
+    assert.equal(archive.markScanned([token.mint]), 1);
+    assert.equal(archive.selectForScan(5, 900000).length, 0, 'confirmed candidates respect the cooldown');
+    assert.equal(archive.getMany([token.mint])[0].mint, token.mint);
+  } finally {
+    archive.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('cold archive forecast export uses bounded keyset pages and returns only compact forecasts', { skip: !sqliteAvailable }, () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'meme-radar-archive-export-'));
+  const archive = new TokenArchive({ file: path.join(dir, 'tokens.sqlite'), maxTokens: 1000 });
+  try {
+    const rows = ['ExportMintA111111111111111111111111111111', 'ExportMintB111111111111111111111111111111', 'ExportMintC111111111111111111111111111111'].map((mint, index) => ({
+      mint,
+      updatedAt: new Date(Date.now() - index * 1000).toISOString(),
+      forecasts: [{ at: Date.now(), score: 70 + index, outcomes: { '1h': { returnPct: 20, label: 'win' } } }]
+    }));
+    archive.putMany(rows);
+    const first = archive.forecastPage('', 2);
+    assert.equal(first.scanned, 2);
+    assert.equal(first.done, false);
+    assert.equal(first.items.length, 2);
+    assert.equal(first.items[0].forecasts.length, 1);
+    const second = archive.forecastPage(first.nextCursor, 2);
+    assert.equal(second.scanned, 1);
+    assert.equal(second.done, true);
+    assert.equal(second.items.length, 1);
+  } finally {
+    archive.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
