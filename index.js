@@ -15,6 +15,7 @@ const {buildWalletReputation}=require('./lib/wallet-reputation');
 const {COINS:HISTORICAL_COINS}=require('./lib/historical-benchmark');
 const {constantTimeEqual,validateHistoricalPayload,validateArchiveLearningPayload,mergeHistoricalBenchmarks}=require('./lib/actions-ingest');
 const {resolveDashboardConfig}=require('./lib/dashboard-config');
+const {applyScannerSettingsPatch}=require('./lib/scanner-settings');
 const CONFIG=resolveDashboardConfig({env:process.env,dataDir:path.join(__dirname,'data')});
 const {port:PORT,accessCode:CODE,sessionSecret:SECRET,dashboardUrl:URL,production:PROD}=CONFIG;
 const COOKIE='meme_radar_session',TEN_YEARS=10*365*24*60*60*1000;
@@ -104,6 +105,19 @@ app.post('/api/login',loginLimit,(q,r)=>{if(!equal(q.body?.code||'',CODE)){q.bad
 app.use('/api',auth,origin);
 app.post('/api/logout',(_q,r)=>{r.clearCookie(COOKIE,{httpOnly:true,secure:PROD,sameSite:'strict',path:'/'});r.json({ok:true});});
 app.get('/api/me',(_q,r)=>r.json({ok:true,authenticated:true}));
+app.get('/api/scanner-settings',(_q,r)=>r.json({ok:true,settings:scanner.state.scannerSettings}));
+app.patch('/api/scanner-settings',(q,r)=>{
+ const previous=scanner.state.scannerSettings;
+ try{
+  scanner.state.scannerSettings=applyScannerSettingsPatch(previous,q.body||{});
+  scanner.save();
+  r.json({ok:true,settings:scanner.state.scannerSettings});
+ }catch(error){
+  scanner.state.scannerSettings=previous;
+  r.status(400).json({error:error.message||'Réglages invalides.'});
+ }
+});
+
 app.get('/api/status',(_q,r)=>r.json(scanner.overview()));app.get('/api/overview',(_q,r)=>r.json(scanner.overview()));
 app.get('/api/selection',(_q,r)=>r.json({ok:true,...scanner.selection()}));
 app.get('/api/launches',(_q,r)=>{const tokens=Object.values(scanner.state.tokens).filter(t=>t.launchSource||t.geckoPoolAddress).sort((a,b)=>Date.parse(b.pumpCreatedAt||b.geckoPoolCreatedAt||b.firstSeenAt||0)-Date.parse(a.pumpCreatedAt||a.geckoPoolCreatedAt||a.firstSeenAt||0)).slice(0,150);r.json({ok:true,tokens,sources:{pumpPortal:scanner.status().pumpPortal,geckoTerminal:scanner.status().geckoTerminal}});});
