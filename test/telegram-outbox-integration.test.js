@@ -30,6 +30,7 @@ test('Telegram outbox sends, removes and persists a delivered message', async ()
   assert.equal(calls.length, 1);
   assert.equal(calls[0][0], '-1001234567890');
   assert.equal(calls[0][1], 'Alerte de test');
+  assert.equal(calls[0][2].parse_mode, 'HTML');
   assert.equal(scanner.state.telegramOutbox.length, 0);
   assert.ok(scanner.state.telegramChannels[0].lastSentAt);
   assert.equal(scanner.state.telegramChannels[0].lastError, null);
@@ -89,4 +90,5 @@ test('delivers Phantom button as Telegram inline keyboard and persists it on ret
   const result=await scanner.drainTelegramOutbox();
   assert.equal(result.sent,1);
   assert.deepEqual(calls[0][2].reply_markup,replyMarkup);
+  assert.equal(calls[0][2].parse_mode, 'HTML');
 });
