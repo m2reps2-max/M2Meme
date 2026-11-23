@@ -47,8 +47,14 @@ async function generateFixture(file) {
   for (let i = 0; i < count; i++) {
     if (!output.write(JSON.stringify(createToken(i)) + '\n')) {
       await new Promise((resolve, reject) => {
-        output.once('drain', resolve);
-        output.once('error', reject);
+        const cleanup = () => {
+          output.off('drain', onDrain);
+          output.off('error', onError);
+        };
+        const onDrain = () => { cleanup(); resolve(); };
+        const onError = error => { cleanup(); reject(error); };
+        output.once('drain', onDrain);
+        output.once('error', onError);
       });
     }
   }
@@ -146,6 +152,9 @@ async function runWorker(adapter, fixture, dbDir) {
   const randomReadMs = performance.now() - randomStarted;
   sample();
 
+  if (archive) archive.close();
+  if (db) await db.close();
+
   const result = {
     adapter,
     count,
@@ -161,9 +170,6 @@ async function runWorker(adapter, fixture, dbDir) {
     peak: Object.fromEntries(Object.entries(peak).map(([key, value]) => [key, Number(value.toFixed(1))])),
     dbBytes: directoryBytes(dbDir)
   };
-
-  if (archive) archive.close();
-  if (db) await db.close();
   process.stdout.write(JSON.stringify(result) + '\n');
 }
 
