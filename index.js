@@ -95,6 +95,7 @@ app.post('/internal/actions/archive-learning',(req,res)=>{
  if(!validation.ok)return res.status(400).json({error:validation.error});
  scanner.state.archiveLearning=payload.summary;
  scanner.state.archiveLearningGeneratedAt=String(payload.generatedAt).slice(0,40);
+ scanner._learningSummaryCache=null;
  try{scanner.save();}catch(error){console.error('[archive learning import]',error.message);return res.status(500).json({error:'Échec de sauvegarde des statistiques archive.'});}
  res.json({ok:true,archiveTokensScanned:payload.summary.archiveTokensScanned,tokensWithForecasts:payload.summary.tokensWithForecasts,importedAt:scanner.state.archiveLearningGeneratedAt});
 });
