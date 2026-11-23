@@ -189,7 +189,13 @@ test('simple settings page exposes scanner thresholds and publication switches',
  assert.match(js,/id="scanner-settings-form"/);
  assert.match(js,/name="preset"/);
  assert.match(js,/name="minScore"/);
- assert.match(js,/name="minLiquidityUsd"/);\n assert.match(js,/name="minVolume1hUsd"/);\n assert.match(js,/name="minCoverage"/);\n assert.match(js,/name="minTransactions1h"/);\n assert.match(js,/name="minBuyRatioPct"/);\n assert.match(js,/name="maxFdvLiquidityRatio"/);\n assert.match(js,/name="requireComprehensiveSecurity"/);
+ assert.match(js,/name="minLiquidityUsd"/);
+ assert.match(js,/name="minVolume1hUsd"/);
+ assert.match(js,/name="minCoverage"/);
+ assert.match(js,/name="minTransactions1h"/);
+ assert.match(js,/name="minBuyRatioPct"/);
+ assert.match(js,/name="maxFdvLiquidityRatio"/);
+ assert.match(js,/name="requireComprehensiveSecurity"/);
  assert.match(js,/name="publishOpportunities"/);
  assert.match(js,/name="publishRisks"/);
  assert.match(js,/api\('\/api\/scanner-settings'/);
