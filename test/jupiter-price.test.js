@@ -10,12 +10,13 @@ test('fetches Jupiter v3 prices in a bounded batch and parses valid USD prices',
   let request;
   const prices = await fetchJupiterPrices([mint, mint], {
     apiKey: 'test-key',
-    fetchImpl: async (url, options) => { request = { url, options }; return response({ [mint]: { usdPrice: 12.5, liquidity: 40000, priceChange24h: 8.2, blockId: 123 } }); }
+    fetchImpl: async (url, options) => { request = { url, options }; return response({ [mint]: { usdPrice: 12.5, liquidity: 40000, priceChange24h: 8.2, decimals: 9, blockId: 123 } }); }
   });
   assert.match(request.url, /price\/v3\?ids=/);
   assert.equal(request.options.headers['x-api-key'], 'test-key');
   assert.equal(prices[mint].priceUsd, 12.5);
   assert.equal(prices[mint].liquidityUsd, 40000);
+  assert.equal(prices[mint].decimals, 9);
 });
 test('supports keyless access and ignores omitted or invalid prices', async () => {
   let headers;
