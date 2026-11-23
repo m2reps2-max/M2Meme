@@ -7,7 +7,7 @@ const now = Date.parse('2026-11-23T00:00:00Z');
 const mint = 'TokenMint111111111111111111111111111111111';
 function fixture(price = 1) {
   return {
-    tokens: { [mint]: { mint, symbol: 'TEST', name: 'Test token', priceUsd: price, updatedAt: new Date(now).toISOString(), history: [{ at: new Date(now).toISOString(), priceUsd: price }] } },
+    tokens: { [mint]: { mint, symbol: 'TEST', name: 'Test token', priceUsd: price, updatedAt: new Date(now).toISOString(), history: [{ at: new Date(now).toISOString(), priceUsd: price }], jupiterPrice: { priceUsd: price, checkedAt: new Date(now).toISOString(), divergencePct: 0 } } },
     paperTrading: { enabled: true, initialCapitalUsd: 1000, cashUsd: 1000, positions: [], trades: [] }
   };
 }
@@ -58,4 +58,14 @@ test('can pause and resume without deleting the simulation ledger', () => {
   assert.equal(stepPaperTrading(state, selection(), now + 1000).status, 'paused');
   assert.equal(state.paperTrading.positions.length, 1);
   assert.equal(setPaperTradingEnabled(state, true), true);
+});
+
+test('requires a fresh Jupiter corroboration and rejects excessive price divergence', () => {
+  const state = fixture();
+  delete state.tokens[mint].jupiterPrice;
+  assert.equal(stepPaperTrading(state, selection(), now).openPositions, 0);
+  state.tokens[mint].jupiterPrice = { priceUsd: 1, checkedAt: new Date(now - 6 * 60 * 1000).toISOString(), divergencePct: 0 };
+  assert.equal(stepPaperTrading(state, selection(), now).openPositions, 0);
+  state.tokens[mint].jupiterPrice = { priceUsd: 1.3, checkedAt: new Date(now).toISOString(), divergencePct: 30 };
+  assert.equal(stepPaperTrading(state, selection(), now).openPositions, 0);
 });
