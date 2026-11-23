@@ -112,7 +112,6 @@ async function runWorker(adapter, fixture, dbDir) {
     }
     sample();
   });
-  if (db) await db.flushed;
   const writeMs = performance.now() - writeStarted;
   sample();
 
