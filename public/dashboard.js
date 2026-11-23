@@ -317,7 +317,8 @@ nav.addEventListener('click',e=>{const target=e.target.closest?.('[data-view]');
 view.addEventListener('click',async e=>{
  const target=e.target.closest?.('button');
  if(!target)return;
- if(target.id==='refresh-tokens')return scan(target);\n if(target.hasAttribute('data-channel-refresh'))return runButtonAction(target,'Actualisation…',async()=>{const data=await api('/api/telegram/channels');state.channels=data.channels||[];render('channels');setSyncStatus('Canaux actualisés','good');});
+ if(target.id==='refresh-tokens')return scan(target);
+ if(target.hasAttribute('data-channel-refresh'))return runButtonAction(target,'Actualisation…',async()=>{const data=await api('/api/telegram/channels');state.channels=data.channels||[];render('channels');setSyncStatus('Canaux actualisés','good');});
  if(target.id==='retry-dashboard'){dashboardBooted=false;return bootDashboard();}
  if(target.hasAttribute('data-token'))return openToken(target.dataset.token,false,target);
  if(target.hasAttribute('data-watch'))return toggleWatch(target.dataset.watch,target);
