@@ -53,7 +53,9 @@ test('subscribes to both launchpad programs and queues only initialize log notif
   assert.deepEqual(socket.sent[0].params[0].mentions, [LAUNCHPADS[0].programId]);
   assert.deepEqual(socket.sent[1].params[0].mentions, [LAUNCHPADS[1].programId]);
   socket.message({ jsonrpc: '2.0', id: 1, result: 11 });
+  assert.equal(stream.status().connected, false, 'both subscriptions must be acknowledged');
   socket.message({ jsonrpc: '2.0', id: 2, result: 22 });
+  assert.equal(stream.status().connected, true);
 
   socket.message({
     jsonrpc: '2.0',
@@ -82,6 +84,19 @@ test('subscribes to both launchpad programs and queues only initialize log notif
   ]);
   assert.equal(stream.status().matched, 2);
   assert.equal(stream.status().subscriptions, 2);
+  stream.stop();
+});
+
+test('reconnects instead of reporting connected when a program subscription is rejected', () => {
+  reset();
+  const stream = new LaunchpadLogStream({ endpoints: ['https://rpc.example.test'], WebSocketImpl: FakeWebSocket });
+  stream.start();
+  const socket = FakeWebSocket.instances[0];
+  socket.open();
+  socket.message({ jsonrpc: '2.0', id: 1, result: 11 });
+  socket.message({ jsonrpc: '2.0', id: 2, error: { message: 'subscription limit reached' } });
+  assert.equal(stream.status().connected, false);
+  assert.match(stream.status().lastError, /subscription limit/);
   stream.stop();
 });
 
