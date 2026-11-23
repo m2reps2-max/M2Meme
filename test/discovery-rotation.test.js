@@ -19,6 +19,6 @@ test('fresh discovery enrichment rotates through all discovered mints', () => {
 test('fresh discovery rotation wraps around and stays bounded', () => {
   const mints = ['a', 'b', 'c', 'd', 'e'];
   assert.deepEqual(selectRotatingBatch(mints, 4, 3), { items: ['e', 'a', 'b'], nextCursor: 2 });
-  assert.deepEqual(selectRotatingBatch(mints, 99, 10), { items: ['e', 'a', 'b', 'c', 'd'], nextCursor: 0 });
+  assert.deepEqual(selectRotatingBatch(mints, 99, 10), { items: ['e', 'a', 'b', 'c', 'd'], nextCursor: 4 });
   assert.deepEqual(selectRotatingBatch([], 5, 10), { items: [], nextCursor: 0 });
 });
