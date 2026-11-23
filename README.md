@@ -233,8 +233,9 @@ hors de FadeHost, puis renvoie uniquement un résumé borné au dashboard. Le ra
 JSON est conservé 30 jours. Il utilise le même secret `MEME_RADAR_ACTIONS_TOKEN`
 et les routes HTTPS authentifiées `GET/POST /internal/actions/archive-learning`.
 Cette analyse couvre l'archive froide, pas les 1 200 tokens actifs du fichier
-principal; elle ne modifie aucun seuil de sélection. Si le secret est absent ou
-différent entre FadeHost et GitHub, l'export/import échoue sans modifier les données.
+principal; elle ne modifie aucun seuil de sélection. Si le secret est absent côté
+GitHub, le workflow saute proprement l'analyse. S'il est absent côté FadeHost ou
+ne correspond pas, l'API refuse l'export/import sans modifier les données.
 
 Ce workflow déporte uniquement le benchmark historique OHLCV. Le scanner temps réel,
 les alertes Telegram et les observations prospectives restent sur FadeHost. GitHub
