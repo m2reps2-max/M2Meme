@@ -103,6 +103,17 @@ test('une absence de route Jupiter est un avertissement, jamais un blocage honey
  }
 });
 
+test('les requêtes Jupiter Price et Sell sont alternées pour respecter le quota keyless',async()=>{
+ const scanner=make();
+ const calls=[];
+ scanner.refreshJupiterPrices=async()=>{calls.push('price');};
+ scanner.refreshSellabilityQuotes=async()=>{calls.push('sellability');};
+ await scanner.refreshJupiterSignals([]);
+ await scanner.refreshJupiterSignals([]);
+ await scanner.refreshJupiterSignals([]);
+ assert.deepEqual(calls,['price','sellability','price']);
+});
+
 test('un fichier de données corrompu est récupéré depuis la sauvegarde valide',()=>{
  const scanner=make();
  scanner.state.tokens.first={mint:'first',symbol:'FIRST'};
