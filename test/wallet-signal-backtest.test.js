@@ -7,13 +7,16 @@ const b='FixmSpsB111111111111111111111111111111111111';
 const target='tca3tbFf111111111111111111111111111111111111';
 const past1='tca3tbFf222222222222222222222222222222222222';
 const past2='tca3tbFf333333333333333333333333333333333333';
+const past3='tca3tbFf555555555555555555555555555555555555';
 const baselineMint='tca3tbFf444444444444444444444444444444444444';
 function trade(wallet,mint,direction,signature,at,amount,quote){return {wallet,mint,direction,signature,at,tokenAmount:amount,swapConfirmed:true,...(direction==='buy'?{quoteSpent:{asset:'SOL',amount:quote}}:{quoteReceived:{asset:'SOL',amount:quote}})};}
 function reputationTrades(wallet,prefix){return [
  trade(wallet,past1,'buy',prefix+'b1','2026-11-22T00:01:00Z',100,1),
  trade(wallet,past1,'sell',prefix+'s1','2026-11-22T00:02:00Z',100,2),
  trade(wallet,past2,'buy',prefix+'b2','2026-11-22T00:03:00Z',100,1),
- trade(wallet,past2,'sell',prefix+'s2','2026-11-22T00:04:00Z',100,2)
+ trade(wallet,past2,'sell',prefix+'s2','2026-11-22T00:04:00Z',100,2),
+ trade(wallet,past3,'buy',prefix+'b3','2026-11-22T00:05:00Z',100,1),
+ trade(wallet,past3,'sell',prefix+'s3','2026-11-22T00:06:00Z',100,2)
 ];}
 function fixture(){
  const at=Date.parse('2026-11-22T01:00:00Z');
