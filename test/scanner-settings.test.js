@@ -2,6 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { PRESETS, defaultScannerSettings, normalizeScannerSettings, applyScannerSettingsPatch } = require('../lib/scanner-settings');
+const { freshState, normalizeState } = require('../lib/state-normalizer');
 
 test('defaults to balanced settings while preserving existing environment defaults', () => {
   assert.deepEqual(defaultScannerSettings({}), { version: 1, preset: 'balanced', minScore: 78, minLiquidityUsd: 5000, publishOpportunities: true, publishRisks: true });
@@ -44,4 +45,14 @@ test('rejects out-of-range values and non-boolean publication options', () => {
   assert.throws(() => applyScannerSettingsPatch(defaultScannerSettings({}), { minLiquidityUsd: 499 }), /500 et 1 000 000/);
   assert.throws(() => applyScannerSettingsPatch(defaultScannerSettings({}), { publishRisks: 'yes' }), /activées ou désactivées/);
   assert.throws(() => applyScannerSettingsPatch(defaultScannerSettings({}), { preset: 'wild' }), /profil valide/);
+});
+
+test('scanner settings survive the existing state normalization and persistence model', () => {
+  const state = normalizeState(freshState());
+  state.scannerSettings = applyScannerSettingsPatch(state.scannerSettings, { preset: 'large', publishRisks: false });
+  const restored = normalizeState(state);
+  assert.equal(restored.scannerSettings.preset, 'large');
+  assert.equal(restored.scannerSettings.minScore, 70);
+  assert.equal(restored.scannerSettings.minLiquidityUsd, 2500);
+  assert.equal(restored.scannerSettings.publishRisks, false);
 });
