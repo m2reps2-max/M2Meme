@@ -48,6 +48,10 @@ Dashboard privé de recherche de meme coins Solana. Le projet utilise des source
 - Les mesures de volume/liquidité et FDV/liquidité sont des ratios descriptifs, pas des preuves de liquidité réellement retirable. Les données DexScreener peuvent être retardées ou incomplètes.
 - Les bundles, snipers et liens de financement entre wallets ne sont pas prouvés automatiquement. Les flux PumpPortal de créations/migrations sont gratuits; ses flux détaillés d'achats/ventes sont payants et ne sont volontairement pas activés. Les signaux de concentration et de pression vendeuse sont des heuristiques, pas des preuves de manipulation.
 
+## Calibration prudente de la sélection
+
+Le seuil de score de la sélection principale démarre à 68/100. Il ne peut être ajusté qu'à partir d'une validation chronologique hors échantillon : au moins 20 tokens dans la validation, au moins 20 tokens au seuil retenu, au moins 55 % ayant atteint +15 % à environ 1 h, rendement moyen positif et au plus 25 % ayant subi une baisse de 20 % ou plus. Si une seule condition manque, le seuil reste à 68/100. Le dashboard indique si le seuil est validé ou s'il utilise encore la valeur prudente par défaut. Cette calibration n'apprend pas les poids du score et ne transforme pas le score en probabilité de hausse.
+
 ## Base hybride à mémoire bornée
 
 Le scanner conserve un cache actif limité à 1 200 tokens dans `data/store.json`. Les tokens qui sortent de ce cache sont archivés dans `data/tokens.archive.sqlite`, avec un historique et des prévisions compactés. L'archive est plafonnée à 50 000 entrées par défaut (`TOKEN_ARCHIVE_MAX` peut modifier ce plafond). À chaque scan, jusqu'à 20 tokens archivés sont réintroduits temporairement pour une nouvelle vérification, avec un délai de revisite de 15 minutes; la vérification de marché peut traiter jusqu'à 200 adresses par cycle. Les tokens actifs restent prioritaires, puis viennent les favoris, les découvertes récentes et le petit lot d'archive.
