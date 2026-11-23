@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { parseNewPools, resolveNewPoolPageLimit, resolveNewPoolPageSequence, analyzePoolTrades, mergeObservedTrades } = require('../lib/gecko-discovery');
+const { fetchTrendingPools, parseNewPools, resolveNewPoolPageLimit, resolveNewPoolPageSequence, analyzePoolTrades, mergeObservedTrades } = require('../lib/gecko-discovery');
 
 test('GeckoTerminal discovery page limit is configurable but always bounded',()=>{
   assert.equal(resolveNewPoolPageLimit(undefined),4);
@@ -20,6 +20,29 @@ test('GeckoTerminal page sequence rotates through the full bounded window',()=>{
   assert.deepEqual(resolveNewPoolPageSequence(99,4,10),{pages:[9,10,1,2],nextCursor:3,pageWindow:10});
   assert.deepEqual(resolveNewPoolPageSequence(1,50,50),{pages:[1,2,3,4,5],nextCursor:6,pageWindow:10});
   assert.deepEqual(resolveNewPoolPageSequence(1,4,0),{pages:[1,2,3,4],nextCursor:5,pageWindow:10});
+});
+
+test('GeckoTerminal trending fetch uses bounded Solana endpoint and duration', async()=>{
+  let requested='';
+  const payload={data:[],included:[]};
+  const result=await fetchTrendingPools({duration:'invalid',page:99,fetchImpl:async(url,options)=>{
+    requested=url;
+    assert.equal(options.headers.accept,'application/json;version=20230203');
+    return {ok:true,json:async()=>payload};
+  }});
+  assert.deepEqual(result,payload);
+  assert.match(requested,/\/networks\/solana\/trending_pools\?duration=1h&page=10/);
+  assert.match(requested,/include=base_token,quote_token,dex/);
+});
+
+test('GeckoTerminal trending pools preserve their discovery source',()=>{
+  const payload={
+    data:[{id:'solana_poolTrend',attributes:{address:'PoolTrend111111111111111111111111111111',pool_created_at:'2026-11-22T10:00:00Z'},relationships:{base_token:{data:{id:'solana_tokenTrend'}},quote_token:{data:{id:'solana_So11111111111111111111111111111111111111112'}}}}],
+    included:[{id:'solana_tokenTrend',attributes:{address:'TokenTrend111111111111111111111111111111',name:'Trend',symbol:'TRND'}}]
+  };
+  const rows=parseNewPools(payload,'geckoterminal_trending_pool');
+  assert.equal(rows.length,1);
+  assert.equal(rows[0].source,'geckoterminal_trending_pool');
 });
 
 test('GeckoTerminal new pools resolves Solana base token and market fields', () => {

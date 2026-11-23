@@ -61,3 +61,12 @@ test('mutating normalization restores missing defaults without replacing existin
  assert.deepEqual(state.walletTrades,[]);
  assert.equal(state.version,3);
 });
+
+
+test('normalizer can preserve every token when the disk archive is unavailable',()=>{
+ const tokens=Object.fromEntries(Array.from({length:1205},(_,i)=>['mint'+i,{mint:'mint'+i,updatedAt:new Date(1205-i).toISOString()}]));
+ const bounded=normalizeState({tokens});
+ assert.equal(Object.keys(bounded.tokens).length,1200);
+ const fallback=normalizeState({tokens},{maxTokens:Infinity});
+ assert.equal(Object.keys(fallback.tokens).length,1205);
+});
