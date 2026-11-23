@@ -9,7 +9,7 @@ const {MemeScanner}=require('./lib/scanner');
 const {getPaperTradingSummary,setPaperTradingEnabled,stepPaperTrading}=require('./lib/paper-trading');
 const {buildHeliusWalletSnapshot}=require('./lib/helius-wallet-intel');
 const {resolveTelegramToken}=require('./lib/telegram-config');
-const {addTelegramChannel,updateTelegramChannel,removeTelegramChannel,validChatId}=require('./lib/telegram-channels');
+const {addTelegramChannel,upsertTelegramChannel,updateTelegramChannel,removeTelegramChannel,validChatId}=require('./lib/telegram-channels');
 const {scoreWalletDiscovery}=require('./lib/wallet-discovery');
 const {buildWalletReputation}=require('./lib/wallet-reputation');
 const {COINS:HISTORICAL_COINS}=require('./lib/historical-benchmark');
@@ -51,7 +51,7 @@ function origin(req,res,next){
 }
 function loginLimit(req,res,next){const key=String(req.ip||'unknown'),now=Date.now();if(now-lastLoginCleanup>60000||fails.size>2000){for(const [ip,row] of fails)if(row.until<=now)fails.delete(ip);lastLoginCleanup=now;}if(fails.size>=5000&&!fails.has(key))return res.status(429).json({error:'Trop de tentatives. Réessaie plus tard.'});let x=fails.get(key)||{n:0,until:now+900000};if(x.until<now)x={n:0,until:now+900000};if(x.n>=8)return res.status(429).json({error:'Trop de tentatives. Réessaie plus tard.'});req.bad=()=>{x.n++;fails.set(key,x);};req.good=()=>fails.delete(key);next();}
 const TELEGRAM_TOKEN=resolveTelegramToken(process.env);
-let bot=null;if(TELEGRAM_TOKEN){bot=new Bot(TELEGRAM_TOKEN);const kb=()=>URL?new InlineKeyboard().url('Ouvrir MEME RADAR',URL):null;bot.command('start',ctx=>ctx.reply('Bienvenue sur MEME RADAR.',kb()?{reply_markup:kb()}:undefined));bot.command('dashboard',ctx=>ctx.reply(URL?'Ouvre ton dashboard privé : '+URL:'Configure DASHBOARD_URL pour recevoir le lien du dashboard.'));bot.command('help',ctx=>ctx.reply('Commandes : /start /dashboard /scan /opportunities /help. Recherche uniquement, aucun achat automatique.'));}
+let bot=null;if(TELEGRAM_TOKEN){bot=new Bot(TELEGRAM_TOKEN);const kb=()=>URL?new InlineKeyboard().url('Ouvrir MEME RADAR',URL):null;bot.command('start',ctx=>ctx.reply('Bienvenue sur MEME RADAR.',kb()?{reply_markup:kb()}:undefined));bot.command('dashboard',ctx=>ctx.reply(URL?'Ouvre ton dashboard privé : '+URL:'Configure DASHBOARD_URL pour recevoir le lien du dashboard.'));bot.command('help',ctx=>ctx.reply('Commandes : /start /dashboard /scan /opportunities /help. Recherche uniquement, aucun achat automatique.'));bot.on('my_chat_member',ctx=>{const update=ctx.update.my_chat_member;const result=upsertTelegramChannel(scanner.state.telegramChannels,update.chat,update.new_chat_member);if(!result.ok){console.warn('[telegram channel discovery]',result.error);return;}if(result.ignored)return;scanner.state.telegramChannels=result.channels;scanner.state.telegramChannelsConfigured=true;try{scanner.save();console.log('[telegram] channel membership updated',{chatId:String(update.chat.id),title:update.chat.title,status:update.new_chat_member?.status,canPostMessages:result.channel?.canPostMessages});}catch(error){console.error('[telegram channel discovery] save failed:',error.message);}});}
 const scanner=new MemeScanner({dataFile:path.join(__dirname,'data','store.json'),bot,telegramChatId:process.env.TELEGRAM_CHAT_ID});
 let lastManual=0;
 app.post('/internal/actions/historical-benchmark',(req,res)=>{
@@ -146,6 +146,7 @@ app.get('/api/backtest/historical/status',(_q,r)=>r.json({ok:true,running:false,
 app.post('/api/backtest/historical/run',async(_q,r)=>r.status(410).json({error:'Le benchmark historique est maintenant exécuté automatiquement.'}));
 app.post('/api/wallets',(q,r)=>{try{r.json({ok:true,wallets:scanner.addWallet(String(q.body?.address||''),String(q.body?.label||''))});}catch(e){r.status(400).json({error:e.message});}});
 app.delete('/api/wallets/:address',(q,r)=>r.json({ok:true,wallets:scanner.removeWallet(q.params.address)}));
+app.get('/api/telegram/connect',async(_q,r)=>{if(!bot)return r.json({ok:true,botConfigured:false,connectUrl:null});try{const me=await bot.api.getMe();if(!me.username)return r.status(503).json({error:'Le bot Telegram ne possède pas de nom d’utilisateur public.'});r.json({ok:true,botConfigured:true,botUsername:me.username,connectUrl:'https://t.me/'+me.username+'?startchannel&admin=post_messages'});}catch(error){r.status(502).json({error:'Impossible de contacter Telegram : '+String(error.message||error).slice(0,140)});}});
 app.get('/api/telegram/channels',(_q,r)=>r.json({ok:true,botConfigured:Boolean(bot),channels:scanner.state.telegramChannels||[]}));
 app.post('/api/telegram/channels',(q,r)=>{
  const result=addTelegramChannel(scanner.state.telegramChannels,{chatId:String(q.body?.chatId||''),label:String(q.body?.label||'')});
@@ -193,5 +194,5 @@ memoryLogTimer=setInterval(()=>{
  if(rssMiB>=220&&Date.now()-lastMemoryWarningAt>=30000){lastMemoryWarningAt=Date.now();console.warn('[process] memory pressure warning: RSS reached',rssMiB,'MiB (hosting limit may be 256 MiB)');}
 },10000);
 memoryLogTimer.unref();
-const server=app.listen(PORT,'0.0.0.0',()=>{console.log('MEME RADAR listening on '+PORT);scanner.start().catch(e=>console.error('[scanner]',e.message));if(bot){console.log('[telegram] Starting grammY long polling…');bot.start().then(()=>console.log('[telegram] Polling stopped cleanly')).catch(e=>console.error('[telegram polling] Startup/runtime failure:',e.message));}else{console.warn('[telegram] Bot disabled: set TELEGRAM_BOT_TOKEN (or legacy BOT_TOKEN) in the hosting environment.');}});server.requestTimeout=20000;server.headersTimeout=25000;server.keepAliveTimeout=5000;
+const server=app.listen(PORT,'0.0.0.0',()=>{console.log('MEME RADAR listening on '+PORT);scanner.start().catch(e=>console.error('[scanner]',e.message));if(bot){console.log('[telegram] Starting grammY long polling…');bot.start({allowed_updates:['message','my_chat_member']}).then(()=>console.log('[telegram] Polling stopped cleanly')).catch(e=>console.error('[telegram polling] Startup/runtime failure:',e.message));}else{console.warn('[telegram] Bot disabled: set TELEGRAM_BOT_TOKEN (or legacy BOT_TOKEN) in the hosting environment.');}});server.requestTimeout=20000;server.headersTimeout=25000;server.keepAliveTimeout=5000;
 async function shutdown(){scanner.stop();if(bot)await bot.stop();server.close(()=>process.exit(0));setTimeout(()=>process.exit(1),10000).unref();}process.once('SIGTERM',shutdown);process.once('SIGINT',shutdown);

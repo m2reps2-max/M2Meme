@@ -194,7 +194,7 @@ test('simple settings page exposes scanner thresholds and publication switches',
  assert.match(js,/name="publishRisks"/);
  assert.match(js,/api\('\/api\/scanner-settings'/);
  assert.match(js,/scanner-settings-preset/);
- assert.match(html,/dashboard-lazy-v1/);
+ assert.match(html,/telegram-channel-picker-v1/);
 });
 test('scanner settings remain in the existing persisted state and are applied to alert selection',()=>{
  const normalizer=fs.readFileSync(path.join(root,'lib/state-normalizer.js'),'utf8');
@@ -204,4 +204,14 @@ test('scanner settings remain in the existing persisted state and are applied to
  assert.match(scanner,/this\.state\.scannerSettings\?\.minLiquidityUsd/);
  assert.match(scanner,/settings\.publishOpportunities/);
  assert.match(scanner,/settings\.publishRisks/);
+});
+
+test('Telegram channel setup uses the native picker instead of asking for a chat identifier',()=>{
+ const server=fs.readFileSync(path.join(root,'index.js'),'utf8');
+ assert.match(server,/startchannel&admin=post_messages/);
+ assert.match(server,/my_chat_member/);
+ assert.match(js,/data-channel-refresh/);
+ assert.match(js,/Connecter un canal avec Telegram/);
+ assert.doesNotMatch(js,/name="chatId"/);
+ assert.doesNotMatch(js,/id="channel-form"/);
 });
