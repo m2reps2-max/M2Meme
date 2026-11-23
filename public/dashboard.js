@@ -172,7 +172,8 @@ async function load(options={}){
    if(i===2)state.alerts=data.alerts||[];
    if(i===3)state.watchlist=data.watchlist||[];
    if(i===4)state.experts=data;
-   if(i===5)state.selection=data;\n   if(i===6)state.paperTrading=data;
+   if(i===5)state.selection=data;
+   if(i===6)state.paperTrading=data;
   }
   const coreFailures=coreResults.filter(x=>x.status==='rejected').length;
   setSyncStatus(coreFailures?'Données partielles':state.overview.scannerRunning?'Scanner actif':'Scanner à vérifier',coreFailures?'warn':state.overview.scannerRunning?'good':'warn');
