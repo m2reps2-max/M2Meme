@@ -567,3 +567,14 @@ test('GeckoTerminal status exposes the new trending discovery telemetry',()=>{
  assert.equal(status.trendingLastError,null);
  assert.match(status.mode,/tendance 1h : 7 pools/);
 });
+
+test('Telegram est déclaré configuré avant le premier canal et son état de connexion reste distinct',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'meme-radar-telegram-status-'));
+ const bot={isRunning:()=>false};
+ const scanner=new MemeScanner({dataFile:path.join(dir,'store.json'),bot});
+ const status=scanner.status().telegram;
+ assert.equal(status.configured,true,'le bot existe même si aucun canal ne lui est encore associé');
+ assert.equal(status.connected,false,'le bot ne doit pas être déclaré connecté avant le démarrage du polling');
+ assert.equal(status.channels,0);
+ assert.equal(status.enabledChannels,0);
+});
