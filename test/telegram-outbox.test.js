@@ -23,7 +23,8 @@ test('restores an interrupted sending attempt as queued after restart', () => {
   }]);
   assert.equal(rows.length, 1);
   assert.equal(rows[0].status, 'queued');
-  assert.equal(rows[0].attempts, 1);
+  assert.equal(rows[0].attempts, 0);
+  assert.equal(claimDueTelegramOutbox(rows, Date.now(), 1)[0].attempts, 1);
 });
 
 test('recovers the final interrupted attempt without exhausting the retry budget', () => {
