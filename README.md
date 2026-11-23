@@ -37,7 +37,7 @@ Dashboard privé de recherche de meme coins Solana. Le projet utilise des source
 | Archive froide des tokens | SQLite natif Node.js, jusqu'à 50 000 tokens archivés, chargement par lots | Aucune clé API ni dépendance native à compiler |
 
 **Limites importantes :**
-- GeckoTerminal ajoute les nouveaux pools indexés sur plusieurs DEX Solana (jusqu'à 40 pools sur deux pages publiques et fenêtre récente), mais ne détecte pas les tokens encore sur une bonding curve sans pool. PumpPortal ajoute les créations/migrations Pump.fun. Raydium LaunchLab, Meteora DBC, Moonshot, LetsBonk et autres launchpads ne sont donc visibles qu'après qu'un pool est indexé par GeckoTerminal ou DexScreener, pas au moment exact de leur création.
+- GeckoTerminal ajoute les nouveaux pools indexés sur plusieurs DEX Solana (jusqu'à 100 pools sur cinq pages publiques et fenêtre récente), mais ne détecte pas les tokens encore sur une bonding curve sans pool. PumpPortal ajoute les créations/migrations Pump.fun. Raydium LaunchLab, Meteora DBC, Moonshot, LetsBonk et autres launchpads ne sont donc visibles qu'après qu'un pool est indexé par GeckoTerminal ou DexScreener, pas au moment exact de leur création.
 - Le RPC public Solana est partagé et soumis à des limites de débit. Si FadeHost ou d'autres utilisateurs envoient trop de requêtes, certaines vérifications peuvent échouer temporairement. On peut renseigner un autre endpoint RPC public/gratuit dans `SOLANA_RPC_URL`, sans garantie de disponibilité.
 - Les contrôles on-chain donnent des observations : ils ne prouvent pas que la liquidité est verrouillée, qu'un token est vendable ou qu'un contrat est sûr.
 - La concentration des détenteurs agrège les comptes SPL par wallet propriétaire sur les 20 plus gros comptes renvoyés par le RPC, puis calcule top 1 / top 5 / top 10 wallets. La concentration brute des 10 comptes est également affichée. C'est plus fiable qu'un simple classement de comptes, mais ce n'est pas une cartographie complète des bénéficiaires : les wallets liés entre eux ne sont pas fusionnés, et les comptes de pool ou de contrats peuvent apparaître dans le classement.
@@ -66,7 +66,7 @@ Le scanner enrichit automatiquement un pool GeckoTerminal candidat par cycle, en
 
 ## Découverte multi-DEX gratuite
 
-À chaque cycle de scan, MEME RADAR interroge aussi `https://api.geckoterminal.com/api/v2/networks/solana/new_pools?page=1&include=base_token,quote_token,dex`. Les pools détectés sont ajoutés à la file de tokens, avec le DEX, l'heure de création, la liquidité, le prix, le volume et les transactions fournis par GeckoTerminal. Les données sont ensuite enrichies par DexScreener dès qu'une paire est disponible. La source publique GeckoTerminal est sans clé, mais limitée à environ 10 appels/minute et ses réponses sont mises en cache; le scanner ne fait qu'un appel par cycle.
+À chaque cycle, MEME RADAR interroge séquentiellement les pages 1 à 4 de `https://api.geckoterminal.com/api/v2/networks/solana/new_pools`, soit jusqu'à environ 80 pools récents par cycle avant déduplication. Le nombre de pages est configurable via `GECKO_NEW_POOL_PAGES` (1 à 5, valeur par défaut 4; maximum théorique environ 100 pools). Chaque page est traitée puis libérée avant la suivante : le scanner ne conserve pas plusieurs réponses API volumineuses en mémoire. Les pools sont dédupliqués par adresse de pool et les tokens par mint; le dashboard expose pages réussies, pools uniques et tokens distincts. En cas de HTTP 429, la pagination s'arrête immédiatement pour éviter d'aggraver la limite de débit. GeckoTerminal est une API publique sans clé, limitée à environ 10 appels/minute; avec un scan par minute, quatre pages consomment environ quatre appels par cycle, auxquels s'ajoutent les éventuels appels d'enrichissement. Les pools détectés sont ensuite enrichis par DexScreener dès qu'une paire est disponible.
 
 ## Social intelligence (public/free sources)
 
@@ -160,6 +160,7 @@ Ne partage jamais ces secrets dans une conversation et ne les commits pas sur Gi
 - `SOLANA_RPC_URL` : endpoint RPC Solana alternatif. Si vide, le projet utilise automatiquement `https://api.mainnet.solana.com`.
 - `PORT` : laisse la valeur attendue par FadeHost (souvent injectée automatiquement).
 - `SCAN_INTERVAL_MS` : intervalle du scanner, par défaut 60000 (60 secondes).
+- `GECKO_NEW_POOL_PAGES` : nombre de pages GeckoTerminal à parcourir par cycle (1 à 5), par défaut 4; augmente la découverte de nouveaux pools, mais utilise davantage le quota public.
 - `ALERT_MIN_SCORE` : score minimal d'alerte, par défaut 78.
 - `MIN_LIQUIDITY_USD` : liquidité minimale, par défaut 5000 USD.
 
