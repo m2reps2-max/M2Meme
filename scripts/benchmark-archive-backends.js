@@ -125,7 +125,7 @@ async function runWorker(adapter, fixture, dbDir) {
       if (read % 512 === 0) sample();
     }
   } else {
-    for (const row of db.getRange({ start: 'bench_mint_', end: 'bench_mint_\\uffff' })) {
+    for (const row of db.getRange({ start: 'bench_mint_', end: 'bench_mint_\uffff' })) {
       checksum += row.value.analysis.score;
       read++;
       if (read % 512 === 0) sample();
