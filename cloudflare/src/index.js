@@ -40,6 +40,7 @@ async function discover(env) {
   const now = new Date().toISOString();
   let upserted = 0;
   let skipped = 0;
+  const statements = [];
 
   for (const pool of pools) {
     const address = tokenAddress(pool);
@@ -53,10 +54,14 @@ async function discover(env) {
     const price = numeric(attrs.base_token_price_usd);
     const reserve = numeric(attrs.reserve_in_usd);
     const volume24h = numeric(attrs.volume_usd?.h24);
-    const result = await env.DB.prepare(
+    statements.push(env.DB.prepare(
       "INSERT INTO discovered_tokens (mint, pool_address, name, price_usd, liquidity_usd, volume_24h_usd, first_seen_at, last_seen_at, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'geckoterminal') ON CONFLICT(mint) DO UPDATE SET pool_address = excluded.pool_address, name = CASE WHEN excluded.name <> '' THEN excluded.name ELSE discovered_tokens.name END, price_usd = COALESCE(excluded.price_usd, discovered_tokens.price_usd), liquidity_usd = COALESCE(excluded.liquidity_usd, discovered_tokens.liquidity_usd), volume_24h_usd = COALESCE(excluded.volume_24h_usd, discovered_tokens.volume_24h_usd), last_seen_at = excluded.last_seen_at"
-    ).bind(address, poolAddress, name, price, reserve, volume24h, now, now).run();
-    if (result.meta?.changes > 0) upserted++;
+    ).bind(address, poolAddress, name, price, reserve, volume24h, now, now));
+  }
+
+  if (statements.length) {
+    const results = await env.DB.batch(statements);
+    upserted = results.reduce((total, result) => total + (result.meta?.changes || 0), 0);
   }
 
   await env.DB.prepare(
