@@ -1,6 +1,8 @@
 name: MEME RADAR archive backend benchmark
 
 on:
+  pull_request:
+    branches: [main]
   workflow_dispatch:
     inputs:
       records:
@@ -35,7 +37,7 @@ jobs:
       - name: Run isolated SQLite vs LMDB benchmark
         env:
           NODE_PATH: /tmp/meme-radar-lmdb-bench/node_modules
-          MEME_ARCHIVE_BENCH_COUNT: ${{ inputs.records || '50000' }}
+          MEME_ARCHIVE_BENCH_COUNT: ${{ github.event.inputs.records || '50000' }}
         run: node scripts/benchmark-archive-backends.js
 
       - name: Upload benchmark report
