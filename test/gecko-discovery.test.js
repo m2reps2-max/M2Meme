@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { parseNewPools, resolveNewPoolPageLimit, analyzePoolTrades, mergeObservedTrades } = require('../lib/gecko-discovery');
+const { parseNewPools, resolveNewPoolPageLimit, resolveNewPoolPageSequence, analyzePoolTrades, mergeObservedTrades } = require('../lib/gecko-discovery');
 
 test('GeckoTerminal discovery page limit is configurable but always bounded',()=>{
   assert.equal(resolveNewPoolPageLimit(undefined),4);
@@ -11,6 +11,15 @@ test('GeckoTerminal discovery page limit is configurable but always bounded',()=
   assert.equal(resolveNewPoolPageLimit('10'),5);
   assert.equal(resolveNewPoolPageLimit('-3'),1);
   assert.equal(resolveNewPoolPageLimit('invalid'),4);
+});
+
+test('GeckoTerminal page sequence rotates through the full bounded window',()=>{
+  assert.deepEqual(resolveNewPoolPageSequence(1,4,10),{pages:[1,2,3,4],nextCursor:5,pageWindow:10});
+  assert.deepEqual(resolveNewPoolPageSequence(5,4,10),{pages:[5,6,7,8],nextCursor:9,pageWindow:10});
+  assert.deepEqual(resolveNewPoolPageSequence(9,4,10),{pages:[9,10,1,2],nextCursor:3,pageWindow:10});
+  assert.deepEqual(resolveNewPoolPageSequence(99,4,10),{pages:[9,10,1,2],nextCursor:3,pageWindow:10});
+  assert.deepEqual(resolveNewPoolPageSequence(1,50,50),{pages:[1,2,3,4,5],nextCursor:6,pageWindow:10});
+  assert.deepEqual(resolveNewPoolPageSequence(1,4,0),{pages:[1,2,3,4],nextCursor:5,pageWindow:10});
 });
 
 test('GeckoTerminal new pools resolves Solana base token and market fields', () => {
