@@ -90,3 +90,12 @@ test('normalizes malformed and duplicate persisted rows safely', () => {
   assert.equal(rows[0].message, 'first');
   assert.equal(rows[0].attempts, 0);
 });
+
+test('persists only a validated Phantom inline button across restart normalization',()=>{
+  const mint='8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump';
+  const replyMarkup={inline_keyboard:[[{text:'👻 Acheter sur Phantom',url:'https://phantom.com/tokens/solana/'+mint}]]};
+  const entry=createTelegramOutboxEntry({alertId:'phantom',chatId:'chat',message:'Alert',replyMarkup});
+  assert.deepEqual(normalizeTelegramOutbox([entry])[0].replyMarkup,replyMarkup);
+  const unsafe=createTelegramOutboxEntry({alertId:'unsafe',chatId:'chat',message:'Alert',replyMarkup:{inline_keyboard:[[{text:'Acheter',url:'https://evil.example/'+mint}]]}});
+  assert.equal(unsafe.replyMarkup,null);
+});

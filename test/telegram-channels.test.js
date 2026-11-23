@@ -3,7 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   validChatId, normalizeTelegramChannels, addTelegramChannel,
-  updateTelegramChannel, removeTelegramChannel, scoreVerdict, formatTelegramAlert
+  updateTelegramChannel, removeTelegramChannel, scoreVerdict, buildTelegramAlertKeyboard, formatTelegramAlert
 } = require('../lib/telegram-channels');
 
 test('accepts numeric Telegram chat ids and public channel usernames', () => {
@@ -53,4 +53,13 @@ test('formats a compact French Telegram alert and explains the score', () => {
   assert.match(message, /87\/100/);
   assert.match(message, /qualité des signaux observés/);
   assert.match(message, /MintAddress/);
+});
+
+test('builds a direct Phantom token-page button only for valid Solana mints',()=>{
+  const mint='8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump';
+  assert.deepEqual(buildTelegramAlertKeyboard({mint}),{
+    inline_keyboard:[[{text:'👻 Acheter sur Phantom',url:'https://phantom.com/tokens/solana/'+mint}]]
+  });
+  assert.equal(buildTelegramAlertKeyboard({mint:'not-a-solana-mint'}),null);
+  assert.equal(buildTelegramAlertKeyboard({mint:''}),null);
 });
