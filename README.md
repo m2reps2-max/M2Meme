@@ -32,7 +32,7 @@ Dashboard privé de recherche de meme coins Solana. Le projet utilise des source
 | Continuité RPC Solana | Endpoint configuré en priorité, puis bascule automatique vers deux RPC publics alternatifs avec cooldown par fournisseur | Rien |
 | Cohortes historiques gagnants / survivants / boom-bust | Bougies publiques GeckoTerminal, replay proxy journalier, rendements fixes à 1j/3j/7j après chaque signal, rendement final et drawdown | Rien |
 | Enrichissement automatique du meilleur candidat GeckoTerminal et d'un créateur observé à la fois | Quotas publics maîtrisés, une analyse de pool par cycle et un financement créateur toutes les 15 minutes au maximum | Rien |
-| Alertes Telegram | Telegram Bot API | Bot token + chat ID facultatifs |
+| Alertes Telegram | Telegram Bot API | Bot token + canaux configurés dans le dashboard (ancien chat ID migré) |
 | Dashboard et état actif | Express + JSON compact pour les 1 200 tokens chauds et les données opérationnelles | Variables d'accès + stockage persistant FadeHost |
 | Archive froide des tokens | SQLite natif Node.js, jusqu'à 50 000 tokens archivés, chargement par lots | Aucune clé API ni dépendance native à compiler |
 
@@ -47,6 +47,10 @@ Dashboard privé de recherche de meme coins Solana. Le projet utilise des source
 - Les scores sont des indicateurs heuristiques, pas des probabilités de hausse ni des conseils d'achat. Les signaux de momentum et les variations de liquidité ne deviennent exploitables qu'après plusieurs observations espacées; au premier scan, l'historique est incomplet.
 - Les mesures de volume/liquidité et FDV/liquidité sont des ratios descriptifs, pas des preuves de liquidité réellement retirable. Les données DexScreener peuvent être retardées ou incomplètes.
 - Les bundles, snipers et liens de financement entre wallets ne sont pas prouvés automatiquement. Les flux PumpPortal de créations/migrations sont gratuits; ses flux détaillés d'achats/ventes sont payants et ne sont volontairement pas activés. Les signaux de concentration et de pression vendeuse sont des heuristiques, pas des preuves de manipulation.
+
+## Calibration prudente de la sélection
+
+Le seuil de score de la sélection principale démarre à 68/100. Il ne peut être ajusté qu'à partir d'une validation chronologique hors échantillon : au moins 20 tokens dans la validation, au moins 20 tokens au seuil retenu, au moins 55 % ayant atteint +15 % à environ 1 h, rendement moyen positif et au plus 25 % ayant subi une baisse de 20 % ou plus. Si une seule condition manque, le seuil reste à 68/100. Le dashboard indique si le seuil est validé ou s'il utilise encore la valeur prudente par défaut. Cette calibration n'apprend pas les poids du score et ne transforme pas le score en probabilité de hausse.
 
 ## Base hybride à mémoire bornée
 
@@ -152,7 +156,7 @@ Ne partage jamais ces secrets dans une conversation et ne les commits pas sur Gi
 
 ### Facultatives
 - `TELEGRAM_BOT_TOKEN` : token obtenu auprès de @BotFather (variable recommandée). L'ancienne variable `BOT_TOKEN` reste acceptée.
-- `TELEGRAM_CHAT_ID` : identifiant du chat ou canal destinataire. Le bot doit avoir accès au chat.
+- `TELEGRAM_CHAT_ID` : identifiant historique facultatif, migré comme canal principal si aucun canal n'a encore été configuré. Les nouveaux canaux se gèrent directement dans le dashboard.
 - `SOLANA_RPC_URL` : endpoint RPC Solana alternatif. Si vide, le projet utilise automatiquement `https://api.mainnet.solana.com`.
 - `PORT` : laisse la valeur attendue par FadeHost (souvent injectée automatiquement).
 - `SCAN_INTERVAL_MS` : intervalle du scanner, par défaut 60000 (60 secondes).
@@ -167,9 +171,19 @@ Ne partage jamais ces secrets dans une conversation et ne les commits pas sur Gi
 - `GET /health/ready` : readiness du processus scanner.
 - `GET /api/system/health` : détails des sources, réservé à une session authentifiée.
 
+## Diffusion Telegram multi-canaux
+
+Le dashboard propose une page **Canaux** : ajoute un identifiant numérique de chat (par exemple `-1001234567890`) ou le nom public d'un canal (par exemple `@moncanal`), puis active ou désactive sa diffusion. Le bot doit être administrateur du canal avec le droit de publier. Jusqu'à 10 canaux peuvent être configurés. Tous reçoivent les mêmes alertes qualifiées depuis un seul scanner; ajouter un canal ne déclenche aucun scan supplémentaire.
+
+Les anciens déploiements qui utilisent `TELEGRAM_CHAT_ID` sont migrés vers un canal principal au premier démarrage, sans effacer les autres données. Une fois la configuration des canaux modifiée dans le dashboard, la liste enregistrée devient la référence, y compris si tous les canaux sont désactivés ou supprimés.
+
+Les alertes Telegram sont volontairement courtes : nom, score M2/100, verdict en français, données marché essentielles, raison principale, adresse du token et lien DexScreener. Le score est une note heuristique de qualité des signaux observés, **pas une probabilité de hausse ni une promesse de rendement**. Les catégories sont : 90–100 exceptionnel, 80–89 très prometteur, 70–79 prometteur, 55–69 à surveiller, 0–54 peu intéressant. Une alerte de risque critique affiche un avertissement et ne peut pas être transformée en signal positif par son score.
+
+La page **Résultats** mesure les tokens de la sélection principale : taux ayant atteint au moins +15 % à environ 1 h, rendements moyens et baisses importantes aux horizons disponibles. Une entrée par mint est suivie; les observations manquantes sont affichées séparément et ne sont pas comptées comme des pertes. Ces résultats utilisent les prix observés, sans frais, slippage ni garantie qu'une transaction aurait pu être exécutée.
+
 ## Telegram
 
-Commandes : `/start`, `/dashboard`, `/scan`, `/opportunities`, `/help`. Le bot démarre en long polling au lancement du serveur si `TELEGRAM_BOT_TOKEN` (ou `BOT_TOKEN`) est renseigné. Les alertes sont envoyées uniquement si le token et `TELEGRAM_CHAT_ID` sont renseignés.
+Commandes : `/start`, `/dashboard`, `/scan`, `/opportunities`, `/help`. Le bot démarre en long polling au lancement du serveur si `TELEGRAM_BOT_TOKEN` (ou `BOT_TOKEN`) est renseigné. Les alertes sont envoyées si le token Telegram est configuré et qu'au moins un canal est activé dans le dashboard (ou migré depuis l'ancien `TELEGRAM_CHAT_ID`).
 
 ## Sécurité et données
 

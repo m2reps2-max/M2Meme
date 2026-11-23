@@ -12,7 +12,8 @@ test('RSS parser extracts Reddit post metadata', () => {
 });
 
 test('Reddit radar matches a token name and reports bounded mentions', async () => {
-  const radar = new RedditRadar({ fetchImpl: async () => ({ ok: true, text: async () => '<rss><channel><item><title>Moon Cat is bullish</title><link>https://reddit.com/a</link><author>u/a</author><pubDate>Sun, 22 Nov 2026 10:00:00 GMT</pubDate></item></channel></rss>' }) });
+  const recentDate = new Date(Date.now() - 60000).toUTCString();
+  const radar = new RedditRadar({ fetchImpl: async () => ({ ok: true, text: async () => '<rss><channel><item><title>Moon Cat is bullish</title><link>https://reddit.com/a</link><author>u/a</author><pubDate>' + recentDate + '</pubDate></item></channel></rss>' }) });
   await radar.refresh();
   const result = radar.match({ name: 'Moon Cat', symbol: 'MCAT' });
   assert.equal(result.mentions24h, 1);

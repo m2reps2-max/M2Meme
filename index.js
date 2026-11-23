@@ -6,10 +6,10 @@ const helmet=require('helmet');
 const cookieParser=require('cookie-parser');
 const {Bot,InlineKeyboard}=require('grammy');
 const {MemeScanner}=require('./lib/scanner');
-const {buildSelection}=require('./lib/selection');
 const {getPaperTradingSummary,setPaperTradingEnabled,stepPaperTrading}=require('./lib/paper-trading');
 const {buildHeliusWalletSnapshot}=require('./lib/helius-wallet-intel');
 const {resolveTelegramToken}=require('./lib/telegram-config');
+const {addTelegramChannel,updateTelegramChannel,removeTelegramChannel,validChatId}=require('./lib/telegram-channels');
 const {scoreWalletDiscovery}=require('./lib/wallet-discovery');
 const {buildWalletReputation}=require('./lib/wallet-reputation');
 const {COINS:HISTORICAL_COINS}=require('./lib/historical-benchmark');
@@ -105,7 +105,7 @@ app.use('/api',auth,origin);
 app.post('/api/logout',(_q,r)=>{r.clearCookie(COOKIE,{httpOnly:true,secure:PROD,sameSite:'strict',path:'/'});r.json({ok:true});});
 app.get('/api/me',(_q,r)=>r.json({ok:true,authenticated:true}));
 app.get('/api/status',(_q,r)=>r.json(scanner.overview()));app.get('/api/overview',(_q,r)=>r.json(scanner.overview()));
-app.get('/api/selection',(_q,r)=>r.json({ok:true,...buildSelection(scanner.state.tokens)}));
+app.get('/api/selection',(_q,r)=>r.json({ok:true,...scanner.selection()}));
 app.get('/api/launches',(_q,r)=>{const tokens=Object.values(scanner.state.tokens).filter(t=>t.launchSource||t.geckoPoolAddress).sort((a,b)=>Date.parse(b.pumpCreatedAt||b.geckoPoolCreatedAt||b.firstSeenAt||0)-Date.parse(a.pumpCreatedAt||a.geckoPoolCreatedAt||a.firstSeenAt||0)).slice(0,150);r.json({ok:true,tokens,sources:{pumpPortal:scanner.status().pumpPortal,geckoTerminal:scanner.status().geckoTerminal}});});
 app.get('/api/tokens',(q,r)=>{const tokens=scanner.tokens({sort:String(q.query.sort||'score'),limit:Math.min(250,Number(q.query.limit)||100),search:String(q.query.search||'').slice(0,80),includeBlocked:q.query.includeBlocked!=='false'});r.json({ok:true,tokens,count:tokens.length,lastScanAt:scanner.state.lastScanAt});});
 app.get('/api/token/:mint',async(q,r)=>{try{const token=await scanner.detail(q.params.mint);let social=null;if(q.query.social==='true')social=await scanner.social(q.params.mint).catch(e=>({configured:true,error:e.message}));r.json({ok:true,token,social});}catch(e){r.status(404).json({error:e.message});}});
@@ -124,7 +124,7 @@ app.get('/api/intelligence/experts',(_q,r)=>r.json({ok:true,...buildHeliusWallet
 app.get('/api/data-quality',(_q,r)=>r.json({ok:true,...scanner.dataQualitySummary()}));
 app.get('/api/backtest',(_q,r)=>r.json({ok:true,...scanner.backtest()}));
 app.get('/api/paper-trading',(_q,r)=>r.json({ok:true,...getPaperTradingSummary(scanner.state,Date.now())}));
-app.post('/api/paper-trading/config',(q,r)=>{if(typeof q.body?.enabled!=='boolean')return r.status(400).json({error:'Le champ enabled doit être booléen.'});setPaperTradingEnabled(scanner.state,q.body.enabled);try{const summary=stepPaperTrading(scanner.state,buildSelection(scanner.state.tokens),Date.now());scanner.save();r.json({ok:true,...summary});}catch(error){r.status(500).json({error:'Impossible de sauvegarder la configuration paper trading.'});}});
+app.post('/api/paper-trading/config',(q,r)=>{if(typeof q.body?.enabled!=='boolean')return r.status(400).json({error:'Le champ enabled doit être booléen.'});setPaperTradingEnabled(scanner.state,q.body.enabled);try{const summary=stepPaperTrading(scanner.state,scanner.selection(),Date.now());scanner.save();r.json({ok:true,...summary});}catch(error){r.status(500).json({error:'Impossible de sauvegarder la configuration paper trading.'});}});
 app.get('/api/learning',(_q,r)=>r.json({ok:true,...scanner.learningSummary(),archive:scanner.state.archiveLearning||null,archiveUpdatedAt:scanner.state.archiveLearningGeneratedAt||null}));
 app.get('/api/selection-performance',(_q,r)=>r.json({ok:true,...require('./lib/selection-cohort').buildSelectionPerformance(scanner.state)}));
 app.get('/api/backtest/historical',(_q,r)=>r.json({ok:true,...scanner.getHistoricalBenchmark()}));
@@ -132,6 +132,35 @@ app.get('/api/backtest/historical/status',(_q,r)=>r.json({ok:true,running:false,
 app.post('/api/backtest/historical/run',async(_q,r)=>r.status(410).json({error:'Le benchmark historique est maintenant exécuté automatiquement.'}));
 app.post('/api/wallets',(q,r)=>{try{r.json({ok:true,wallets:scanner.addWallet(String(q.body?.address||''),String(q.body?.label||''))});}catch(e){r.status(400).json({error:e.message});}});
 app.delete('/api/wallets/:address',(q,r)=>r.json({ok:true,wallets:scanner.removeWallet(q.params.address)}));
+app.get('/api/telegram/channels',(_q,r)=>r.json({ok:true,botConfigured:Boolean(bot),channels:scanner.state.telegramChannels||[]}));
+app.post('/api/telegram/channels',(q,r)=>{
+ const result=addTelegramChannel(scanner.state.telegramChannels,{chatId:String(q.body?.chatId||''),label:String(q.body?.label||'')});
+ if(!result.ok)return r.status(400).json({error:result.error});
+ scanner.state.telegramChannels=result.channels;scanner.state.telegramChannelsConfigured=true;
+ try{scanner.save();r.status(201).json({ok:true,channels:scanner.state.telegramChannels});}
+ catch(error){r.status(500).json({error:'Impossible de sauvegarder les canaux.'});}
+});
+app.patch('/api/telegram/channels/:chatId',(q,r)=>{
+ const result=updateTelegramChannel(scanner.state.telegramChannels,q.params.chatId,{enabled:q.body?.enabled,label:q.body?.label});
+ if(!result.ok)return r.status(404).json({error:result.error});
+ scanner.state.telegramChannels=result.channels;scanner.state.telegramChannelsConfigured=true;
+ try{scanner.save();r.json({ok:true,channels:scanner.state.telegramChannels});}
+ catch(error){r.status(500).json({error:'Impossible de sauvegarder les canaux.'});}
+});
+app.delete('/api/telegram/channels/:chatId',(q,r)=>{
+ const result=removeTelegramChannel(scanner.state.telegramChannels,q.params.chatId);
+ if(!result.ok)return r.status(404).json({error:result.error});
+ scanner.state.telegramChannels=result.channels;scanner.state.telegramChannelsConfigured=true;
+ try{scanner.save();r.json({ok:true,channels:scanner.state.telegramChannels});}
+ catch(error){r.status(500).json({error:'Impossible de sauvegarder les canaux.'});}
+});
+app.post('/api/telegram/channels/test',async(q,r)=>{
+ const chatId=String(q.body?.chatId||'').trim();
+ if(!bot)return r.status(400).json({error:'Configure TELEGRAM_BOT_TOKEN dans FadeHost.'});
+ if(!validChatId(chatId))return r.status(400).json({error:'Identifiant Telegram invalide.'});
+ try{await bot.api.sendMessage(chatId,'✅ MEME RADAR : connexion du canal réussie. Les trouvailles sélectionnées pourront être publiées ici.',{disable_web_page_preview:true});r.json({ok:true});}
+ catch(error){r.status(502).json({error:'Envoi impossible. Vérifie que le bot est administrateur du canal. '+String(error.message||error).slice(0,140)});}
+});
 app.post('/api/telegram/test',async(_q,r)=>{if(!bot||!scanner.chat)return r.status(400).json({error:'Configure BOT_TOKEN et TELEGRAM_CHAT_ID dans FadeHost'});try{await bot.api.sendMessage(scanner.chat,'MEME RADAR : test de notification réussi.');r.json({ok:true});}catch(e){r.status(502).json({error:e.message});}});
 app.use('/assets',express.static(path.join(__dirname,'public'),{index:false,maxAge:PROD?'1h':0}));app.get('/login',(_q,r)=>r.sendFile(path.join(__dirname,'public','login.html')));app.get('/',(q,r)=>valid(q.cookies[COOKIE])?r.sendFile(path.join(__dirname,'public','dashboard.html')):r.redirect('/login'));
 app.use((e,_q,r,_n)=>{console.error('[http]',e.message);r.status(500).json({error:'Erreur interne'});});
