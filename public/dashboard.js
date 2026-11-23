@@ -262,7 +262,8 @@ view.addEventListener('click',async e=>{
  if(target.hasAttribute('data-token'))return openToken(target.dataset.token,false,target);
  if(target.hasAttribute('data-watch'))return toggleWatch(target.dataset.watch,target);
  if(target.hasAttribute('data-go'))return render(target.dataset.go);
- if(target.hasAttribute('data-remove-wallet'))return removeWallet(target.dataset.removeWallet,target);\n if(target.hasAttribute('data-paper-toggle'))return runButtonAction(target,'Mise à jour…',async()=>{const data=await api('/api/paper-trading/config',{method:'POST',body:JSON.stringify({enabled:target.dataset.paperToggle==='true'})});state.paperTrading=data;render('paper');setSyncStatus(data.enabled?'Simulation reprise':'Simulation en pause','good');});
+ if(target.hasAttribute('data-remove-wallet'))return removeWallet(target.dataset.removeWallet,target);
+ if(target.hasAttribute('data-paper-toggle'))return runButtonAction(target,'Mise à jour…',async()=>{const data=await api('/api/paper-trading/config',{method:'POST',body:JSON.stringify({enabled:target.dataset.paperToggle==='true'})});state.paperTrading=data;render('paper');setSyncStatus(data.enabled?'Simulation reprise':'Simulation en pause','good');});
 });
 view.addEventListener('input',e=>{if(e.target.id==='search-token'){state.search=e.target.value;refreshTable();}});
 view.addEventListener('change',e=>{if(e.target.id==='sort-token'){state.sort=e.target.value;refreshTable();}});
