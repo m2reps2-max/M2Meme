@@ -257,3 +257,13 @@ Une source facultative ajoute un classement dynamique de 50 wallets KOL Solana, 
 - Les étiquettes KOL et les liens sociaux sont des attributions du fournisseur, pas une preuve d'identité personnelle. Les achats/ventes sont des événements publics on-chain; aucune copie automatique ni transaction n'est exécutée.
 
 Le plan gratuit permet le suivi du flux et des classements. Les endpoints de portefeuille universel et certaines données avancées sont réservés aux plans supérieurs; MEME RADAR n'en dépend pas.
+
+
+## Validation croisée Jupiter et paper trading
+
+- À chaque scan terminé, MEME RADAR envoie les cinq meilleurs candidats qualifiés à Jupiter Price API v3 (`https://api.jup.ag/price/v3`) en une seule requête bornée. L'accès keyless gratuit est utilisé par défaut; `JUPITER_API_KEY` est facultative et permet d'obtenir une limite supérieure.
+- Le prix Jupiter est conservé avec son horodatage et son écart par rapport au prix DexScreener. L'absence de prix Jupiter n'est pas interprétée comme un prix nul.
+- Le paper trading suit uniquement la sélection principale (maximum cinq positions). Une entrée exige un prix Jupiter datant de moins de cinq minutes et un écart de prix inférieur ou égal à 15 %.
+- Hypothèses de simulation : 100 USD par position, frais de 0,3 % par côté, slippage de 0,5 % à l'entrée et à la sortie, stop-loss de -25 %, objectif de +60 %, durée maximale de 24 heures. Les hypothèses sont explicites et ne représentent pas des fills garantis.
+- Le registre est sauvegardé dans l'état JSON existant et limité aux 200 derniers trades clôturés. La page « Plus → Paper trading » affiche le capital simulé, les positions et les résultats; la simulation peut être mise en pause.
+- Aucun wallet n'est signé et aucun swap n'est envoyé. Le paper trading est une mesure prospective; il ne remplace pas un backtest historique sans biais ni une validation sur un échantillon suffisant.
