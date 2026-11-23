@@ -194,7 +194,7 @@ test('simple settings page exposes scanner thresholds and publication switches',
  assert.match(js,/name="publishRisks"/);
  assert.match(js,/api\('\/api\/scanner-settings'/);
  assert.match(js,/scanner-settings-preset/);
- assert.match(html,/dashboard-lazy-v1/);
+ assert.match(html,/telegram-channel-picker-v1/);
 });
 test('scanner settings remain in the existing persisted state and are applied to alert selection',()=>{
  const normalizer=fs.readFileSync(path.join(root,'lib/state-normalizer.js'),'utf8');
