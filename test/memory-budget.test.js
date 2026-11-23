@@ -27,13 +27,20 @@ test('memory budget defers when native buffers are too high',()=>{
 test('memory budget defers when resident memory is too close to the host limit',()=>{
  const original=process.memoryUsage;
  process.memoryUsage=()=>({heapUsed:60*1048576,external:5*1048576,rss:253*1048576});
- try{assert.equal(memoryBudget({maxHeapMiB:76,maxExternalMiB:20,maxRssMiB:252}).ok,false);}
+ try{assert.equal(memoryBudget({maxHeapMiB:76,maxExternalMiB:20,maxRssMiB:240}).ok,false);}
  finally{process.memoryUsage=original;}
 });
 
-test('memory budget accepts RSS below the configured ceiling',()=>{
+test('memory budget accepts RSS at the new safety ceiling',()=>{
  const original=process.memoryUsage;
- process.memoryUsage=()=>({heapUsed:60*1048576,external:5*1048576,rss:248*1048576});
- try{assert.equal(memoryBudget({maxHeapMiB:76,maxExternalMiB:20,maxRssMiB:252}).ok,true);}
+ process.memoryUsage=()=>({heapUsed:60*1048576,external:5*1048576,rss:238*1048576});
+ try{assert.equal(memoryBudget({maxHeapMiB:76,maxExternalMiB:20,maxRssMiB:240}).ok,true);}
+ finally{process.memoryUsage=original;}
+});
+
+test('memory budget defers optional work with a 16 MiB reserve before a 256 MiB host limit',()=>{
+ const original=process.memoryUsage;
+ process.memoryUsage=()=>({heapUsed:60*1048576,external:5*1048576,rss:241*1048576});
+ try{assert.equal(memoryBudget({maxHeapMiB:76,maxExternalMiB:20,maxRssMiB:240}).ok,false);}
  finally{process.memoryUsage=original;}
 });
