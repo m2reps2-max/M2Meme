@@ -2,7 +2,13 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { LAUNCHPADS, decodeBase58, parseLaunchpadTransaction, pollLaunchpadDiscovery } = require('../lib/launchpad-discovery');
+const {
+  LAUNCHPADS,
+  decodeBase58,
+  parseLaunchpadTransaction,
+  enqueueLaunchpadSignature,
+  processPendingLaunchpadTransactions
+} = require('../lib/launchpad-discovery');
 
 const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 function encodeBase58(bytes) {
@@ -98,80 +104,79 @@ test('ignores non-launch instructions, failed transactions and invalid mint acco
   assert.equal(parseLaunchpadTransaction(invalid), null);
 });
 
-test('polls launchpad programs incrementally and processes only newly observed signatures', async () => {
+test('queues only recognized launch signatures and deduplicates reconnect notifications', () => {
   const state = {};
-  const oldSignature = 'old-signature';
-  const newSignature = 'new-signature';
-  let raydiumRows = [{ signature: oldSignature, slot: 100 }];
+  const event = { launchpadId: 'raydium-launchlab', signature: 'signature-a', slot: 123 };
+  assert.equal(enqueueLaunchpadSignature(state, event).queued, true);
+  assert.equal(enqueueLaunchpadSignature(state, event).reason, 'duplicate');
+  assert.equal(enqueueLaunchpadSignature(state, { ...event, launchpadId: 'unknown' }).reason, 'invalid_event');
+  assert.equal(state.launchpadDiscovery.pending['raydium-launchlab'].length, 1);
+});
+
+test('bounds the pending signature queue and records a gap when it overflows', () => {
+  const state = {};
+  for (let i = 0; i < 4; i++) enqueueLaunchpadSignature(state, { launchpadId: 'raydium-launchlab', signature: 'sig-' + i }, { maxPending: 3 });
+  assert.deepEqual(state.launchpadDiscovery.pending['raydium-launchlab'].map(row => row.signature), ['sig-1', 'sig-2', 'sig-3']);
+  assert.equal(state.launchpadDiscovery.metrics.gaps, 1);
+});
+
+test('processes only queued launch signatures and records successful token creation', async () => {
+  const state = {};
+  const event = { launchpadId: 'raydium-launchlab', signature: 'launch-signature', slot: 123 };
+  enqueueLaunchpadSignature(state, event);
   const launch = txFor({
     programId: launchLab.programId,
     discriminator: 'afaf6d1f0d989bed',
     accounts: ['payer', creator, 'global', 'config', 'authority', 'pool', mint, 'quote'],
-    signature: newSignature
+    signature: event.signature
   });
   const calls = [];
   const rpc = async (method, params) => {
     calls.push([method, params[0]]);
-    if (method === 'getSignaturesForAddress') {
-      return params[0] === launchLab.programId ? raydiumRows : [{ signature: 'meteora-old', slot: 90 }];
-    }
-    if (method === 'getTransaction') return launch;
-    throw new Error('unexpected RPC method');
+    assert.equal(method, 'getTransaction');
+    return launch;
   };
   const found = [];
-  await pollLaunchpadDiscovery(state, rpc, row => found.push(row), { now: 1000 });
-  await pollLaunchpadDiscovery(state, rpc, row => found.push(row), { now: 2000 });
-  raydiumRows = [{ signature: newSignature, slot: 101 }, { signature: oldSignature, slot: 100 }];
-  const result = await pollLaunchpadDiscovery(state, rpc, row => found.push(row), { now: 3000 });
-  assert.equal(result.program, 'raydium-launchlab');
-  assert.equal(result.queued, 1);
+  const result = await processPendingLaunchpadTransactions(state, rpc, row => found.push(row), { now: 1000 });
+  assert.equal(calls.length, 1);
   assert.equal(result.processed, 1);
   assert.equal(result.launches, 1);
-  assert.equal(found.length, 1);
   assert.equal(found[0].mint, mint);
   assert.equal(state.launchpadDiscovery.metrics.launches, 1);
   assert.equal(state.launchpadDiscovery.pending['raydium-launchlab'].length, 0);
+  assert.equal(enqueueLaunchpadSignature(state, event).reason, 'duplicate');
 });
 
-test('keeps a launch queued when ingestion fails and retries it on the next visit', async () => {
+test('keeps a launch queued when ingestion fails and retries it on the next scan', async () => {
   const state = {};
-  const oldSignature = 'cursor-before-launch';
-  const newSignature = 'launch-to-retry';
-  let rows = [{ signature: oldSignature, slot: 10 }];
+  const event = { launchpadId: 'raydium-launchlab', signature: 'retry-signature', slot: 123 };
+  enqueueLaunchpadSignature(state, event);
   const launch = txFor({
     programId: launchLab.programId,
     discriminator: 'afaf6d1f0d989bed',
     accounts: ['payer', creator, 'global', 'config', 'authority', 'pool', mint, 'quote'],
-    signature: newSignature
+    signature: event.signature
   });
-  const rpc = async (method, params) => {
-    if (method === 'getSignaturesForAddress') return params[0] === launchLab.programId ? rows : [{ signature: 'other-program-cursor' }];
-    if (method === 'getTransaction') return launch;
-    throw new Error('unexpected RPC method');
-  };
-  await pollLaunchpadDiscovery(state, rpc, () => {}, { now: 1000 });
-  await pollLaunchpadDiscovery(state, rpc, () => {}, { now: 2000 });
-  rows = [{ signature: newSignature, slot: 11 }, { signature: oldSignature, slot: 10 }];
-  const failed = await pollLaunchpadDiscovery(state, rpc, () => { throw new Error('temporary persistence failure'); }, { now: 3000 });
+  const rpc = async () => launch;
+  const failed = await processPendingLaunchpadTransactions(state, rpc, () => { throw new Error('temporary persistence failure'); }, { now: 1000 });
   assert.equal(failed.error, 'temporary persistence failure');
   assert.equal(state.launchpadDiscovery.pending['raydium-launchlab'].length, 1);
-  assert.equal(state.launchpadDiscovery.pending['raydium-launchlab'][0].signature, newSignature);
-  await pollLaunchpadDiscovery(state, rpc, () => {}, { now: 4000 });
-  const retried = await pollLaunchpadDiscovery(state, rpc, () => {}, { now: 5000 });
+  assert.equal(state.launchpadDiscovery.pending['raydium-launchlab'][0].attempts, 1);
+  const retried = await processPendingLaunchpadTransactions(state, rpc, () => {}, { now: 2000 });
   assert.equal(retried.launches, 1);
   assert.equal(state.launchpadDiscovery.pending['raydium-launchlab'].length, 0);
 });
 
-test('does not replay historical signatures on first bootstrap', async () => {
+test('rotates across queued launchpad programs and never scans every trade signature', async () => {
   const state = {};
-  let transactions = 0;
-  const rpc = async method => {
-    if (method === 'getSignaturesForAddress') return [{ signature: 'existing-history', slot: 1 }];
-    if (method === 'getTransaction') { transactions++; return null; }
-    throw new Error('unexpected RPC method');
+  enqueueLaunchpadSignature(state, { launchpadId: 'raydium-launchlab', signature: 'raydium-signature' });
+  enqueueLaunchpadSignature(state, { launchpadId: 'meteora-dbc', signature: 'meteora-signature' });
+  const calls = [];
+  const rpc = async (_method, params) => {
+    calls.push(params[0]);
+    return { meta: { err: null }, transaction: { message: { accountKeys: [], instructions: [] } } };
   };
-  const result = await pollLaunchpadDiscovery(state, rpc, () => {}, { now: 1000 });
-  assert.equal(result.queued, 0);
-  assert.equal(transactions, 0);
-  assert.equal(state.launchpadDiscovery.cursors['raydium-launchlab'], 'existing-history');
+  await processPendingLaunchpadTransactions(state, rpc, () => {});
+  await processPendingLaunchpadTransactions(state, rpc, () => {});
+  assert.deepEqual(calls, ['raydium-signature', 'meteora-signature']);
 });
