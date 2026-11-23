@@ -33,7 +33,7 @@ function add(bucketValue, outcome) {
   bucketValue.resolved++;
   bucketValue.sum += ret;
   if (ret >= 15) bucketValue.positive++;
-  if (ret <= -20 || ['loss', 'severe_loss', 'liquidity_stress', 'liquidity_collapse'].includes(outcome.label)) bucketValue.losses++;
+  if (ret <= -20) bucketValue.losses++;
   return true;
 }
 
@@ -94,7 +94,7 @@ async function main() {
       for (const forecast of item.forecasts.slice(-8)) {
         forecasts++;
         const score = Number(forecast.score);
-        const hasScore = Number.isFinite(score);
+        const hasScore = forecast.score !== null && forecast.score !== undefined && Number.isFinite(score);
         for (const horizon of HORIZONS) {
           const outcome = forecast.outcomes?.[horizon];
           if (!outcome || !add(horizonBuckets[horizon], outcome)) continue;
@@ -132,12 +132,12 @@ async function main() {
     archiveTokensScanned,
     tokensWithForecasts,
     forecasts,
-    firstResolvedTokens: firstSignals.length,
+    uniqueResolvedTokens1h: firstSignals.length,
     horizons: Object.fromEntries(HORIZONS.map(key => [key, summarize(horizonBuckets[key])])),
     scoreBands: Object.fromEntries(BANDS.map(([key]) => [key, summarize(scoreBuckets[key])])),
     bySource: Object.fromEntries([...sourceBuckets.entries()].map(([key, value]) => [key, summarize(value)])),
     walkForward: {
-      method: 'Un premier résultat 1h résolu par mint, tri chronologique; 80% des tokens les plus anciens en entraînement descriptif, 20% les plus récents en validation descriptive. Aucun seuil n’est modifié automatiquement.',
+      method: 'Pour chaque mint, plus ancienne prévision 1h encore conservée parmi les huit dernières (pas nécessairement le premier signal historique), tri chronologique; 80% des tokens les plus anciens en entraînement descriptif, 20% les plus récents en validation descriptive. Aucun seuil n’est modifié automatiquement.',
       trainingTokens: training.length,
       validationTokens: validation.length,
       validation: firstSignalMetrics(validation)
