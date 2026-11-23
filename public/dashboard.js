@@ -193,15 +193,21 @@ const pageDataLoaders={
  paper:async()=>{state.paperTrading=await api('/api/paper-trading');},
  results:async()=>{state.selectionPerformance=await api('/api/selection-performance');}
 };
+const pageLoadPromises=new Map();
 async function openPage(page){
  render(page);
  const loader=pageDataLoaders[page];
  if(!loader)return;
- setSyncStatus('Chargement…','neutral');
- try{await loader();if(state.page===page)render(page);setSyncStatus(state.overview.scannerRunning?'Scanner actif':'Scanner à vérifier',state.overview.scannerRunning?'good':'warn');}
- catch(error){console.error('[MEME RADAR page data]',page,error);if(state.page===page)view.insertAdjacentHTML('afterbegin','<div class="notice"><b>Données temporairement indisponibles</b><p>'+esc(error.message||error)+'</p></div>');setSyncStatus('Données indisponibles','warn');}
+ if(pageLoadPromises.has(page))return pageLoadPromises.get(page);
+ const pending=(async()=>{
+  setSyncStatus('Chargement…','neutral');
+  try{await loader();if(state.page===page)render(page);setSyncStatus(state.overview.scannerRunning?'Scanner actif':'Scanner à vérifier',state.overview.scannerRunning?'good':'warn');}
+  catch(error){console.error('[MEME RADAR page data]',page,error);if(state.page===page)view.insertAdjacentHTML('afterbegin','<div class="notice"><b>Données temporairement indisponibles</b><p>'+esc(error.message||error)+'</p></div>');setSyncStatus('Données indisponibles','warn');}
+ })();
+ pageLoadPromises.set(page,pending);
+ try{return await pending;}finally{pageLoadPromises.delete(page);}
 }
-async function load(options={}){
+async function load(){
  if(dashboardLoadPromise)return dashboardLoadPromise;
  setSyncStatus('Actualisation…','neutral');
  dashboardLoadPromise=(async()=>{
@@ -254,7 +260,7 @@ async function openToken(mint,social=false,button=null){
 async function scan(button=$('#refresh-tokens')){
  return runButtonAction(button,'Scan…',async()=>{
   await api('/api/scan',{method:'POST',body:'{}'});
-  await load({full:false});
+  await load();
   setSyncStatus('Scan terminé','good');
  });
 }
@@ -265,7 +271,7 @@ async function toggleWatch(mint,button){
    ?await api('/api/watchlist/'+encodeURIComponent(mint),{method:'DELETE'})
    :await api('/api/watchlist',{method:'POST',body:JSON.stringify({mint})});
   state.watchlist=data.watchlist||state.watchlist;
-  await load({full:false});
+  await load();
   setSyncStatus(removing?'Retiré des favoris':'Ajouté aux favoris','good');
  });
 }
@@ -303,7 +309,7 @@ view.addEventListener('submit',async e=>{
   e.preventDefault();const form=e.target;const button=e.submitter||form.querySelector('button[type="submit"]');
   return runButtonAction(button,'Enregistrement…',async()=>{
    const data=await api('/api/scanner-settings',{method:'PATCH',body:JSON.stringify({preset:form.elements.preset.value,minScore:Number(form.elements.minScore.value),minLiquidityUsd:Number(form.elements.minLiquidityUsd.value),publishOpportunities:form.elements.publishOpportunities.checked,publishRisks:form.elements.publishRisks.checked})});
-   state.scannerSettings=data.settings;await load({full:false});setSyncStatus('Réglages enregistrés','good');
+   state.scannerSettings=data.settings;await load();setSyncStatus('Réglages enregistrés','good');
   });
  }
  if(e.target.id!=='wallet-form')return;
@@ -332,9 +338,9 @@ async function bootDashboard(){
  dashboardBooted=true;
  view.innerHTML='<div class="panel empty-panel"><div class="empty-icon">◎</div><h2>Connexion au scanner</h2><p>Chargement des données et de l’état de surveillance…</p></div>';
  try{await load();}catch(error){console.error('[MEME RADAR boot]',error);view.innerHTML='<div class="panel empty-panel"><h2>Connexion impossible</h2><p>'+esc(error.message||error)+'</p><button class="primary" id="retry-dashboard">Réessayer</button></div>';}
- dashboardRefreshTimer=setInterval(()=>{if(!document.hidden)load({full:false}).catch(error=>console.warn('[MEME RADAR refresh]',error));},30000);
+ dashboardRefreshTimer=setInterval(()=>{if(!document.hidden)load().catch(error=>console.warn('[MEME RADAR refresh]',error));},30000);
 }
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&dashboardBooted)load({full:false}).catch(error=>console.warn('[MEME RADAR resume]',error));});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&dashboardBooted)load().catch(error=>console.warn('[MEME RADAR resume]',error));});
 view.addEventListener('click',e=>{if(e.target.closest('#retry-dashboard')){dashboardBooted=false;bootDashboard();}});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bootDashboard,{once:true});
 else bootDashboard();
