@@ -82,6 +82,7 @@ test('subscribes to both launchpad programs and queues only initialize log notif
     ['meteora-dbc', 'meteora-launch', 102],
     ['raydium-launchlab', 'raydium-launch', 103]
   ]);
+  assert.equal(stream.status().connected, true);
   assert.equal(stream.status().matched, 2);
   assert.equal(stream.status().subscriptions, 2);
   stream.stop();
