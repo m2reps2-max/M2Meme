@@ -90,6 +90,20 @@ test('dashboard assets share one cache version so deployed UI fixes are loaded t
  assert.ok(html.includes('/assets/live.css?v='+version));
 });
 
+test('secondary dashboard datasets load only when their page is opened',()=>{
+ assert.match(js,/const pageDataJobs=\{/);
+ assert.match(js,/async function ensurePageData\(page,options=\{\}\)/);
+ assert.match(js,/pageDataPromises\.has\(key\)/);
+ assert.match(js,/paper:\[\['paper-trading'/);
+ assert.match(js,/smart:\[\['wallets'/);
+ assert.match(js,/walletGraph:\[\['wallet-graph'/);
+ assert.match(js,/backtest:\[\['backtest'/);
+ assert.match(js,/await ensurePageData\(state\.page\)/);
+ assert.match(js,/navigate\(target\.dataset\.view\)/);
+ const core=js.slice(js.indexOf('const coreJobs='),js.indexOf('const coreResults=',js.indexOf('const coreJobs=')));
+ assert.doesNotMatch(core,/intelligence|paper-trading|backtest|learning|launches|data-quality/);
+ assert.doesNotMatch(core,/\['Experts'/);
+});
 test('dashboard loads a server-side shortlist instead of selecting from the first 200 score-sorted tokens',()=>{
  assert.match(js,/\['Sélection','\/api\/selection'\]/);
  assert.match(js,/if\(i===5\)state\.selection=data/);
