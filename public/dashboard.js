@@ -160,7 +160,7 @@ async function load(options={}){
  const full=options.full!==false;
  setSyncStatus('Actualisation…','neutral');
  dashboardLoadPromise=(async()=>{
-  const coreJobs=[['Vue générale','/api/overview'],['Tokens','/api/tokens?limit=200'],['Alertes','/api/alerts'],['Watchlist','/api/watchlist'],['Experts','/api/intelligence/experts'],['Sélection','/api/selection']];
+  const coreJobs=[['Vue générale','/api/overview'],['Tokens','/api/tokens?limit=200'],['Alertes','/api/alerts'],['Watchlist','/api/watchlist'],['Experts','/api/intelligence/experts'],['Sélection','/api/selection'],['Paper trading','/api/paper-trading']];
   const coreResults=await Promise.allSettled(coreJobs.map(([,url])=>api(url)));
   state.loadErrors=[];
   for(let i=0;i<coreResults.length;i++){
@@ -172,13 +172,13 @@ async function load(options={}){
    if(i===2)state.alerts=data.alerts||[];
    if(i===3)state.watchlist=data.watchlist||[];
    if(i===4)state.experts=data;
-   if(i===5)state.selection=data;
+   if(i===5)state.selection=data;\n   if(i===6)state.paperTrading=data;
   }
   const coreFailures=coreResults.filter(x=>x.status==='rejected').length;
   setSyncStatus(coreFailures?'Données partielles':state.overview.scannerRunning?'Scanner actif':'Scanner à vérifier',coreFailures?'warn':state.overview.scannerRunning?'good':'warn');
   render(state.page);
   if(!full)return;
-  const secondaryJobs=[['Wallets','/api/wallets'],['Créateurs','/api/intelligence/creators'],['Wallet intelligence','/api/intelligence/wallets'],['Backtest','/api/backtest'],['Benchmark historique','/api/backtest/historical'],['Apprentissage continu','/api/learning'],['Nouveaux lancements','/api/launches'],['Graphe wallets','/api/intelligence/wallet-graph'],['Réputation wallets','/api/intelligence/wallet-reputation'],['Qualité des données','/api/data-quality'],['Backtest wallets','/api/intelligence/wallet-signal-backtest'],['Cohorte Sélection','/api/selection-performance'],['Paper trading','/api/paper-trading']];
+  const secondaryJobs=[['Wallets','/api/wallets'],['Créateurs','/api/intelligence/creators'],['Wallet intelligence','/api/intelligence/wallets'],['Backtest','/api/backtest'],['Benchmark historique','/api/backtest/historical'],['Apprentissage continu','/api/learning'],['Nouveaux lancements','/api/launches'],['Graphe wallets','/api/intelligence/wallet-graph'],['Réputation wallets','/api/intelligence/wallet-reputation'],['Qualité des données','/api/data-quality'],['Backtest wallets','/api/intelligence/wallet-signal-backtest'],['Cohorte Sélection','/api/selection-performance']];
   const results=await Promise.allSettled(secondaryJobs.map(([,url])=>api(url)));
   for(let i=0;i<results.length;i++){
    const result=results[i];
@@ -195,7 +195,7 @@ async function load(options={}){
    if(i===8)state.walletReputation=data;
    if(i===9)state.dataQuality=data;
    if(i===10)state.walletSignalBacktest=data;
-   if(i===11)state.selectionPerformance=data;\n   if(i===12)state.paperTrading=data;
+   if(i===11)state.selectionPerformance=data;\n
   }
   setSyncStatus(state.loadErrors.length?'Données partielles':state.overview.scannerRunning?'Scanner actif':'Scanner à vérifier',state.loadErrors.length?'warn':state.overview.scannerRunning?'good':'warn');
   render(state.page);
