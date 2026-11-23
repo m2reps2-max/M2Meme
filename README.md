@@ -226,6 +226,17 @@ n'est pas configuré, le workflow produit quand même l'artifact, mais n'importe
 dans le dashboard. Ne jamais mettre ce secret dans le dépôt ou dans un fichier suivi
 par Git.
 
+Un second workflow, `.github/workflows/archive-learning.yml`, lance chaque lundi
+à 04:41 UTC (ou manuellement) une analyse de l'archive froide SQLite. Il lit
+l'archive par pages de 200 tokens maximum, calcule les statistiques des prévisions
+hors de FadeHost, puis renvoie uniquement un résumé borné au dashboard. Le rapport
+JSON est conservé 30 jours. Il utilise le même secret `MEME_RADAR_ACTIONS_TOKEN`
+et les routes HTTPS authentifiées `GET/POST /internal/actions/archive-learning`.
+Cette analyse couvre l'archive froide, pas les 1 200 tokens actifs du fichier
+principal; elle ne modifie aucun seuil de sélection. Si le secret est absent côté
+GitHub, le workflow saute proprement l'analyse. S'il est absent côté FadeHost ou
+ne correspond pas, l'API refuse l'export/import sans modifier les données.
+
 Ce workflow déporte uniquement le benchmark historique OHLCV. Le scanner temps réel,
 les alertes Telegram et les observations prospectives restent sur FadeHost. GitHub
 Actions n'est pas un worker permanent et ne remplace pas l'hébergement du scanner.

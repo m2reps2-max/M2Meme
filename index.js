@@ -13,14 +13,14 @@ const {resolveTelegramToken}=require('./lib/telegram-config');
 const {scoreWalletDiscovery}=require('./lib/wallet-discovery');
 const {buildWalletReputation}=require('./lib/wallet-reputation');
 const {COINS:HISTORICAL_COINS}=require('./lib/historical-benchmark');
-const {constantTimeEqual,validateHistoricalPayload,mergeHistoricalBenchmarks}=require('./lib/actions-ingest');
+const {constantTimeEqual,validateHistoricalPayload,validateArchiveLearningPayload,mergeHistoricalBenchmarks}=require('./lib/actions-ingest');
 const {resolveDashboardConfig}=require('./lib/dashboard-config');
 const CONFIG=resolveDashboardConfig({env:process.env,dataDir:path.join(__dirname,'data')});
 const {port:PORT,accessCode:CODE,sessionSecret:SECRET,dashboardUrl:URL,production:PROD}=CONFIG;
 const COOKIE='meme_radar_session',TEN_YEARS=10*365*24*60*60*1000;
 const app=express();app.disable('x-powered-by');app.set('trust proxy',1);
 app.use(helmet({contentSecurityPolicy:{directives:{defaultSrc:["'self'"],scriptSrc:["'self'"],styleSrc:["'self'"],imgSrc:["'self'",'data:','https:'],connectSrc:["'self'"],objectSrc:["'none'"],frameAncestors:["'none'"]}}}));
-app.use('/internal/actions/historical-benchmark',express.raw({type:'application/json',limit:'5mb'}));app.use(express.json({limit:'24kb'}));app.use(cookieParser());
+app.use('/internal/actions/historical-benchmark',express.raw({type:'application/json',limit:'5mb'}));app.use('/internal/actions/archive-learning',express.raw({type:'application/json',limit:'128kb'}));app.use(express.json({limit:'24kb'}));app.use(cookieParser());
 const fails=new Map();
 let lastLoginCleanup=0;
 function equal(a,b){const x=Buffer.from(String(a)),y=Buffer.from(String(b));return x.length===y.length&&crypto.timingSafeEqual(x,y);}
@@ -69,6 +69,34 @@ app.post('/internal/actions/historical-benchmark',(req,res)=>{
  const completed=Object.values(scanner.state.historicalBenchmarks).filter(x=>x.completed).length;
  res.json({ok:true,received:Object.keys(payload.historicalBenchmarks).length,completed,total:HISTORICAL_COINS.length,importedAt:scanner.state.historicalBenchmarkActionsAt});
 });
+app.get('/internal/actions/archive-learning',(req,res)=>{
+ const expected=String(process.env.MEME_RADAR_ACTIONS_TOKEN||'');
+ const authorization=String(req.get('authorization')||'');
+ const supplied=authorization.startsWith('Bearer ')?authorization.slice(7):'';
+ if(expected.length<32)return res.status(503).json({error:'Export GitHub Actions non configuré.'});
+ if(!constantTimeEqual(expected,supplied))return res.status(401).json({error:'Authentification refusée.'});
+ if(!scanner.archive?.available)return res.status(503).json({error:'Archive SQLite indisponible.'});
+ const cursor=String(req.query.cursor||'').slice(0,64);
+ const requested=Number(req.query.limit)||200;
+ const page=scanner.archive.forecastPage(cursor,Math.min(200,Math.max(1,requested)));
+ if(page.error)return res.status(503).json({error:page.error});
+ res.json(page);
+});
+app.post('/internal/actions/archive-learning',(req,res)=>{
+ const expected=String(process.env.MEME_RADAR_ACTIONS_TOKEN||'');
+ const authorization=String(req.get('authorization')||'');
+ const supplied=authorization.startsWith('Bearer ')?authorization.slice(7):'';
+ if(expected.length<32)return res.status(503).json({error:'Import GitHub Actions non configuré.'});
+ if(!constantTimeEqual(expected,supplied))return res.status(401).json({error:'Authentification refusée.'});
+ if(!Buffer.isBuffer(req.body))return res.status(400).json({error:'Corps JSON requis.'});
+ let payload;try{payload=JSON.parse(req.body.toString('utf8'));}catch{return res.status(400).json({error:'JSON invalide.'});}
+ const validation=validateArchiveLearningPayload(payload);
+ if(!validation.ok)return res.status(400).json({error:validation.error});
+ scanner.state.archiveLearning=payload.summary;
+ scanner.state.archiveLearningGeneratedAt=String(payload.generatedAt).slice(0,40);
+ try{scanner.save();}catch(error){console.error('[archive learning import]',error.message);return res.status(500).json({error:'Échec de sauvegarde des statistiques archive.'});}
+ res.json({ok:true,archiveTokensScanned:payload.summary.archiveTokensScanned,tokensWithForecasts:payload.summary.tokensWithForecasts,importedAt:scanner.state.archiveLearningGeneratedAt});
+});
 app.get('/health',(_q,r)=>r.json({ok:true,service:'meme-radar',at:new Date().toISOString()}));
 app.get('/health/ready',(_q,r)=>{const health=scanner.healthSummary();const ready=health.checks.scanner.ok;r.status(ready?200:503).json({ok:ready,scannerRunning:scanner.running,at:new Date().toISOString()});});
 app.get('/api/system/health',(_q,r)=>r.json({ok:true,...scanner.healthSummary()}));
@@ -97,7 +125,7 @@ app.get('/api/data-quality',(_q,r)=>r.json({ok:true,...scanner.dataQualitySummar
 app.get('/api/backtest',(_q,r)=>r.json({ok:true,...scanner.backtest()}));
 app.get('/api/paper-trading',(_q,r)=>r.json({ok:true,...getPaperTradingSummary(scanner.state,Date.now())}));
 app.post('/api/paper-trading/config',(q,r)=>{if(typeof q.body?.enabled!=='boolean')return r.status(400).json({error:'Le champ enabled doit être booléen.'});setPaperTradingEnabled(scanner.state,q.body.enabled);try{const summary=stepPaperTrading(scanner.state,buildSelection(scanner.state.tokens),Date.now());scanner.save();r.json({ok:true,...summary});}catch(error){r.status(500).json({error:'Impossible de sauvegarder la configuration paper trading.'});}});
-app.get('/api/learning',(_q,r)=>r.json({ok:true,...scanner.learningSummary()}));
+app.get('/api/learning',(_q,r)=>r.json({ok:true,...scanner.learningSummary(),archive:scanner.state.archiveLearning||null,archiveUpdatedAt:scanner.state.archiveLearningGeneratedAt||null}));
 app.get('/api/selection-performance',(_q,r)=>r.json({ok:true,...require('./lib/selection-cohort').buildSelectionPerformance(scanner.state)}));
 app.get('/api/backtest/historical',(_q,r)=>r.json({ok:true,...scanner.getHistoricalBenchmark()}));
 app.get('/api/backtest/historical/status',(_q,r)=>r.json({ok:true,running:false,automatic:false,executor:'GitHub Actions',configured:String(process.env.MEME_RADAR_ACTIONS_TOKEN||'').length>=32,lastRunAt:scanner.state.historicalBenchmarkActionsAt||null,...scanner.getHistoricalBenchmark()}));
