@@ -69,3 +69,17 @@ test('requires a fresh Jupiter corroboration and rejects excessive price diverge
   state.tokens[mint].jupiterPrice = { priceUsd: 1.3, checkedAt: new Date(now).toISOString(), divergencePct: 30 };
   assert.equal(stepPaperTrading(state, selection(), now).openPositions, 0);
 });
+
+test('keeps lifetime realized PnL when the bounded recent-trade history is trimmed', () => {
+  const state = fixture();
+  state.paperTrading.trades = Array.from({ length: 200 }, (_, i) => ({ pnlUsd: 1, closedAt: new Date(now - i * 1000).toISOString() }));
+  state.paperTrading.realizedPnlUsd = 200;
+  state.paperTrading.closedTradeCount = 200;
+  stepPaperTrading(state, selection(), now);
+  state.tokens[mint].history.push({ at: new Date(now + 60000).toISOString(), priceUsd: 1.8 });
+  const result = stepPaperTrading(state, { best: [] }, now + 60000);
+  assert.equal(state.paperTrading.trades.length, 200);
+  assert.equal(state.paperTrading.closedTradeCount, 201);
+  assert.ok(state.paperTrading.realizedPnlUsd > 200);
+  assert.equal(result.realizedPnlUsd, Number(state.paperTrading.realizedPnlUsd.toFixed(2)));
+});
