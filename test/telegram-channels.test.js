@@ -70,7 +70,7 @@ test('escapes token-controlled text and gives risk alerts a clear risk-first lay
   assert.match(message, /<b>RISQUE IMPORTANT<\/b>|RISQUE IMPORTANT/);
   assert.match(message, /POURQUOI C’EST RISQUÉ/);
   assert.match(message, /Chute du prix &gt; 20% sur 5 minutes/);
-  assert.match(message, /Variation \(1 h\).*<b>-33\.0%<\/b>/);
+  assert.match(message, /<b>Variation \(1 h\)<\/b> : -33\.0%/);
   assert.doesNotMatch(message, /<script>/);
 });
 
