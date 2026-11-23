@@ -4,9 +4,11 @@ Dashboard privé de recherche de meme coins Solana. Le projet utilise des source
 
 ### Connecteur X facultatif (session personnelle)
 
-Le connecteur X est désactivé tant que `X_COOKIES` n'est pas configuré. Il utilise `twscrape` (MIT) dans un processus Python séparé : une seule session, trois recherches maximum par cycle, quinze publications maximum par recherche, cache de dix minutes, aucune rotation de comptes. Les cookies ne sont transmis au processus via stdin et ne sont jamais écrits dans le dépôt ni dans les logs. Configure `X_COOKIES` dans les variables privées de l'hébergeur avec uniquement `auth_token=...; ct0=...`. Installe Python 3 puis `pip install -r requirements-social.txt`; si Python ou le paquet manque, le reste du bot continue normalement et le statut X indique l'erreur. `X_SEARCH_QUERIES` peut contenir jusqu'à trois recherches séparées par des points-virgules. `PYTHON_BIN` permet de préciser le chemin de l'interpréteur.
+Le connecteur X est désactivé tant que `X_AUTH_TOKEN` et `X_CT0` ne sont pas configurés dans les variables privées de FadeHost. Il utilise le SDK Node.js `x-agent-sdk` (MIT), sans runtime Python : une seule session, une recherche par cycle social de 15 minutes, trois requêtes configurables qui tournent d'un cycle à l'autre, 20 publications maximum par recherche et cache de dix minutes. Le code n'effectue aucune publication, aucun like, aucun repost et aucun suivi.
 
-Les recherches utilisent des interfaces internes non documentées de X et peuvent casser, être limitées ou entraîner une restriction de compte. L'activation est volontaire; respecte les règles de X, ses limites et les paramètres de ton compte. N'utilise pas plusieurs comptes pour contourner des limitations. Ne partage jamais les cookies dans un chat, un ticket ou GitHub; révoque la session si elle est exposée.
+Configure les deux variables privées `X_AUTH_TOKEN` (cookie `auth_token`) et `X_CT0` (cookie `ct0`). Ne colle jamais ces valeurs dans le dépôt, un chat ou les logs; révoque la session si elle est exposée. `X_SEARCH_QUERIES` peut contenir jusqu'à trois recherches séparées par des points-virgules.
+
+Ce connecteur utilise l'API web privée non documentée de X. Il peut casser, être limité ou entraîner une restriction du compte. L'activation est volontaire; respecte les règles de X et ses limites. Une seule session est utilisée, sans rotation de comptes ni contournement des limites.
 
 ## Fonctions disponibles sans payer
 
