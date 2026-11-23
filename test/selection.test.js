@@ -6,13 +6,13 @@ const NOW=1_800_000_000_000;
 
 function token(i,overrides={}){
  return {
-  mint:'mint-'+i,name:'Token '+i,symbol:'T'+i,pairAddress:'pair-'+i,liquidityUsd:20000,
-  volume:{h1:3000},txns:{h1:{buys:8,sells:4}},
+  mint:'mint-'+i,name:'Token '+i,symbol:'T'+i,pairAddress:'pair-'+i,liquidityUsd:20000,fdv:200000,
+  volume:{h1:6000},txns:{h1:{buys:15,sells:5}},
   history:[{at:NOW-60_000,priceUsd:1}],
   security:{checkedAt:new Date(NOW-5*60_000).toISOString()},
   tradeIntel:{checkedAt:new Date(NOW-5*60_000).toISOString()},
   analysis:{
-   score:80,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,
+   score:90,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,
    factors:{activity:80,momentum:75,market:82,liquidityQuality:78,security:95}
   },
   ...overrides
@@ -20,7 +20,7 @@ function token(i,overrides={}){
 }
 
 test('selection ranks the full input and returns no more than five best candidates',()=>{
- const items=Array.from({length:9},(_,i)=>token(i,{analysis:{...token(i).analysis,score:70+i}}));
+ const items=Array.from({length:9},(_,i)=>token(i,{analysis:{...token(i).analysis,score:88+i}}));
  const result=buildSelection(items,NOW);
  assert.equal(result.considered,9);
  assert.equal(result.eligible,9);
