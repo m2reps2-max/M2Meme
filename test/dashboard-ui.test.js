@@ -171,23 +171,23 @@ test('simple dashboard exposes channel management and real selection success met
 });
 
 test('simple settings page exposes scanner thresholds and publication switches',()=>{
- assert.match(js,/function renderSettings\\(\\)/);
+ assert.match(js,/function renderSettings\(\)/);
  assert.match(js,/id="scanner-settings-form"/);
  assert.match(js,/name="preset"/);
  assert.match(js,/name="minScore"/);
  assert.match(js,/name="minLiquidityUsd"/);
  assert.match(js,/name="publishOpportunities"/);
  assert.match(js,/name="publishRisks"/);
- assert.match(js,/api\\('\\/api\\/scanner-settings'/);
+ assert.match(js,/api\('\/api\/scanner-settings'/);
  assert.match(js,/scanner-settings-preset/);
  assert.match(html,/scanner-settings-v1/);
 });
 test('scanner settings remain in the existing persisted state and are applied to alert selection',()=>{
  const normalizer=fs.readFileSync(path.join(root,'lib/state-normalizer.js'),'utf8');
  const scanner=fs.readFileSync(path.join(root,'lib/scanner.js'),'utf8');
- assert.match(normalizer,/normalizeScannerSettings\\(raw\\.scannerSettings\\)/);
- assert.match(scanner,/this\\.state\\.scannerSettings\\?\\.minScore/);
- assert.match(scanner,/this\\.state\\.scannerSettings\\?\\.minLiquidityUsd/);
- assert.match(scanner,/settings\\.publishOpportunities/);
- assert.match(scanner,/settings\\.publishRisks/);
+ assert.match(normalizer,/normalizeScannerSettings\(raw\.scannerSettings\)/);
+ assert.match(scanner,/this\.state\.scannerSettings\?\.minScore/);
+ assert.match(scanner,/this\.state\.scannerSettings\?\.minLiquidityUsd/);
+ assert.match(scanner,/settings\.publishOpportunities/);
+ assert.match(scanner,/settings\.publishRisks/);
 });
