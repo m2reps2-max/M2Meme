@@ -14,6 +14,8 @@ test('creates one stable outbox entry per alert and Telegram destination', () =>
   assert.equal(first.id, second.id);
   assert.equal(first.status, 'queued');
   assert.equal(first.attempts, 0);
+  assert.equal(first.parseMode, 'HTML');
+  assert.equal(normalizeTelegramOutbox([first])[0].parseMode, 'HTML');
 });
 
 test('restores an interrupted sending attempt as queued after restart', () => {
@@ -88,6 +90,7 @@ test('normalizes malformed and duplicate persisted rows safely', () => {
   ]);
   assert.equal(rows.length, 1);
   assert.equal(rows[0].message, 'first');
+  assert.equal(rows[0].parseMode, null);
   assert.equal(rows[0].attempts, 0);
 });
 
