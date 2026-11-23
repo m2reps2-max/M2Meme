@@ -1,0 +1,51 @@
+name: MEME RADAR archive backend benchmark
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      records:
+        description: Number of archived-token records (1000–250000)
+        required: false
+        default: '50000'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: meme-radar-archive-backend-benchmark
+  cancel-in-progress: false
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install optional benchmark backend outside the application
+        run: npm install --prefix /tmp/meme-radar-lmdb-bench --no-save lmdb
+
+      - name: Run isolated SQLite vs LMDB benchmark
+        env:
+          NODE_PATH: /tmp/meme-radar-lmdb-bench/node_modules
+          MEME_ARCHIVE_BENCH_COUNT: ${{ github.event.inputs.records || '50000' }}
+        run: node scripts/benchmark-archive-backends.js
+
+      - name: Upload benchmark report
+        uses: actions/upload-artifact@v4
+        with:
+          name: meme-radar-archive-backend-benchmark
+          path: |
+            artifacts/archive-backend-benchmark.json
+            artifacts/archive-backend-benchmark.md
+          if-no-files-found: error
+          retention-days: 30
