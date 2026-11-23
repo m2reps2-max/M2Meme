@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { constantTimeEqual, validateHistoricalPayload, mergeHistoricalBenchmarks } = require('../lib/actions-ingest');
+const { constantTimeEqual, validateHistoricalPayload, validateArchiveLearningPayload, mergeHistoricalBenchmarks } = require('../lib/actions-ingest');
 
 const allowed = new Set(['BONK', 'WIF']);
 const completed = { symbol: 'BONK', completed: true, terminalReturnPct: 20, maxDrawdownPct: -30, signals: [], fetchedAt: new Date().toISOString() };
@@ -24,4 +24,22 @@ test('actions ingest keeps a recent completed benchmark when a later run only ha
   const failed = { BONK: { symbol: 'BONK', completed: false, error: '429', fetchedAt: new Date().toISOString() } };
   assert.equal(mergeHistoricalBenchmarks(old, failed)[ 'BONK' ].completed, true);
   assert.equal(mergeHistoricalBenchmarks({}, failed).BONK.completed, false);
+});
+
+test('archive learning ingest accepts bounded aggregates and rejects malformed or oversized metrics', () => {
+  const metric = { resolved: 12, averageReturnPct: 8.5, positive15Pct: 50, loss20Pct: 16.7 };
+  const summary = {
+    archiveTokensScanned: 50000,
+    tokensWithForecasts: 1200,
+    forecasts: 9000,
+    firstResolvedTokens: 800,
+    horizons: Object.fromEntries(['15m', '1h', '6h', '24h', '7d'].map(key => [key, metric])),
+    scoreBands: Object.fromEntries(['0-44', '45-64', '65-79', '80-100'].map(key => [key, metric])),
+    bySource: { 'Pump.fun': metric },
+    walkForward: { trainingTokens: 640, validationTokens: 160, validation: metric }
+  };
+  const payload = { schemaVersion: 1, generatedAt: new Date().toISOString(), summary };
+  assert.equal(validateArchiveLearningPayload(payload).ok, true);
+  assert.equal(validateArchiveLearningPayload({ ...payload, summary: { ...summary, archiveTokensScanned: 999999 } }).ok, false);
+  assert.equal(validateArchiveLearningPayload({ ...payload, summary: { ...summary, horizons: { ...summary.horizons, '1h': { ...metric, averageReturnPct: Infinity } } } }).ok, false);
 });
