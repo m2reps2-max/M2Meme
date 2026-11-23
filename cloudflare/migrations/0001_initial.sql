@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS scan_runs (
   ran_at TEXT NOT NULL,
   source TEXT NOT NULL,
   pools_received INTEGER NOT NULL DEFAULT 0,
-  inserted_count INTEGER NOT NULL DEFAULT 0,
+  upserted_count INTEGER NOT NULL DEFAULT 0,
   skipped_count INTEGER NOT NULL DEFAULT 0,
   status TEXT NOT NULL,
   error TEXT
