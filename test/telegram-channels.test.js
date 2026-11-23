@@ -49,10 +49,29 @@ test('formats a compact French Telegram alert and explains the score', () => {
     analysis: { score: 87, coverage: 92, flags: [] },
     signalReasons: ['Liquidité correcte', 'Activité acheteurs en hausse']
   });
-  assert.match(message, /TRÈS PROMETTEUR/);
+  assert.match(message, /<b>M2  87\/100<\/b>/);
+  assert.match(message, /<b>📡 DONNÉES DE MARCHÉ<\/b>/);
+  assert.match(message, /<a href=/);
+  assert.match(message, /<i>Le score M2/);
   assert.match(message, /87\/100/);
   assert.match(message, /qualité des signaux observés/);
-  assert.match(message, /MintAddress/);
+  assert.match(message, /<code>MintAddress<\/code>/);
+});
+
+
+test('escapes token-controlled text and gives risk alerts a clear risk-first layout', () => {
+  const message = formatTelegramAlert({
+    name: 'Offchain <script> & Co', symbol: 'OFF&', mint: '5jv4h9dam2xtheatffvqfjpnhj2gmd3443auuxisccgm',
+    liquidityUsd: 1650, fdv: 2056, volume: { h1: 1107 }, priceChange: { h1: -33 },
+    analysis: { score: 71, coverage: 75, flags: [{ level: 'critical', message: 'Chute du prix > 20% sur 5 minutes' }] }
+  }, 'danger');
+  assert.ok(message.startsWith('🚨 <b>ALERTE RISQUE</b>'));
+  assert.match(message, /Offchain &lt;script&gt; &amp; Co/);
+  assert.match(message, /<b>RISQUE IMPORTANT<\/b>|RISQUE IMPORTANT/);
+  assert.match(message, /POURQUOI C’EST RISQUÉ/);
+  assert.match(message, /Chute du prix &gt; 20% sur 5 minutes/);
+  assert.match(message, /Variation \(1 h\).*<b>-33\.0%<\/b>/);
+  assert.doesNotMatch(message, /<script>/);
 });
 
 test('builds a direct Phantom token-page button only for valid Solana mints',()=>{
