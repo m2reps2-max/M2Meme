@@ -108,14 +108,13 @@ app.get('/api/me',(_q,r)=>r.json({ok:true,authenticated:true}));
 app.get('/api/scanner-settings',(_q,r)=>r.json({ok:true,settings:scanner.state.scannerSettings}));
 app.patch('/api/scanner-settings',(q,r)=>{
  const previous=scanner.state.scannerSettings;
- try{
-  scanner.state.scannerSettings=applyScannerSettingsPatch(previous,q.body||{});
-  scanner.save();
-  r.json({ok:true,settings:scanner.state.scannerSettings});
- }catch(error){
-  scanner.state.scannerSettings=previous;
-  r.status(400).json({error:error.message||'Réglages invalides.'});
- }
+ let next;
+ try{next=applyScannerSettingsPatch(previous,q.body||{});}
+ catch(error){return r.status(400).json({error:error.message||'Réglages invalides.'});}
+ scanner.state.scannerSettings=next;
+ try{scanner.save();}
+ catch(error){scanner.state.scannerSettings=previous;return r.status(500).json({error:'Impossible de sauvegarder les réglages.'});}
+ r.json({ok:true,settings:scanner.state.scannerSettings});
 });
 
 app.get('/api/status',(_q,r)=>r.json(scanner.overview()));app.get('/api/overview',(_q,r)=>r.json(scanner.overview()));
