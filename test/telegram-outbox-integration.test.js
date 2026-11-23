@@ -77,3 +77,16 @@ test('outbox does not contact Telegram if claiming the message cannot be persist
   assert.equal(scanner.state.telegramOutbox[0].attempts, 0);
   assert.match(result.error, /disk unavailable/);
 });
+
+test('delivers Phantom button as Telegram inline keyboard and persists it on retry',async()=>{
+  const scanner=make();
+  const mint='8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump';
+  const replyMarkup={inline_keyboard:[[{text:'👻 Acheter sur Phantom',url:'https://phantom.com/tokens/solana/'+mint}]]};
+  const calls=[];
+  scanner.bot={api:{sendMessage:async(...args)=>{calls.push(args);return {message_id:43};}}};
+  enqueue(scanner,{alertId:'phantom',message:'Nouveau token'});
+  scanner.state.telegramOutbox[0].replyMarkup=replyMarkup;
+  const result=await scanner.drainTelegramOutbox();
+  assert.equal(result.sent,1);
+  assert.deepEqual(calls[0][2].reply_markup,replyMarkup);
+});
