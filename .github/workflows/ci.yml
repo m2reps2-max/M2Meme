@@ -21,3 +21,29 @@ jobs:
       - run: npm install --ignore-scripts
       - run: npm run check
       - run: npm test
+
+  archive-backend-benchmark:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install optional LMDB benchmark package outside the application
+        run: npm install --prefix /tmp/meme-radar-lmdb-bench --no-save lmdb
+      - name: Compare SQLite and LMDB with 50,000 records
+        env:
+          NODE_PATH: /tmp/meme-radar-lmdb-bench/node_modules
+          MEME_ARCHIVE_BENCH_COUNT: '50000'
+        run: node scripts/benchmark-archive-backends.js
+      - name: Upload benchmark report
+        uses: actions/upload-artifact@v4
+        with:
+          name: meme-radar-archive-backend-benchmark
+          path: |
+            artifacts/archive-backend-benchmark.json
+            artifacts/archive-backend-benchmark.md
+          if-no-files-found: error
+          retention-days: 30
