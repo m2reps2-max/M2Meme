@@ -97,3 +97,22 @@ test('shortlist response contains compact card data rather than full token histo
  assert.equal(card.history,undefined);
  assert.equal(card.tradeIntel,undefined);
 });
+
+test('recent pre-market launch detections are visible separately and never scored as opportunities',()=>{
+ const early={
+  mint:'premarket-1',name:'Early token',symbol:'EARLY',launchSource:'Raydium LaunchLab',
+  launchCreatedAt:NOW-4*60_000,firstSeenAt:new Date(NOW-4*60_000).toISOString(),
+  analysis:{score:5,coverage:5,risk:'unknown',hardBlocked:false}
+ };
+ const stale={...early,mint:'premarket-stale',launchCreatedAt:NOW-45*60_000};
+ const blocked={...early,mint:'premarket-blocked',analysis:{...early.analysis,hardBlocked:true}};
+ const linked={...early,mint:'market-linked',pairAddress:'pair-linked'};
+ const result=buildSelection([early,stale,blocked,linked],NOW);
+ assert.equal(result.early.length,1);
+ assert.equal(result.early[0].mint,'premarket-1');
+ assert.equal(result.early[0].phase,'pre_market');
+ assert.equal(result.early[0].score,null);
+ assert.equal(result.early[0].hardBlocked,false);
+ assert.equal(result.best.length,0);
+ assert.equal(result.observe.length,0);
+});
