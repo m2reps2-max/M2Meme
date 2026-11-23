@@ -1,7 +1,17 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { parseNewPools, analyzePoolTrades, mergeObservedTrades } = require('../lib/gecko-discovery');
+const { parseNewPools, resolveNewPoolPageLimit, analyzePoolTrades, mergeObservedTrades } = require('../lib/gecko-discovery');
+
+test('GeckoTerminal discovery page limit is configurable but always bounded',()=>{
+  assert.equal(resolveNewPoolPageLimit(undefined),4);
+  assert.equal(resolveNewPoolPageLimit(''),4);
+  assert.equal(resolveNewPoolPageLimit('2'),2);
+  assert.equal(resolveNewPoolPageLimit('5'),5);
+  assert.equal(resolveNewPoolPageLimit('10'),5);
+  assert.equal(resolveNewPoolPageLimit('-3'),1);
+  assert.equal(resolveNewPoolPageLimit('invalid'),4);
+});
 
 test('GeckoTerminal new pools resolves Solana base token and market fields', () => {
   const payload = {
