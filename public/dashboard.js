@@ -306,7 +306,7 @@ view.addEventListener('submit',async e=>{
   e.preventDefault();const form=e.target;const button=e.submitter||form.querySelector('button[type="submit"]');
   return runButtonAction(button,'Enregistrement…',async()=>{
    const data=await api('/api/scanner-settings',{method:'PATCH',body:JSON.stringify({preset:form.elements.preset.value,minScore:Number(form.elements.minScore.value),minLiquidityUsd:Number(form.elements.minLiquidityUsd.value),publishOpportunities:form.elements.publishOpportunities.checked,publishRisks:form.elements.publishRisks.checked})});
-   state.scannerSettings=data.settings;render('settings');setSyncStatus('Réglages enregistrés','good');
+   state.scannerSettings=data.settings;await load({full:false});setSyncStatus('Réglages enregistrés','good');
   });
  }
  if(e.target.id!=='wallet-form')return;
