@@ -106,7 +106,7 @@ test('secondary dashboard datasets load only when their page is opened',()=>{
 });
 test('dashboard loads a server-side shortlist instead of selecting from the first 200 score-sorted tokens',()=>{
  assert.match(js,/\['Sélection','\/api\/selection'\]/);
- assert.match(js,/if\(i===5\)state\.selection=data/);
+ assert.match(js,/if\(i===4\)state\.selection=data/);
  assert.match(js,/function selectionPools\(\)\{return state\.selection/);
 });
 
