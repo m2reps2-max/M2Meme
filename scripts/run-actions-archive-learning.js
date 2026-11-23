@@ -84,6 +84,7 @@ async function main() {
   const scoreBuckets = Object.fromEntries(BANDS.map(([key]) => [key, bucket()]));
   const sourceBuckets = new Map();
   const firstByMint = new Map();
+  const adaptiveByMint = new Map();
   let cursor = '';
   let archiveTokensScanned = 0;
   let tokensWithForecasts = 0;
@@ -109,6 +110,7 @@ async function main() {
       if (!item || typeof item.mint !== 'string' || !Array.isArray(item.forecasts)) continue;
       if (item.forecasts.length) tokensWithForecasts++;
       let first = null;
+      let firstAdaptive = null;
       for (const forecast of item.forecasts.slice(-8)) {
         forecasts++;
         const score = Number(forecast.score);
@@ -122,17 +124,27 @@ async function main() {
           }
         }
         const oneHour = forecast.outcomes?.['1h'];
-        if (oneHour && Number.isFinite(Number(oneHour.returnPct))) {
+        if (oneHour && oneHour.returnPct !== null && oneHour.returnPct !== undefined && Number.isFinite(Number(oneHour.returnPct))) {
           const source = String(forecast.source || 'Source inconnue').slice(0, 80);
           if (!sourceBuckets.has(source) && sourceBuckets.size < 30) sourceBuckets.set(source, bucket());
           if (sourceBuckets.has(source)) add(sourceBuckets.get(source), oneHour);
           const at = Number(forecast.at);
-          if (Number.isFinite(at) && (!first || at < first.at)) first = { mint: item.mint, at, score: hasScore ? score : null, outcome: oneHour, features: forecast.features && typeof forecast.features === 'object' ? forecast.features : null, outcomes: Object.fromEntries(HORIZONS.filter(key => forecast.outcomes?.[key]?.returnPct !== null && forecast.outcomes?.[key]?.returnPct !== undefined && Number.isFinite(Number(forecast.outcomes[key].returnPct))).map(key => [key, { returnPct: Number(forecast.outcomes[key].returnPct) }])) };
+          if (Number.isFinite(at)) {
+            const outcomes = Object.fromEntries(HORIZONS.filter(key => forecast.outcomes?.[key]?.returnPct !== null && forecast.outcomes?.[key]?.returnPct !== undefined && Number.isFinite(Number(forecast.outcomes[key].returnPct))).map(key => [key, { returnPct: Number(forecast.outcomes[key].returnPct) }]));
+            if (!first || at < first.at) first = { mint: item.mint, at, score: hasScore ? score : null, outcome: oneHour };
+            const features = forecast.features && typeof forecast.features === 'object' ? forecast.features : null;
+            const featureCount = features ? Object.values(features).filter(value => typeof value === 'number' && Number.isFinite(value)).length : 0;
+            if (hasScore && featureCount >= 4 && (!firstAdaptive || at < firstAdaptive.at)) firstAdaptive = { mint: item.mint, at, score, features, outcomes };
+          }
         }
       }
       if (first) {
         const previous = firstByMint.get(item.mint);
         if (!previous || first.at < previous.at) firstByMint.set(item.mint, first);
+      }
+      if (firstAdaptive) {
+        const previous = adaptiveByMint.get(item.mint);
+        if (!previous || firstAdaptive.at < previous.at) adaptiveByMint.set(item.mint, firstAdaptive);
       }
     }
 
@@ -143,7 +155,8 @@ async function main() {
   }
 
   const firstSignals = [...firstByMint.values()].sort((a, b) => a.at - b.at);
-  const adaptiveModel = buildAdaptiveModel(buildAdaptiveTokens(firstSignals));
+  const adaptiveSignals = [...adaptiveByMint.values()].sort((a, b) => a.at - b.at);
+  const adaptiveModel = buildAdaptiveModel(buildAdaptiveTokens(adaptiveSignals));
   const splitAt = Math.floor(firstSignals.length * 0.8);
   const training = firstSignals.slice(0, splitAt);
   const validation = firstSignals.slice(splitAt);
