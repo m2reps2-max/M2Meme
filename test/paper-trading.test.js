@@ -124,3 +124,20 @@ test('paper-trade feedback ignores legacy trades without entry snapshots and ded
   assert.equal(feedback.byFactor.activity.high.trades, 1);
   assert.equal(feedback.lifetimeClosedTrades, 3);
 });
+
+
+test('reports separate realized cohorts for fixed and learned entry scores with a conventional median', () => {
+  const { buildPaperLearningSummary } = require('../lib/paper-trading');
+  const book = {
+    trades: [
+      { mint: 'a', openedAt: '2026-01-01T00:00:00Z', pnlPct: 10, entrySnapshot: { score: 80, learnedScore: 90, features: {} } },
+      { mint: 'b', openedAt: '2026-01-01T00:00:00Z', pnlPct: 30, entrySnapshot: { score: 70, learnedScore: 80, features: {} } }
+    ],
+    closedTradeCount: 2
+  };
+  const feedback = buildPaperLearningSummary(book);
+  assert.equal(feedback.overall.medianNetReturnPct, 20);
+  assert.equal(feedback.byScore['75–84'].trades, 1);
+  assert.equal(feedback.byLearnedScore['85–100'].trades, 1);
+  assert.equal(feedback.byLearnedScore['75–84'].trades, 1);
+});
