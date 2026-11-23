@@ -51,6 +51,18 @@ Dashboard privé de recherche de meme coins Solana. Le projet utilise des source
 - Les mesures de volume/liquidité et FDV/liquidité sont des ratios descriptifs, pas des preuves de liquidité réellement retirable. Les données DexScreener peuvent être retardées ou incomplètes.
 - Les bundles, snipers et liens de financement entre wallets ne sont pas prouvés automatiquement. Les flux PumpPortal de créations/migrations sont gratuits; ses flux détaillés d'achats/ventes sont payants et ne sont volontairement pas activés. Les signaux de concentration et de pression vendeuse sont des heuristiques, pas des preuves de manipulation.
 
+## Intelligence élite en cinq phases
+
+Le module `lib/elite-intelligence.js` expose cinq analyses complémentaires et leurs limites :
+
+1. **Demande organique** : recoupement des acheteurs/vendeurs observés, sorties rapides du même wallet, répétition des montants et rafales déjà détectées. Une pénalité n'est appliquée qu'avec un échantillon minimal et une confiance suffisante; ce n'est jamais une preuve de wash trading.
+2. **Réseau de wallets** : récurrence des acheteurs entre tokens suivis et financeurs directs communs des créateurs. Les services partagés et traders actifs sont explicitement signalés comme faux positifs possibles.
+3. **Détenteurs et sécurité** : contrôle de la disponibilité de la concentration des propriétaires, des comptes inconnus et des extensions Token-2022. Les données manquantes restent partielles et ne sont pas inventées.
+4. **Validation des résultats** : expose les conditions du holdout chronologique déjà calculé par le moteur d'apprentissage. Aucun seuil ni poids n'est modifié automatiquement par cette phase.
+5. **Couverture de découverte** : affiche les sources actuellement observées et liste séparément Heaven, Pangea, kids.fun et Boop comme non intégrés. Ces launchpads ne sont pas prétendus surveillés; leur intégration nécessite leurs vrais programmes/API et des tests de décodage.
+
+Le résumé des cinq phases est disponible dans `/api/overview` sous `eliteIntelligence`; chaque analyse de token expose ses résultats dans `analysis.eliteIntelligence`. Les signaux nouveaux n'ajoutent qu'une pénalité bornée et seulement lorsque les observations sont suffisamment étayées. Aucune signature, transaction d'achat ou connexion de wallet n'est effectuée.
+
 ## Calibration prudente de la sélection
 
 Le seuil de score de la sélection principale démarre à 68/100. Il ne peut être ajusté qu'à partir d'une validation chronologique hors échantillon : au moins 20 tokens dans la validation, au moins 20 tokens au seuil retenu, au moins 55 % ayant atteint +15 % à environ 1 h, rendement moyen positif et au plus 25 % ayant subi une baisse de 20 % ou plus. Si une seule condition manque, le seuil reste à 68/100. Le dashboard indique si le seuil est validé ou s'il utilise encore la valeur prudente par défaut. Cette calibration n'apprend pas les poids du score et ne transforme pas le score en probabilité de hausse.
