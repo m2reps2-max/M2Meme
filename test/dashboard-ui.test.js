@@ -90,9 +90,23 @@ test('dashboard assets share one cache version so deployed UI fixes are loaded t
  assert.ok(html.includes('/assets/live.css?v='+version));
 });
 
+test('secondary dashboard datasets load only when their page is opened',()=>{
+ assert.match(js,/const pageDataJobs=\{/);
+ assert.match(js,/async function ensurePageData\(page,options=\{\}\)/);
+ assert.match(js,/pageDataPromises\.has\(key\)/);
+ assert.match(js,/paper:\[\['paper-trading'/);
+ assert.match(js,/smart:\[\['wallets'/);
+ assert.match(js,/walletGraph:\[\['wallet-graph'/);
+ assert.match(js,/backtest:\[\['learning'/);
+ assert.match(js,/await ensurePageData\(state\.page\)/);
+ assert.match(js,/navigate\(target\.dataset\.view\)/);
+ const core=js.slice(js.indexOf('const coreJobs='),js.indexOf('const coreResults=',js.indexOf('const coreJobs=')));
+ assert.doesNotMatch(core,/intelligence|paper-trading|backtest|learning|launches|data-quality/);
+ assert.doesNotMatch(core,/\['Experts'/);
+});
 test('dashboard loads a server-side shortlist instead of selecting from the first 200 score-sorted tokens',()=>{
  assert.match(js,/\['Sélection','\/api\/selection'\]/);
- assert.match(js,/if\(i===5\)state\.selection=data/);
+ assert.match(js,/if\(i===4\)state\.selection=data/);
  assert.match(js,/function selectionPools\(\)\{return state\.selection/);
 });
 
@@ -180,7 +194,7 @@ test('simple settings page exposes scanner thresholds and publication switches',
  assert.match(js,/name="publishRisks"/);
  assert.match(js,/api\('\/api\/scanner-settings'/);
  assert.match(js,/scanner-settings-preset/);
- assert.match(html,/scanner-settings-v1/);
+ assert.match(html,/dashboard-lazy-v1/);
 });
 test('scanner settings remain in the existing persisted state and are applied to alert selection',()=>{
  const normalizer=fs.readFileSync(path.join(root,'lib/state-normalizer.js'),'utf8');
