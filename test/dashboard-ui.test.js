@@ -207,8 +207,9 @@ test('scanner settings remain in the existing persisted state and are applied to
 });
 
 test('Telegram channel setup uses the native picker instead of asking for a chat identifier',()=>{
- assert.match(js,/startchannel&admin=post_messages/);
- assert.match(js,/my_chat_member/);
+ const server=fs.readFileSync(path.join(root,'index.js'),'utf8');
+ assert.match(server,/startchannel&admin=post_messages/);
+ assert.match(server,/my_chat_member/);
  assert.match(js,/data-channel-refresh/);
  assert.match(js,/Connecter un canal avec Telegram/);
  assert.doesNotMatch(js,/name="chatId"/);
