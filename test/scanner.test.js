@@ -295,15 +295,22 @@ test('la santé distingue serveur actif et sources de données dégradées',()=>
  assert.equal(health.checks.pumpPortal.ok,false);
 });
 
-test('alerts require fresh market data and downgrade delayed signals',async()=>{
+test('alerts require fresh market data and the complete elite quality profile',async()=>{
  const s=make(),now=Date.now();
- s.activeAlertThreshold=()=>({threshold:78});
+ s.activeAlertThreshold=()=>({threshold:88});
  s.earlyBuyerExitIntel=()=>({alert:false,wallets:0,soldSharePct:0});
- const makeToken=(mint,at,critical=false)=>({mint,symbol:mint.toUpperCase(),pairAddress:'pair-'+mint,liquidityUsd:12000,history:[{at}],analysis:{score:90,coverage:90,factors:{security:80},hardBlocked:critical,flags:critical?[{level:'critical',message:'critical flag'}]:[]}});
+ const makeToken=(mint,at,overrides={})=>({
+  mint,symbol:mint.toUpperCase(),pairAddress:'pair-'+mint,liquidityUsd:20000,fdv:300000,
+  volume:{h1:8000},txns:{h1:{buys:16,sells:4}},
+  history:[{at}],security:{checkedAt:new Date(now-5*60_000).toISOString()},
+  tradeIntel:{checkedAt:new Date(now-5*60_000).toISOString()},
+  analysis:{score:92,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,factors:{security:95},flags:[]},
+  ...overrides
+ });
  s.state.tokens={
   fresh:makeToken('fresh',now-60_000),
   delayed:makeToken('delayed',now-8*60_000),
-  stale:makeToken('stale',now-20*60_000,true)
+  stale:makeToken('stale',now-20*60_000,{analysis:{score:92,coverage:90,risk:'high',securityComprehensive:true,hardBlocked:true,factors:{security:95},flags:[{level:'critical',message:'critical flag'}]}})
  };
  await s.alerts();
  assert.equal(s.state.tokens.fresh.signalLevel,'opportunity');
@@ -311,6 +318,26 @@ test('alerts require fresh market data and downgrade delayed signals',async()=>{
  assert.equal(s.state.tokens.stale.signalLevel,'none');
  assert.deepEqual(s.state.alerts.map(x=>x.mint).sort(),['delayed','fresh']);
  assert.equal(s.state.alerts.find(x=>x.mint==='delayed').level,'watch');
+});
+
+test('critical risk alerts do not broadcast junk tokens and only notify for tracked candidates',async()=>{
+ const s=make(),now=Date.now();
+ s.activeAlertThreshold=()=>({threshold:88});
+ s.earlyBuyerExitIntel=()=>({alert:false,wallets:0,soldSharePct:0});
+ const mint='crashing-junk';
+ s.state.tokens[mint]={
+  mint,symbol:'JUNK',pairAddress:'pool-junk',liquidityUsd:1650,fdv:2056,
+  volume:{h1:1107},txns:{h1:{buys:2,sells:18}},history:[{at:now-30_000}],
+  analysis:{score:71,coverage:75,risk:'high',securityComprehensive:false,hardBlocked:true,flags:[{level:'critical',message:'Crash'}]}
+ };
+ await s.alerts();
+ assert.equal(s.state.tokens[mint].signalLevel,'none');
+ assert.equal(s.state.alerts.length,0);
+ s.state.watchlist.push(mint);
+ await s.alerts();
+ assert.equal(s.state.tokens[mint].signalLevel,'danger');
+ assert.equal(s.state.alerts.length,1);
+ assert.equal(s.state.alerts[0].level,'danger');
 });
 
 
