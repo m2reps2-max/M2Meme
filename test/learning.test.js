@@ -42,8 +42,8 @@ test('les prévisions enregistrent le maximum favorable et le drawdown',()=>{
 
 test('learning segments one-hour outcomes by discovery source and launch age',()=>{
  const result=learningSummary.call({state:{tokens:{
-  a:{mint:'a',forecasts:[{score:80,at:1000,source:'Pump.fun',launchAgeHours:0.02,outcomes:{'1h':{label:'win',returnPct:20}}}]},
-  b:{mint:'b',forecasts:[{score:60,at:2000,source:'GeckoTerminal pool',launchAgeHours:0.2,outcomes:{'1h':{label:'loss',returnPct:-25}}}]}
+  a:{mint:'a',forecasts:[{score:80,at:1000,source:'Pump.fun',launchAgeHours:0.02,liquidityUsd:100000,outcomes:{'1h':{label:'win',returnPct:20,exitLiquidityUsd:100000}}}]},
+  b:{mint:'b',forecasts:[{score:60,at:2000,source:'GeckoTerminal pool',launchAgeHours:0.2,liquidityUsd:100000,outcomes:{'1h':{label:'loss',returnPct:-25,exitLiquidityUsd:100000}}}]}
  }}});
  assert.equal(result.cohorts.bySource['Pump.fun'].winRate1hPct,100);
  assert.equal(result.cohorts.bySource['GeckoTerminal pool'].lossRate1hPct,100);
@@ -164,8 +164,8 @@ test('net simulated returns, not gross labels, drive win/loss and calibration ra
  const result=learningSummary.call({state:{tokens:{micro:{mint:'micro',forecasts:[{score:80,at:1,source:'test',liquidityBand:'under_1k',liquidityUsd:250,outcomes:{'1h':{label:'win',grossLabel:'win',returnPct:16,grossReturnPct:16,exitLiquidityUsd:250}}}]}}}});
  assert.equal(result.successRate.evaluated,1);
  assert.equal(result.successRate.successful,0);
- assert.equal(result.horizons['1h'].winRatePct,0);
- assert.equal(result.horizons['1h'].lossRatePct,100);
+ assert.equal(result.summary.horizons['1h'].winRatePct,0);
+ assert.equal(result.summary.horizons['1h'].lossRatePct,100);
  assert.equal(result.cohorts.byLiquidity.under_1k.winRate1hPct,0);
  assert.equal(result.cohorts.byLiquidity.under_1k.lossRate1hPct,100);
  assert.equal(result.labels.drawdown['1h'],1);
