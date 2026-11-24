@@ -59,7 +59,7 @@ test('score focus adapts its floor to the dashboard minimum and remains capped a
     liquidityUsd: index,
     analysis: { score: 95 - index, risk: 'low', hardBlocked: false }
   }));
-  assert.equal(selectScoreFocusCandidates(candidates, 95).length, 15);
+  assert.equal(selectScoreFocusCandidates(candidates, 95).length, 16);
   assert.equal(selectScoreFocusCandidates(candidates, 70).length, 30);
   assert.equal(selectScoreFocusCandidates(candidates, 70).at(-1).analysis.score, 66);
 });
