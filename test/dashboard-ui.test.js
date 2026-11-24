@@ -58,7 +58,7 @@ test('wallet reputation page exposes point-in-time backtest and outcomes against
 test('Radar shortlist is capped at five best and five watch candidates with strict data gates',()=>{
  assert.match(selection,/\.slice\(0,5\)/);
  assert.ok(selection.includes('qualifyOpportunity(t,qualificationSettings).eligible'));
- assert.ok(selection.includes('factorSet(t,[\'activity\',\'momentum\',\'market\',\'liquidityQuality\',\'security\'])'));
+ assert.ok(selection.includes("factorSet(t,['activity','market','liquidityQuality','security'])"));
  assert.match(selection,/risk!=='high'/);
  assert.match(js,/Aucun candidat assez solide/);
  assert.match(js,/pré-marchés à 5 % ne sont pas présentés comme des opportunités/);

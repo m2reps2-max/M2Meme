@@ -109,6 +109,22 @@ test('GeckoTerminal trade sampling is optional when the current DEX snapshot has
  assert.equal(assessOpportunityEvidence(token,now).transactionSource,'dexscreener_snapshot');
 });
 
+test('contextual social and valuation warnings do not veto an otherwise qualified candidate',()=>{
+ const candidate=eliteCandidate({analysis:{...eliteCandidate().analysis,risk:'medium',flags:[
+  {level:'warning',code:'SOCIAL_AUTHOR_CONCENTRATION'},
+  {level:'warning',code:'ELITE_RECURRENT_CREATOR_FUNDER'},
+  {level:'warning',code:'HIGH_FDV_LIQUIDITY'}
+ ]}});
+ assert.equal(qualifyOpportunity(candidate,{}).eligible,true);
+});
+
+test('holder concentration, Token-2022 review and unavailable sell route remain blockers',()=>{
+ for(const code of ['HOLDER_CONCENTRATION','TOP1_WALLET_CONCENTRATION','TOP5_WALLET_CONCENTRATION','TOKEN_2022_REVIEW','ELITE_TOKEN2022_EXTENSIONS_UNKNOWN','SELL_ROUTE_UNAVAILABLE']){
+  const candidate=eliteCandidate({analysis:{...eliteCandidate().analysis,risk:'medium',flags:[{level:'warning',code}]}});
+  assert.equal(qualifyOpportunity(candidate,{}).eligible,false,code);
+ }
+});
+
 test('transaction fallback cannot use stale market snapshots or missing security evidence',()=>{
  const now=10_000_000;
  const {assessOpportunityEvidence}=require('../lib/alert-quality');

@@ -3,6 +3,22 @@ const test=require('node:test');const assert=require('node:assert/strict');const
 function make(){const dir=fs.mkdtempSync(path.join(os.tmpdir(),'meme-radar-test-'));return new MemeScanner({dataFile:path.join(dir,'store.json')});}
 test('score ne compte que les facteurs réellement disponibles',()=>{const s=make();const a=s.score({txns:{h1:{buys:70,sells:30}},volume:{h1:25000,h24:120000},liquidityUsd:45000,ageHours:3});assert.equal(a.coverage,40);assert.ok(a.score>=0&&a.score<=100);assert.equal(a.confidence,'low');});
 test('une freeze authority active bloque le token',()=>{const s=make();const a=s.score({txns:{h1:{buys:20,sells:10}},volume:{h1:5000,h24:20000},liquidityUsd:10000,ageHours:2,security:{checkedAt:new Date().toISOString(),data:{freezeAuthorityActive:true,mintAuthorityActive:false,top10HolderPercent:30}}});assert.equal(a.hardBlocked,true);assert.equal(a.risk,'high');});
+test('les preuves sociales multi-auteurs sont un facteur pondéré et augmentent la couverture sans double bonus',()=>{
+ const s=make();
+ const t={
+  txns:{h1:{buys:80,sells:20}},volume:{h1:12000,h24:90000},liquidityUsd:30000,fdv:300000,ageHours:1,
+  history:[{at:1,liquidityUsd:25000,priceUsd:0.00001,buys1h:30,sells1h:20},{at:2,liquidityUsd:30000,priceUsd:0.000012,buys1h:80,sells1h:20}],
+  security:{checkedAt:new Date().toISOString(),data:{isInitialized:true,isToken2022:false,freezeAuthorityActive:false,mintAuthorityActive:false,ownerConcentrationAvailable:true,top10HolderPercent:30}},
+  socialIntel:{available:true,mentions1h:8,mentions24h:20,uniqueAuthors24h:10,uniqueChannels24h:4,uniqueSources24h:3,sentimentScore:75,evidence:{sampledPosts24h:12,uniqueAuthors24h:10,uniqueChannels24h:4,uniqueSources24h:3,duplicateSharePct:0,weakMatchSharePct:0}}
+ };
+ const withSocial=s.score(t);
+ const withoutSocial=s.score({...t,socialIntel:null});
+ const lowSocial=s.score({...t,socialIntel:{...t.socialIntel,mentions1h:1,mentions24h:5,uniqueAuthors24h:2,uniqueChannels24h:1,uniqueSources24h:1,sentimentScore:10,evidence:{sampledPosts24h:5,uniqueAuthors24h:2,uniqueChannels24h:1,duplicateSharePct:0,weakMatchSharePct:0}}});
+ assert.ok(Number.isFinite(withSocial.factors.social));
+ assert.equal(withSocial.coverage,withoutSocial.coverage,'le social influence le score, pas la couverture des preuves de base');
+ assert.ok(withSocial.baseScore>lowSocial.baseScore,'une communauté plus large et plus indépendante doit améliorer le classement');
+});
+
 test('les données sociales et wallet inconnues ne sont pas inventées',()=>{const s=make();const a=s.score({txns:{h1:{buys:1,sells:1}},volume:{h1:1,h24:2},liquidityUsd:100,ageHours:1,smartMoney:{hits:0,wallets:[]}});assert.equal(Object.hasOwn(a.factors,'social'),false);assert.equal(Object.hasOwn(a.factors,'smartMoney'),false);assert.equal(Object.hasOwn(a.factors,'narrative'),false);});
 test('watchlist valide et déduplique les adresses',()=>{const s=make(),mint='So11111111111111111111111111111111111111112';assert.equal(s.addWatch(mint).length,1);assert.equal(s.addWatch(mint).length,1);assert.throws(()=>s.addWatch('invalid'),/invalide/);assert.equal(s.removeWatch(mint).length,0);});
 test('wallets sont ajoutés et retirés proprement',()=>{const s=make(),wallet='So11111111111111111111111111111111111111112';assert.equal(s.addWallet(wallet,'Référence')[0].label,'Référence');assert.equal(s.removeWallet(wallet).length,0);});

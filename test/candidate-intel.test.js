@@ -29,7 +29,8 @@ test('candidate intelligence changes ranking only modestly and does not fake dat
   assert.equal(result.coverage,40);
   assert.ok(Math.abs(result.score-result.baseScore)<=6);
   assert.ok(result.factors.tradeQuality>80);
-  assert.equal(result.factors.social>50,true);
+  assert.equal(result.candidateIntel.socialQuality>50,true);
+  assert.equal(Object.hasOwn(result.factors,'social'),false,'les agrégats sociaux non vérifiés ne doivent pas augmenter la couverture');
 });
 
 test('social scoring rewards independent authors, channels and network spread', () => {
@@ -56,8 +57,8 @@ test('verified multi-network social evidence has a bounded, material ranking inf
   const token={socialIntel:{available:true,mentions1h:8,mentions24h:20,uniqueAuthors24h:10,uniqueChannels24h:4,uniqueSources24h:3,sentimentScore:75,evidence:{sampledPosts24h:12,uniqueAuthors24h:10,uniqueChannels24h:4,uniqueSources24h:3,duplicateSharePct:0,weakMatchSharePct:0}}};
   const result=evaluateCandidateIntel(token);
   assert.ok(result.socialQuality>=75);
-  assert.ok(result.adjustment>2);
-  assert.ok(result.adjustment<=8);
+  assert.equal(result.adjustment,0,'la preuve sociale est intégrée comme facteur pondéré, pas comptée deux fois dans un bonus');
+  assert.ok(result.socialConfidence==='limited_sample');
 });
 
 test('same-slot Smart Money clusters add a bounded warning and modest score penalty',()=>{
