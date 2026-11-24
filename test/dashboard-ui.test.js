@@ -257,3 +257,13 @@ test('publication diagnostics expose score, quality, freshness, missing factors,
  assert.match(js,/publicationStatus\.botRunning/);
  assert.match(js,/publicationStatus\.outbox\?\.failed/);
 });
+
+
+test('home narrative panel exposes observed community acceleration and independent-source evidence',()=>{
+ assert.match(js,/mentions1h/);
+ assert.match(js,/mentions24h/);
+ assert.match(js,/uniqueAuthors24h/);
+ assert.match(js,/uniqueSources24h/);
+ assert.match(js,/accélération observée/);
+ assert.match(js,/mentions publiques vérifiées/);
+});
