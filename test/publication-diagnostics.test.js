@@ -84,5 +84,6 @@ test('diagnostics count exact best-selection factor gates instead of reporting f
  assert.equal(result.discovery.opportunityEligible,0);
  assert.equal(result.discovery.qualifiedButMissingFactors,1);
  assert.ok(result.mostBlockedCandidates[0].blockers.some(x=>x.includes('activité')));
+ assert.ok(result.rejectionReasons.some(x=>x.reason.includes('activité')));
  assert.match(result.diagnosis,/facteur obligatoire/i);
 });
