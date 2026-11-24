@@ -119,6 +119,13 @@ test('recent pre-market launch detections are visible separately and never score
 });
 
 
+test('best shortlist does not require historical momentum when all independent core factors are present',()=>{
+ const candidate=token(88,{analysis:{...token(88).analysis,coverage:75,factors:{activity:85,market:80,liquidityQuality:78,security:90}}});
+ const result=buildSelection([candidate],NOW);
+ assert.equal(result.best.length,1);
+ assert.equal(result.best[0].mint,'mint-88');
+});
+
 test('best shortlist accepts fresh DEX transactions when GeckoTerminal pool sampling is unavailable',()=>{
  const candidate=token(77,{geckoPoolAddress:null,tradeIntel:null,txns:{h1:{buys:15,sells:5}}});
  const result=buildSelection([candidate],NOW);
