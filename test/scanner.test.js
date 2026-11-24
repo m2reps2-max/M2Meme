@@ -85,6 +85,21 @@ test('le scanner vérifie une seule route de vente en lecture seule et respecte 
  }
 });
 
+test('trade intelligence rotates through the oldest unchecked pools instead of starving lower-ranked tokens',async()=>{
+ const scanner=make();
+ const now=Date.now();
+ const first={mint:'oldest',geckoPoolAddress:'Pool111111111111111111111111111111111',analysis:{score:90},tradeIntel:{checkedAt:new Date(now-20*60_000).toISOString()}};
+ const second={mint:'second-oldest',geckoPoolAddress:'Pool222222222222222222222222222222222',analysis:{score:70},tradeIntel:{checkedAt:new Date(now-10*60_000).toISOString()}};
+ const third={mint:'fresh',geckoPoolAddress:'Pool333333333333333333333333333333333',analysis:{score:99},tradeIntel:{checkedAt:new Date(now-60_000).toISOString()}};
+ scanner.state.tokens={oldest:first,second,third};
+ scanner.lastAutoCreatorFundingAt=Date.now();
+ const checked=[];
+ scanner.inspectTradeIntel=async token=>{checked.push(token.mint);token.tradeIntel={checkedAt:new Date().toISOString()};return token.tradeIntel;};
+ await scanner.refreshCandidateIntelligence();
+ await scanner.refreshCandidateIntelligence();
+ assert.deepEqual(checked,['oldest','second-oldest']);
+});
+
 test('une absence de route Jupiter est un avertissement, jamais un blocage honeypot automatique',async()=>{
  const scanner=make();
  const mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
