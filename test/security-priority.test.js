@@ -13,7 +13,7 @@ test('security queue prioritizes strong candidates while preserving an age-based
     { mint: 'launch', pairAddress: 'p4', launchSource: 'pumpfun', analysis: { score: 85 } }
   ];
   const selected = rankSecurityCandidates(tokens, now, 3);
-  assert.deepEqual(selected.map(token => token.mint), ['low-score-old', 'launch', 'high-score']);
+  assert.deepEqual(selected.map(token => token.mint), ['launch', 'low-score-old', 'high-score']);
 });
 
 test('security queue is deterministic, bounded and excludes fresh or unlinked tokens', () => {
@@ -23,4 +23,12 @@ test('security queue is deterministic, bounded and excludes fresh or unlinked to
   assert.equal(rankSecurityCandidates(tokens, now, 4).length, 4);
   assert.deepEqual(rankSecurityCandidates(tokens, now, 4).map(x => x.mint), rankSecurityCandidates(tokens, now, 4).map(x => x.mint));
   assert.ok(!rankSecurityCandidates(tokens, now, 20).some(x => x.mint === 'fresh'));
+});
+
+
+test('never-inspected linked tokens are prioritized over stale refreshes',()=>{
+ const now=50_000_000;
+ const neverChecked={mint:'never-checked',pairAddress:'new-pool',analysis:{score:65}};
+ const staleHigh={mint:'stale-high',pairAddress:'old-pool',analysis:{score:95},security:{checkedAt:new Date(now-2*3600000).toISOString()}};
+ assert.deepEqual(rankSecurityCandidates([staleHigh,neverChecked],now,1).map(x=>x.mint),['never-checked']);
 });
