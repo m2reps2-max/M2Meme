@@ -32,7 +32,7 @@ function eliteCandidate(overrides={}) {
  return {
   mint:'elite-token',pairAddress:'pool-1',liquidityUsd:20000,fdv:300000,
   volume:{h1:8000},txns:{h1:{buys:16,sells:4}},
-  analysis:{score:92,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,flags:[]},
+  analysis:{score:92,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,flags:[],factors:{security:95}},
   ...overrides
  };
 }
@@ -47,18 +47,27 @@ test('elite opportunity requires depth, real activity, buyer pressure, valuation
 });
 
 test('a high score cannot bypass weak liquidity, low volume or excessive FDV/liquidity',()=>{
- const weak=qualifyOpportunity(eliteCandidate({liquidityUsd:1600,fdv:200000,volume:{h1:1107}}),{});
+ const weak=qualifyOpportunity(eliteCandidate({liquidityUsd:1600,fdv:200000,volume:{h1:500}}),{});
  assert.equal(weak.eligible,false);
  assert.ok(weak.reasons.includes('Liquidité insuffisante'));
  assert.ok(weak.reasons.includes('Volume 1h insuffisant'));
  assert.ok(weak.reasons.includes('Valorisation trop élevée par rapport à la liquidité'));
 });
 
-test('missing holder security evidence and warning flags block opportunity publication',()=>{
- const missing=qualifyOpportunity(eliteCandidate({analysis:{...eliteCandidate().analysis,securityComprehensive:false}}),{});
- assert.ok(missing.reasons.includes('Analyse des détenteurs incomplète'));
+test('incomplete holder metadata is allowed only after base on-chain security is verified',()=>{
+ const missing=qualifyOpportunity(eliteCandidate({analysis:{...eliteCandidate().analysis,risk:'partial',securityComprehensive:false}}),{});
+ assert.equal(missing.eligible,true);
+ const noBaseSecurity=qualifyOpportunity(eliteCandidate({analysis:{...eliteCandidate().analysis,securityComprehensive:false,factors:{}}}),{});
+ assert.ok(noBaseSecurity.reasons.includes('Contrôle on-chain de base incomplet'));
  const warning=qualifyOpportunity(eliteCandidate({analysis:{...eliteCandidate().analysis,flags:[{level:'warning'}]}}),{});
  assert.ok(warning.reasons.includes('Signal de risque encore présent'));
+});
+
+test('partial risk is accepted only with verified base security and no blocking warnings',()=>{
+ const partial=eliteCandidate({analysis:{...eliteCandidate().analysis,risk:'partial',securityComprehensive:false,factors:{security:80}}});
+ assert.equal(qualifyOpportunity(partial,{requireComprehensiveSecurity:false}).eligible,true);
+ const unknown=eliteCandidate({analysis:{...eliteCandidate().analysis,risk:'partial',securityComprehensive:false,factors:{}}});
+ assert.equal(qualifyOpportunity(unknown,{requireComprehensiveSecurity:false}).eligible,false);
 });
 
 test('non-fatal synchronized-wallet heuristics reduce confidence but do not automatically veto an otherwise elite candidate',()=>{
@@ -78,7 +87,7 @@ test('critical and unknown warning codes remain publication blockers',()=>{
 });
 
 test('weak buyer ratio and insufficient transaction count block opportunity publication',()=>{
- const result=qualifyOpportunity(eliteCandidate({txns:{h1:{buys:4,sells:12}}}),{});
+ const result=qualifyOpportunity(eliteCandidate({txns:{h1:{buys:3,sells:4}}}),{});
  assert.ok(result.reasons.includes('Activité transactionnelle insuffisante'));
  assert.ok(result.reasons.includes('Pression acheteuse insuffisante'));
 });

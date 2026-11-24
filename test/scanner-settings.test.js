@@ -7,21 +7,21 @@ const { freshState, normalizeState } = require('../lib/state-normalizer');
 test('defaults to the elite profile with multiple independent quality thresholds', () => {
   const settings = defaultScannerSettings({});
   assert.equal(settings.preset, 'elite');
-  assert.equal(settings.minScore, 88);
-  assert.equal(settings.minLiquidityUsd, 15000);
-  assert.equal(settings.minVolume1hUsd, 5000);
-  assert.equal(settings.minCoverage, 85);
-  assert.equal(settings.minTransactions1h, 20);
-  assert.equal(settings.minBuyRatioPct, 55);
-  assert.equal(settings.maxFdvLiquidityRatio, 20);
-  assert.equal(settings.requireComprehensiveSecurity, true);
+  assert.equal(settings.minScore, 80);
+  assert.equal(settings.minLiquidityUsd, 5000);
+  assert.equal(settings.minVolume1hUsd, 750);
+  assert.equal(settings.minCoverage, 70);
+  assert.equal(settings.minTransactions1h, 8);
+  assert.equal(settings.minBuyRatioPct, 50);
+  assert.equal(settings.maxFdvLiquidityRatio, 35);
+  assert.equal(settings.requireComprehensiveSecurity, false);
 });
 
 test('migrates the old untouched balanced default to elite without breaking custom thresholds', () => {
   const migrated = normalizeScannerSettings({ version: 1, preset: 'balanced', minScore: 78, minLiquidityUsd: 5000 });
   assert.equal(migrated.preset, 'elite');
-  assert.equal(migrated.minScore, 88);
-  assert.equal(migrated.minLiquidityUsd, 15000);
+  assert.equal(migrated.minScore, 80);
+  assert.equal(migrated.minLiquidityUsd, 5000);
   const custom = normalizeScannerSettings({ version: 1, preset: 'custom', minScore: 83, minLiquidityUsd: 9000 });
   assert.equal(custom.preset, 'custom');
   assert.equal(custom.minScore, 83);

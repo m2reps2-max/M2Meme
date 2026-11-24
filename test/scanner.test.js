@@ -85,6 +85,21 @@ test('le scanner vérifie une seule route de vente en lecture seule et respecte 
  }
 });
 
+test('trade intelligence rotates through the oldest unchecked pools instead of starving lower-ranked tokens',async()=>{
+ const scanner=make();
+ const now=Date.now();
+ const first={mint:'oldest',geckoPoolAddress:'Pool111111111111111111111111111111111',analysis:{score:90},tradeIntel:{checkedAt:new Date(now-20*60_000).toISOString()}};
+ const second={mint:'second-oldest',geckoPoolAddress:'Pool222222222222222222222222222222222',analysis:{score:70},tradeIntel:{checkedAt:new Date(now-10*60_000).toISOString()}};
+ const third={mint:'fresh',geckoPoolAddress:'Pool333333333333333333333333333333333',analysis:{score:99},tradeIntel:{checkedAt:new Date(now-60_000).toISOString()}};
+ scanner.state.tokens={oldest:first,second,third};
+ scanner.lastAutoCreatorFundingAt=Date.now();
+ const checked=[];
+ scanner.inspectTradeIntel=async token=>{checked.push(token.mint);token.tradeIntel={checkedAt:new Date().toISOString()};return token.tradeIntel;};
+ await scanner.refreshCandidateIntelligence();
+ await scanner.refreshCandidateIntelligence();
+ assert.deepEqual(checked,['oldest','second-oldest']);
+});
+
 test('une absence de route Jupiter est un avertissement, jamais un blocage honeypot automatique',async()=>{
  const scanner=make();
  const mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
@@ -214,9 +229,10 @@ test('le seuil des alertes ne change qu’après une validation hors échantillo
  const scanner=make();
  const previous=process.env.ALERT_MIN_SCORE;
  process.env.ALERT_MIN_SCORE='78';
+ scanner.state.scannerSettings={minScore:78};
  try{
   scanner.learningSummary=()=>({outOfSample:{status:'holdout_available',selectedThreshold:70,validation:{tokens:25},holdoutAtSelectedThreshold:{tokens:22,positive15Pct:60,averageReturnPct:18,loss20Pct:15}}});
-  assert.deepEqual(scanner.activeAlertThreshold(),{threshold:78,source:'out_of_sample_validation',validated:true,holdoutTokens:22});
+  assert.deepEqual(scanner.activeAlertThreshold(),{threshold:78,source:'dashboard',validated:true,holdoutTokens:22});
   scanner.learningSummary=()=>({outOfSample:{status:'holdout_available',selectedThreshold:65,validation:{tokens:19},holdoutAtSelectedThreshold:{tokens:19,positive15Pct:80,averageReturnPct:40,loss20Pct:5}}});
   assert.deepEqual(scanner.activeAlertThreshold(),{threshold:78,source:'dashboard',validated:false,holdoutTokens:19});
  }finally{
@@ -229,7 +245,17 @@ test('le seuil minimum choisi dans le dashboard reste prioritaire sur un seuil a
  const scanner=make();
  scanner.state.scannerSettings={minScore:84};
  scanner.learningSummary=()=>({outOfSample:{status:'holdout_available',selectedThreshold:70,validation:{tokens:25},holdoutAtSelectedThreshold:{tokens:22,positive15Pct:60,averageReturnPct:18,loss20Pct:15}}});
- assert.deepEqual(scanner.activeAlertThreshold(),{threshold:84,source:'out_of_sample_validation',validated:true,holdoutTokens:22});
+ assert.deepEqual(scanner.activeAlertThreshold(),{threshold:84,source:'dashboard',validated:true,holdoutTokens:22});
+});
+
+test('a validated adaptive threshold cannot silently raise the score floor set in the dashboard',()=>{
+ const scanner=make();
+ scanner.state.scannerSettings={minScore:80};
+ scanner.learningSummary=()=>({outOfSample:{status:'holdout_available',selectedThreshold:90,validation:{tokens:30},holdoutAtSelectedThreshold:{tokens:24,positive15Pct:62,averageReturnPct:12,loss20Pct:18}}});
+ assert.deepEqual(scanner.activeAlertThreshold(),{threshold:80,source:'dashboard',validated:true,holdoutTokens:24});
+ const selected=scanner.selection();
+ assert.equal(selected.adaptiveThreshold.threshold,80);
+ assert.equal(selected.adaptiveThreshold.calibrationThreshold,90);
 });
 
 test('le suivi wallet surveille les nouvelles signatures au lieu de paginer uniquement vers le passé',async()=>{
@@ -318,6 +344,24 @@ test('alerts require fresh market data and the complete elite quality profile',a
  assert.equal(s.state.tokens.stale.signalLevel,'none');
  assert.deepEqual(s.state.alerts.map(x=>x.mint).sort(),['delayed','fresh']);
  assert.equal(s.state.alerts.find(x=>x.mint==='delayed').level,'watch');
+});
+
+test('an otherwise qualified opportunity stays off Telegram while security evidence is stale',async()=>{
+ const scanner=make(),now=Date.now();
+ scanner.activeAlertThreshold=()=>({threshold:80});
+ scanner.earlyBuyerExitIntel=()=>({alert:false,wallets:0,soldSharePct:0});
+ const mint='stale-security-candidate';
+ scanner.state.tokens[mint]={
+  mint,symbol:'STALE',pairAddress:'pool-stale',liquidityUsd:12000,fdv:240000,
+  volume:{h1:1800},txns:{h1:{buys:12,sells:8}},
+  history:[{at:now-30_000}],
+  security:{checkedAt:new Date(now-90*60_000).toISOString()},
+  tradeIntel:{checkedAt:new Date(now-5*60_000).toISOString()},
+  analysis:{score:84,coverage:85,risk:'observations_only',securityComprehensive:false,hardBlocked:false,flags:[],factors:{activity:80,momentum:80,market:80,liquidityQuality:80,security:90}}
+ };
+ await scanner.alerts();
+ assert.equal(scanner.state.tokens[mint].signalLevel,'watch');
+ assert.equal(scanner.state.alerts.some(row=>row.mint===mint&&row.level==='opportunity'),false);
 });
 
 test('critical risk alerts do not broadcast junk tokens and only notify for tracked candidates',async()=>{
