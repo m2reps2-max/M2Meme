@@ -88,15 +88,24 @@ jobs:
             echo "Application did not become healthy"
             exit 1
           fi
-          sleep 15
-          RSS_KB=$(ps -o rss= -p "$APP_PID" | tr -d ' ')
-          if [ -z "$RSS_KB" ]; then
-            cat runtime.log
-            echo "Could not measure application RSS"
-            exit 1
-          fi
+          PEAK_RSS_KB=0
+          for SAMPLE in $(seq 1 12); do
+            sleep 5
+            RSS_KB=$(ps -o rss= -p "$APP_PID" | tr -d ' ')
+            if [ -z "$RSS_KB" ]; then
+              cat runtime.log
+              echo "Application exited during the memory soak"
+              exit 1
+            fi
+            if [ "$RSS_KB" -gt "$PEAK_RSS_KB" ]; then PEAK_RSS_KB=$RSS_KB; fi
+          done
           echo "Runtime: $RUNTIME"
           echo "Health: $(cat health.json)"
-          echo "Application RSS after 15s: $((RSS_KB / 1024)) MiB"
+          echo "Peak application RSS over 60s: $((PEAK_RSS_KB / 1024)) MiB"
+          if [ "$PEAK_RSS_KB" -gt $((256 * 1024)) ]; then
+            cat runtime.log
+            echo "Application exceeded the 256 MiB memory budget"
+            exit 1
+          fi
           echo "---- application logs ----"
           cat runtime.log
