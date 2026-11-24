@@ -116,3 +116,11 @@ test('recent pre-market launch detections are visible separately and never score
  assert.equal(result.best.length,0);
  assert.equal(result.observe.length,0);
 });
+
+
+test('best shortlist accepts fresh DEX transactions when GeckoTerminal pool sampling is unavailable',()=>{
+ const candidate=token(77,{geckoPoolAddress:null,tradeIntel:null,txns:{h1:{buys:15,sells:5}}});
+ const result=buildSelection([candidate],NOW);
+ assert.equal(result.best.length,1);
+ assert.equal(result.best[0].freshness.transactionAgeMinutes,1);
+});
