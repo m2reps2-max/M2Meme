@@ -41,43 +41,47 @@ test('verdicts are labels, not probability claims', () => {
   assert.equal(scoreVerdict(99, 'danger'), 'RISQUE IMPORTANT');
 });
 
-test('formats a compact French Telegram alert and explains the score', () => {
+test('formats a compact Telegram alert with age, security and terminal links', () => {
   const message = formatTelegramAlert({
-    name: 'Example Token', symbol: 'EX', mint: 'MintAddress',
-    liquidityUsd: 12000, fdv: 43000, volume: { h1: 93000 },
-    priceChange: { h1: 47.6 }, dexUrl: 'https://dexscreener.com/solana/MintAddress',
-    analysis: { score: 87, coverage: 92, flags: [] },
+    name: 'Example Token', symbol: 'EX', mint: '8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump',
+    liquidityUsd: 12000, fdv: 43000, ageMinutes: 30,
+    analysis: { score: 87, coverage: 92, securityComprehensive: false, factors: { security: 82 }, flags: [] },
     signalReasons: ['Liquidité correcte', 'Activité acheteurs en hausse']
   });
-  assert.match(message, /<b>M2  87\/100<\/b>/);
-  assert.match(message, /<b>📡 DONNÉES DE MARCHÉ<\/b>/);
-  assert.match(message, /<a href=/);
-  assert.match(message, /<i>Le score M2/);
-  assert.match(message, /87\/100/);
-  assert.match(message, /qualité des signaux observés/);
-  assert.match(message, /<code>MintAddress<\/code>/);
+  assert.match(message, /\\$EX/);
+  assert.match(message, /M2 87\\/100/);
+  assert.match(message, /couverture 92%/);
+  assert.match(message, /MC\\/FDV/);
+  assert.match(message, /LP/);
+  assert.match(message, /30 min/);
+  assert.match(message, /Contrôle de base OK/);
+  assert.match(message, /<code>8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump<\\/code>/);
+  assert.match(message, /qualité des signaux, pas une probabilité/);
+  assert.doesNotMatch(message, /Volume \\(1 h\\)|Variation \\(1 h\\)|Phantom/);
 });
 
-
-test('escapes token-controlled text and gives risk alerts a clear risk-first layout', () => {
+test('escapes token-controlled text and keeps risk alerts concise', () => {
   const message = formatTelegramAlert({
     name: 'Offchain <script> & Co', symbol: 'OFF&', mint: '5jv4h9dam2xtheatffvqfjpnhj2gmd3443auuxisccgm',
-    liquidityUsd: 1650, fdv: 2056, volume: { h1: 1107 }, priceChange: { h1: -33 },
-    analysis: { score: 71, coverage: 75, flags: [{ level: 'critical', message: 'Chute du prix > 20% sur 5 minutes' }] }
+    liquidityUsd: 1650, fdv: 2056, ageMinutes: 10,
+    analysis: { score: 71, coverage: 75, hardBlocked: true, flags: [{ level: 'critical', message: 'Chute du prix > 20% sur 5 minutes' }] }
   }, 'danger');
   assert.ok(message.startsWith('🚨 <b>ALERTE RISQUE</b>'));
   assert.match(message, /Offchain &lt;script&gt; &amp; Co/);
-  assert.match(message, /<b>RISQUE IMPORTANT<\/b>|RISQUE IMPORTANT/);
-  assert.match(message, /POURQUOI C’EST RISQUÉ/);
+  assert.match(message, /RISQUE IMPORTANT/);
+  assert.match(message, /Sécurité : <b>BLOQUÉE/);
   assert.match(message, /Chute du prix &gt; 20% sur 5 minutes/);
-  assert.match(message, /<b>Variation \(1 h\)<\/b> : -33\.0%/);
   assert.doesNotMatch(message, /<script>/);
 });
 
-test('builds a direct Phantom token-page button only for valid Solana mints',()=>{
+test('builds DexScreener, GMGN and Axiom buttons only for valid Solana mints',()=>{
   const mint='8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump';
   assert.deepEqual(buildTelegramAlertKeyboard({mint}),{
-    inline_keyboard:[[{text:'👻 Acheter sur Phantom',url:'https://phantom.com/tokens/solana/'+mint}]]
+    inline_keyboard:[[
+      {text:'DexScreener',url:'https://dexscreener.com/solana/'+mint},
+      {text:'GMGN',url:'https://gmgn.ai/sol/token/'+mint},
+      {text:'Axiom',url:'https://axiom.trade/token/'+mint}
+    ]]
   });
   assert.equal(buildTelegramAlertKeyboard({mint:'not-a-solana-mint'}),null);
   assert.equal(buildTelegramAlertKeyboard({mint:''}),null);
