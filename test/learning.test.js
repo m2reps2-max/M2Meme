@@ -202,3 +202,17 @@ test('out-of-sample calibration excludes one-hour outcome records with null gros
  assert.equal(result.training.tokens,1);
  assert.equal(result.training.averageReturnPct,Number(netReturnPct(20,100000,100000,100).toFixed(2)));
 });
+
+
+test('la première prévision reste résolue après sa sortie de la fenêtre glissante de 700 observations',()=>{
+ const first={id:'first',at:1000000,priceUsd:1,liquidityUsd:100000,volume1h:100,score:80,features:{activity:80,momentum:70,market:60,security:90},outcomes:{},path:{maxPrice:1,minPrice:1,minLiquidity:100000}};
+ const recent=Array.from({length:700},(_,i)=>({id:'recent-'+i,at:2000000+i*3000,priceUsd:1,liquidityUsd:100000,volume1h:100,score:70,outcomes:{},path:{maxPrice:1,minPrice:1,minLiquidity:100000}}));
+ const token={mint:'first-retained',firstForecast:first,forecasts:recent};
+ recordForecast(token,{at:4600000,priceUsd:1.2,liquidityUsd:100000,volume1h:200,score:75});
+ assert.equal(token.forecasts.length,700);
+ assert.equal(token.firstForecast.outcomes['1h'].returnPct,20);
+ assert.equal(token.firstForecast.outcomes['1h'].netReturnPct<20,true);
+ const summary=learningSummary.call({state:{tokens:{[token.mint]:token}}});
+ assert.ok(summary.summary.forecasts>=701);
+ assert.equal(summary.outOfSample.uniqueResolvedTokens,1);
+});
