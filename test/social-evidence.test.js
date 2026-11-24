@@ -76,3 +76,10 @@ test('promotional Telegram call channels do not count as independent community e
   assert.equal(rejected.score,null);
   assert.equal(rejected.confidence,'promotional_only');
 });
+
+
+test('whale-information Telegram channels are not automatically treated as promotional',()=>{
+  const {isPromotionalPost}=require('../lib/social-evidence');
+  assert.equal(isPromotionalPost({channel:'solwhalealerts'},'telegram'),false);
+  assert.equal(isPromotionalPost({channel:'solwhaletrending'},'telegram'),true);
+});
