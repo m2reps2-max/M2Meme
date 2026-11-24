@@ -85,7 +85,7 @@ test('whale-information Telegram channels are not automatically treated as promo
 });
 
 
-test('Telegram promotional heuristic does not blacklist generic whale or trader channels',()=>{
+test('Telegram promotion heuristic does not blacklist generic whale or quant channels',()=>{
   assert.equal(isPromotionalPost({channel:'solwhaleintel'},'telegram'),false);
   assert.equal(isPromotionalPost({channel:'QwertysQuants'},'telegram'),false);
   assert.equal(isPromotionalPost({channel:'solcallsgems'},'telegram'),true);

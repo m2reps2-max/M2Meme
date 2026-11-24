@@ -126,7 +126,7 @@ test('Telegram source classification marks obvious calls and signal channels as 
 });
 
 
-test('Telegram source heuristic is narrow: it filters calls but not generic whale or trading channels',()=>{
+test('Telegram source heuristic is narrow: generic whale and quant channels stay unverified',()=>{
   assert.equal(classifyTelegramChannel('mars100xcryptocalls'),'promotional');
   assert.equal(classifyTelegramChannel('soltrenchtrending'),'promotional');
   assert.equal(classifyTelegramChannel('solwhaleintel'),'unverified');
