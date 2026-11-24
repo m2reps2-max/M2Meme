@@ -2,6 +2,7 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const {learningSummary,recordForecast}=require('../lib/learning');
+const {netReturnPct}=require('../lib/adaptive-model');
 
 test('le taux de réussite à une heure compte les hausses de 15% ou plus',()=>{
  const scanner={state:{tokens:{
