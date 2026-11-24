@@ -346,6 +346,24 @@ test('alerts require fresh market data and the complete elite quality profile',a
  assert.equal(s.state.alerts.find(x=>x.mint==='delayed').level,'watch');
 });
 
+test('an otherwise qualified opportunity stays off Telegram while security evidence is stale',async()=>{
+ const scanner=make(),now=Date.now();
+ scanner.activeAlertThreshold=()=>({threshold:80});
+ scanner.earlyBuyerExitIntel=()=>({alert:false,wallets:0,soldSharePct:0});
+ const mint='stale-security-candidate';
+ scanner.state.tokens[mint]={
+  mint,symbol:'STALE',pairAddress:'pool-stale',liquidityUsd:12000,fdv:240000,
+  volume:{h1:1800},txns:{h1:{buys:12,sells:8}},
+  history:[{at:now-30_000}],
+  security:{checkedAt:new Date(now-90*60_000).toISOString()},
+  tradeIntel:{checkedAt:new Date(now-5*60_000).toISOString()},
+  analysis:{score:84,coverage:85,risk:'observations_only',securityComprehensive:false,hardBlocked:false,flags:[],factors:{activity:80,momentum:80,market:80,liquidityQuality:80,security:90}}
+ };
+ await scanner.alerts();
+ assert.equal(scanner.state.tokens[mint].signalLevel,'watch');
+ assert.equal(scanner.state.alerts.some(row=>row.mint===mint&&row.level==='opportunity'),false);
+});
+
 test('critical risk alerts do not broadcast junk tokens and only notify for tracked candidates',async()=>{
  const s=make(),now=Date.now();
  s.activeAlertThreshold=()=>({threshold:88});
