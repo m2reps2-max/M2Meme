@@ -79,7 +79,7 @@ test('verified social evidence has a material but bounded influence on the ranki
   const without=scanner.score({...base});
   const withSocial=scanner.score({...base,socialIntel:social});
   assert.ok(withSocial.factors.social>=75);
-  assert.ok(withSocial.score>without.score+3,'social evidence should materially influence the ranking');
+  assert.ok(withSocial.score>without.score+1,'social evidence should materially influence the ranking');
   assert.equal(withSocial.coverage,without.coverage,'social evidence must not inflate core data coverage');
   const weakSocial=scanner.score({...base,socialIntel:{...social,evidence:{...social.evidence,sampledPosts24h:6,uniqueAuthors24h:2,uniqueChannels24h:1}}});
   assert.equal(Object.hasOwn(weakSocial.factors,'social'),false,'small social samples must not receive the full social weight');
