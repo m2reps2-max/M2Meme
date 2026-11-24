@@ -245,7 +245,7 @@ test('le seuil minimum choisi dans le dashboard reste prioritaire sur un seuil a
  const scanner=make();
  scanner.state.scannerSettings={minScore:84};
  scanner.learningSummary=()=>({outOfSample:{status:'holdout_available',selectedThreshold:70,validation:{tokens:25},holdoutAtSelectedThreshold:{tokens:22,positive15Pct:60,averageReturnPct:18,loss20Pct:15}}});
- assert.deepEqual(scanner.activeAlertThreshold(),{threshold:84,source:'out_of_sample_validation',validated:true,holdoutTokens:22});
+ assert.deepEqual(scanner.activeAlertThreshold(),{threshold:84,source:'dashboard',validated:true,holdoutTokens:22});
 });
 
 test('a validated adaptive threshold cannot silently raise the score floor set in the dashboard',()=>{
