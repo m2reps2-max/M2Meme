@@ -10,7 +10,7 @@ test('learning summary aggregates forecasts without duplicating full forecast ro
    {at:2000,score:70,source:'Pump.fun',launchAgeHours:0.2,liquidityBand:'1k_5k',liquidityUsd:100000,outcomes:{'1h':{label:'loss',returnPct:-25,exitLiquidityUsd:100000}}}
   ]},
   b:{mint:'b',symbol:'BBB',forecasts:[
-   {at:3000,score:55,source:'GeckoTerminal pool',launchAgeHours:null,liquidityBand:'under_1k',liquidityUsd:250,outcomes:{'1h':{label:'flat',returnPct:10}}}
+   {at:3000,score:55,source:'GeckoTerminal pool',launchAgeHours:null,liquidityBand:'under_1k',liquidityUsd:250,outcomes:{'1h':{label:'flat',returnPct:10,exitLiquidityUsd:250}}}
   ]}
  }}};
  const result=learningSummary.call(scanner);
