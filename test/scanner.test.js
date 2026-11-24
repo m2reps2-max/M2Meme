@@ -355,7 +355,7 @@ test('an otherwise qualified opportunity stays off Telegram while security evide
   mint,symbol:'STALE',pairAddress:'pool-stale',liquidityUsd:12000,fdv:240000,
   volume:{h1:1800},txns:{h1:{buys:12,sells:8}},
   history:[{at:now-30_000}],
-  security:{checkedAt:new Date(now-90*60_000).toISOString()},
+  security:{checkedAt:new Date(now-120*60_000).toISOString()},
   tradeIntel:{checkedAt:new Date(now-5*60_000).toISOString()},
   analysis:{score:84,coverage:85,risk:'observations_only',securityComprehensive:false,hardBlocked:false,flags:[],factors:{activity:80,momentum:80,market:80,liquidityQuality:80,security:90}}
  };
@@ -648,4 +648,20 @@ test('Telegram est déclaré configuré avant le premier canal et son état de c
  assert.equal(status.connected,false,'le bot ne doit pas être déclaré connecté avant le démarrage du polling');
  assert.equal(status.channels,0);
  assert.equal(status.enabledChannels,0);
+});
+
+
+test('security leader rotation refreshes four tokens every five minutes',async()=>{
+ const scanner=make();
+ const now=Date.now();
+ scanner.state.tokens=Object.fromEntries(Array.from({length:5},(_,i)=>['security-'+i,{mint:'security-'+i,pairAddress:'pair-'+i,liquidityUsd:10000}]));
+ const checked=[];
+ scanner.inspectSecurity=async token=>{checked.push(token.mint);token.security={checkedAt:new Date().toISOString(),data:{}};};
+ scanner.inspectExternalSecurity=async()=>null;
+ scanner.lastSecurity=now-5*60_000-1;
+ await scanner.securityLeaders();
+ assert.equal(checked.length,4);
+ scanner.lastSecurity=Date.now()-5*60_000-1;
+ await scanner.securityLeaders();
+ assert.equal(checked.length,5);
 });

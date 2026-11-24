@@ -66,25 +66,26 @@ test('stale market data cannot enter either shortlist even with a perfect score'
  assert.equal(result.diagnostics.missingMarketTimestamp,1);
 });
 
-test('best picks require fresh security and transaction evidence, not only fresh price',()=>{
- const staleSecurity=token(1,{security:{checkedAt:new Date(NOW-90*60_000).toISOString()}});
- const staleTrades=token(2,{tradeIntel:{checkedAt:new Date(NOW-90*60_000).toISOString()}});
+test('best picks require fresh security and either recent Gecko trades or a fresh DEX transaction snapshot',()=>{
+ const staleSecurity=token(1,{security:{checkedAt:new Date(NOW-120*60_000).toISOString()}});
+ const staleTrades=token(2,{geckoPoolAddress:'gecko-pool-2',tradeIntel:{checkedAt:new Date(NOW-120*60_000).toISOString()},txns:{h1:{buys:0,sells:0}}});
  const result=buildSelection([staleSecurity,staleTrades],NOW);
  assert.equal(result.best.length,0);
  assert.equal(result.diagnostics.bestRejectedStaleSecurity,1);
  assert.equal(result.diagnostics.bestRejectedStaleTransactions,1);
+ assert.equal(result.diagnostics.bestRejectedStaleMarket,0);
 });
 
 test('security freshness window matches the hourly background refresh cadence',()=>{
  const tokenWith45mSecurityAge=token(9,{security:{checkedAt:new Date(NOW-45*60_000).toISOString()}});
  const result=buildSelection([tokenWith45mSecurityAge],NOW);
  assert.equal(result.best.length,1);
- assert.equal(result.qualityGate.bestSecurityMaxAgeMinutes,65);
+ assert.equal(result.qualityGate.bestSecurityMaxAgeMinutes,95);
 });
 
 test('watchlist tolerates partial security but not stale market or very stale security',()=>{
  const partial=token(1,{liquidityUsd:7000,volume:{h1:250},analysis:{score:65,coverage:70,risk:'partial',securityComprehensive:false,hardBlocked:false,factors:{market:70,security:80}},security:{}});
- const stale=token(2,{liquidityUsd:7000,volume:{h1:250},security:{checkedAt:new Date(NOW-90*60_000).toISOString()},analysis:{score:66,coverage:70,risk:'partial',securityComprehensive:false,hardBlocked:false,factors:{market:70,security:80}}});
+ const stale=token(2,{liquidityUsd:7000,volume:{h1:250},security:{checkedAt:new Date(NOW-120*60_000).toISOString()},analysis:{score:66,coverage:70,risk:'partial',securityComprehensive:false,hardBlocked:false,factors:{market:70,security:80}}});
  const result=buildSelection([partial,stale],NOW);
  assert.deepEqual(result.observe.map(x=>x.mint),['mint-1']);
 });
@@ -115,4 +116,12 @@ test('recent pre-market launch detections are visible separately and never score
  assert.equal(result.early[0].hardBlocked,false);
  assert.equal(result.best.length,0);
  assert.equal(result.observe.length,0);
+});
+
+
+test('best shortlist accepts fresh DEX transactions when GeckoTerminal pool sampling is unavailable',()=>{
+ const candidate=token(77,{geckoPoolAddress:null,tradeIntel:null,txns:{h1:{buys:15,sells:5}}});
+ const result=buildSelection([candidate],NOW);
+ assert.equal(result.best.length,1);
+ assert.equal(result.best[0].freshness.transactionAgeMinutes,1);
 });

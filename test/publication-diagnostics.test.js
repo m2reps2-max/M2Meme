@@ -53,3 +53,19 @@ test('diagnostics identify Telegram delivery configuration blockers', () => {
   assert.equal(result.discovery.opportunityEligible, 1);
   assert.match(result.diagnosis, /bot Telegram/i);
 });
+
+
+test('diagnostics count DexScreener-only candidates as publication eligible without Gecko trade IDs',()=>{
+ const token=makeToken({
+  liquidityUsd:20000,fdv:200000,volume:{h1:8000},txns:{h1:{buys:16,sells:4}},
+  history:[{at:new Date(NOW-30_000).toISOString()}],
+  security:{checkedAt:new Date(NOW-60_000).toISOString()},
+  analysis:{score:90,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,flags:[],factors:{activity:80,momentum:80,market:80,liquidityQuality:80,security:90}}
+ });
+ const instance=scanner([token]);
+ instance.state.scannerSettings.requireComprehensiveSecurity=false;
+ const result=scannerPublicationDiagnostics.call(instance);
+ assert.equal(result.discovery.qualityPass,1);
+ assert.equal(result.discovery.opportunityEligible,1);
+ assert.equal(result.discovery.evidenceFallbackDexScreener,1);
+});
