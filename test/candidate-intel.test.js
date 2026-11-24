@@ -61,13 +61,13 @@ test('verified multi-network social evidence has a bounded, material ranking inf
   assert.ok(result.socialConfidence==='limited_sample');
 });
 
-test('same-slot Smart Money clusters add a bounded warning and modest score penalty',()=>{
-  const baseline=evaluateCandidateIntel({walletReputation:{sameSlotClusteredWallets:0}});
-  const clustered=evaluateCandidateIntel({walletReputation:{sameSlotClusteredWallets:2}});
+test('same-transaction Smart Money clusters add a bounded warning and modest score penalty',()=>{
+  const baseline=evaluateCandidateIntel({walletReputation:{sameTransactionClusteredWallets:0}});
+  const clustered=evaluateCandidateIntel({walletReputation:{sameTransactionClusteredWallets:2}});
   assert.equal(clustered.adjustment,-4);
-  assert.ok(clustered.flags.some(flag=>flag.code==='SMART_MONEY_SLOT_CLUSTER'));
-  assert.ok(clustered.reasons.some(reason=>reason.includes('même slot')));
-  assert.equal(baseline.flags.some(flag=>flag.code==='SMART_MONEY_SLOT_CLUSTER'),false);
+  assert.ok(clustered.flags.some(flag=>flag.code==='SMART_MONEY_TRANSACTION_CLUSTER'));
+  assert.ok(clustered.reasons.some(reason=>reason.includes('même transaction')));
+  assert.equal(baseline.flags.some(flag=>flag.code==='SMART_MONEY_TRANSACTION_CLUSTER'),false);
 });
 
 
