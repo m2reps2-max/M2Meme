@@ -43,3 +43,16 @@ test('collects outer and inner instructions without mutating the transaction', (
   assert.equal(transactionInstructions(transaction).length, 2);
   assert.equal(transaction.transaction.message.instructions.length, 1);
 });
+
+
+test('recognizes an unparsed known Jupiter swap only when transaction logs confirm the swap instruction', () => {
+  const programId = 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4';
+  assert.equal(hasVerifiedSwapInstruction({
+    transaction: { message: { instructions: [{ programId }] } },
+    meta: { innerInstructions: [], logMessages: ['Program log: Instruction: Route'] }
+  }), true);
+  assert.equal(hasVerifiedSwapInstruction({
+    transaction: { message: { instructions: [{ programId }] } },
+    meta: { innerInstructions: [], logMessages: ['Program log: Instruction: CreateOpenOrders'] }
+  }), false);
+});
