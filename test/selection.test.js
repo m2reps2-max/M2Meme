@@ -68,7 +68,7 @@ test('stale market data cannot enter either shortlist even with a perfect score'
 
 test('best picks require fresh security and either recent Gecko trades or a fresh DEX transaction snapshot',()=>{
  const staleSecurity=token(1,{security:{checkedAt:new Date(NOW-120*60_000).toISOString()}});
- const staleTrades=token(2,{tradeIntel:{checkedAt:new Date(NOW-90*60_000).toISOString()}});
+ const staleTrades=token(2,{geckoPoolAddress:'gecko-pool-2',tradeIntel:{checkedAt:new Date(NOW-120*60_000).toISOString()},txns:{h1:{buys:0,sells:0}}});
  const result=buildSelection([staleSecurity,staleTrades],NOW);
  assert.equal(result.best.length,0);
  assert.equal(result.diagnostics.bestRejectedStaleSecurity,1);
