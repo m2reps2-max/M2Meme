@@ -61,6 +61,22 @@ test('missing holder security evidence and warning flags block opportunity publi
  assert.ok(warning.reasons.includes('Signal de risque encore présent'));
 });
 
+test('non-fatal synchronized-wallet heuristics reduce confidence but do not automatically veto an otherwise elite candidate',()=>{
+ const candidate=eliteCandidate({analysis:{...eliteCandidate().analysis,risk:'medium',flags:[
+  {level:'warning',code:'SAME_BLOCK_BUY_BURST'},
+  {level:'warning',code:'BUNDLE_LIKE_BURST'},
+  {level:'warning',code:'SMART_MONEY_SLOT_CLUSTER'}
+ ]}});
+ assert.equal(qualifyOpportunity(candidate,{}).eligible,true);
+});
+
+test('critical and unknown warning codes remain publication blockers',()=>{
+ const critical=qualifyOpportunity(eliteCandidate({analysis:{...eliteCandidate().analysis,flags:[{level:'critical',code:'LIQUIDITY_DROP'}]}}),{});
+ assert.equal(critical.eligible,false);
+ const unknown=qualifyOpportunity(eliteCandidate({analysis:{...eliteCandidate().analysis,risk:'medium',flags:[{level:'warning',code:'UNCLASSIFIED_RISK'}]}}),{});
+ assert.equal(unknown.eligible,false);
+});
+
 test('weak buyer ratio and insufficient transaction count block opportunity publication',()=>{
  const result=qualifyOpportunity(eliteCandidate({txns:{h1:{buys:4,sells:12}}}),{});
  assert.ok(result.reasons.includes('Activité transactionnelle insuffisante'));

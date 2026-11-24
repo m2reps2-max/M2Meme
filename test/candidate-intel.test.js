@@ -52,6 +52,14 @@ test('social scoring flags repeated public snippets without claiming proof', () 
   assert.ok(result.reasons.some(reason => reason.includes('concentrées')));
 });
 
+test('verified multi-network social evidence has a bounded, material ranking influence',()=>{
+  const token={socialIntel:{available:true,mentions1h:8,mentions24h:20,uniqueAuthors24h:10,uniqueChannels24h:4,uniqueSources24h:3,sentimentScore:75,evidence:{sampledPosts24h:12,uniqueAuthors24h:10,uniqueChannels24h:4,uniqueSources24h:3,duplicateSharePct:0,weakMatchSharePct:0}}};
+  const result=evaluateCandidateIntel(token);
+  assert.ok(result.socialQuality>=75);
+  assert.ok(result.adjustment>2);
+  assert.ok(result.adjustment<=8);
+});
+
 test('same-slot Smart Money clusters add a bounded warning and modest score penalty',()=>{
   const baseline=evaluateCandidateIntel({walletReputation:{sameSlotClusteredWallets:0}});
   const clustered=evaluateCandidateIntel({walletReputation:{sameSlotClusteredWallets:2}});
