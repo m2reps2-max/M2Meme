@@ -5,13 +5,13 @@ const {learningSummary,recordForecast}=require('../lib/learning');
 
 test('le taux de réussite à une heure compte les hausses de 15% ou plus',()=>{
  const scanner={state:{tokens:{
-  a:{mint:'a',symbol:'AAA',forecasts:[
-   {score:80,at:1,outcomes:{'1h':{label:'win',returnPct:18}}},
-   {score:70,at:2,outcomes:{'1h':{label:'strong_win',returnPct:65}}}
+  a:{mint:'a',symbol:'AAA',liquidityUsd:100000,forecasts:[
+   {score:80,at:1,outcomes:{'1h':{label:'win',returnPct:18,exitLiquidityUsd:100000}}},
+   {score:70,at:2,outcomes:{'1h':{label:'strong_win',returnPct:65,exitLiquidityUsd:100000}}}
   ]},
-  b:{mint:'b',symbol:'BBB',forecasts:[
-   {score:60,at:3,outcomes:{'1h':{label:'flat',returnPct:2}}},
-   {score:50,at:4,outcomes:{'1h':{label:'liquidity_stress',returnPct:25}}}
+  b:{mint:'b',symbol:'BBB',liquidityUsd:100000,forecasts:[
+   {score:60,at:3,outcomes:{'1h':{label:'flat',returnPct:2,exitLiquidityUsd:100000}}},
+   {score:50,at:4,outcomes:{'1h':{label:'liquidity_stress',returnPct:25,exitLiquidityUsd:100000}}}
   ]}
  }}};
  const result=learningSummary.call(scanner);
@@ -62,9 +62,9 @@ test('out-of-sample calibration separates mints and counts one first forecast pe
  const tokens={};
  for(let i=0;i<100;i++){
   const mint='MintCalibration'+String(i).padStart(4,'0');
-  tokens[mint]={mint,forecasts:[
-   {at:i+1,score:80,source:'test',outcomes:{'1h':{returnPct:20,label:'win'}}},
-   {at:i+2,score:90,source:'test',outcomes:{'1h':{returnPct:-25,label:'loss'}}}
+  tokens[mint]={mint,liquidityUsd:100000,forecasts:[
+   {at:i+1,score:80,source:'test',outcomes:{'1h':{returnPct:20,exitLiquidityUsd:100000,label:'win'}}},
+   {at:i+2,score:90,source:'test',outcomes:{'1h':{returnPct:-25,exitLiquidityUsd:100000,label:'loss'}}}
   ]};
  }
  const result=learningSummary.call({state:{tokens}}).outOfSample;
@@ -102,7 +102,7 @@ test('la validation walk-forward utilise uniquement des tokens plus récents que
  const tokens={};
  for(let i=0;i<40;i++){
   const mint='WalkForward'+String(i).padStart(4,'0');
-  tokens[mint]={mint,forecasts:[{at:i*1000+1,score:i<32?85:45,outcomes:{'1h':{returnPct:i<32?25:-10,label:i<32?'win':'drawdown'}}}]};
+  tokens[mint]={mint,liquidityUsd:100000,forecasts:[{at:i*1000+1,score:i<32?85:45,outcomes:{'1h':{returnPct:i<32?25:-10,exitLiquidityUsd:100000,label:i<32?'win':'drawdown'}}}]};
  }
  const result=learningSummary.call({state:{tokens}}).outOfSample;
  assert.equal(result.training.tokens,32);
