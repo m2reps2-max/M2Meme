@@ -331,7 +331,8 @@ test('la santé distingue serveur actif et sources de données dégradées',()=>
   solanaRpc:{lastSuccess:null,error:'offline'},
   pumpPortal:{connected:false,lastMessageAt:null,lastError:'offline'},
   redditRss:{connected:false,lastSuccess:null,error:'offline'},
-  bluesky:{connected:false,lastSuccess:null,lastError:'offline'}
+  bluesky:{connected:false,lastSuccess:null,lastError:'offline'},
+  xSocial:{connected:false,lastSuccess:null,lastError:'X session unavailable',mode:'Recherche X facultative'}
  });
  const health=scanner.healthSummary();
  assert.equal(health.state,'healthy');
@@ -340,6 +341,8 @@ test('la santé distingue serveur actif et sources de données dégradées',()=>
  assert.equal(health.checks.reddit.ok,true);
  assert.equal(health.checks.reddit.disabled,true);
  assert.equal(health.checks.reddit.retired,true);
+ assert.equal(health.checks.xSocial.ok,false);
+ assert.equal(health.checks.xSocial.detail,'Recherche X facultative');
 });
 
 test('alerts require fresh market data and the complete elite quality profile',async()=>{
