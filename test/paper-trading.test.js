@@ -147,6 +147,7 @@ test('paper trading estimates slippage from simulated size and observed liquidit
  const {estimateSlippagePct}=require('../lib/paper-trading');
  assert.ok(estimateSlippagePct(1000,100)>estimateSlippagePct(10000,100));
  assert.equal(estimateSlippagePct(null,100),0.10);
+  assert.equal(estimateSlippagePct(0,100),1,'observed zero exit liquidity means no executable sell route');
  const state=fixture();
  stepPaperTrading(state,selection(),now);
  const position=state.paperTrading.positions[0];
