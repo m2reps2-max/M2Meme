@@ -125,3 +125,11 @@ test('best shortlist accepts fresh DEX transactions when GeckoTerminal pool samp
  assert.equal(result.best.length,1);
  assert.equal(result.best[0].freshness.transactionAgeMinutes,1);
 });
+
+
+test('best shortlist does not require history-dependent momentum and liquidity-quality factors',()=>{
+ const candidate=token(88,{analysis:{...token(88).analysis,coverage:75,factors:{activity:85,market:80,security:90}}});
+ const result=buildSelection([candidate],NOW);
+ assert.equal(result.best.length,1);
+ assert.equal(result.best[0].mint,'mint-88');
+});
