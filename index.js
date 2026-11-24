@@ -19,7 +19,7 @@ const {isTrustedDashboardRequest}=require('./lib/origin-guard');
 const {applyScannerSettingsPatch}=require('./lib/scanner-settings');
 const CONFIG=resolveDashboardConfig({env:process.env,dataDir:path.join(__dirname,'data')});
 const {port:PORT,accessCode:CODE,sessionSecret:SECRET,dashboardUrl:URL,production:PROD}=CONFIG;
-const COOKIE='meme_radar_session',TEN_YEARS=10*365*24*60*60*1000;
+const COOKIE='meme_radar_session',SESSION_TTL=7*24*60*60*1000;
 const app=express();app.disable('x-powered-by');app.set('trust proxy',1);
 app.use(helmet({contentSecurityPolicy:{directives:{defaultSrc:["'self'"],scriptSrc:["'self'"],styleSrc:["'self'"],imgSrc:["'self'",'data:','https:'],connectSrc:["'self'"],objectSrc:["'none'"],frameAncestors:["'none'"]}}}));
 app.use('/internal/actions/historical-benchmark',express.raw({type:'application/json',limit:'5mb'}));app.use('/internal/actions/archive-learning',express.raw({type:'application/json',limit:'128kb'}));app.use(express.json({limit:'24kb'}));app.use(cookieParser());
@@ -28,8 +28,8 @@ let lastLoginCleanup=0;
 function equal(a,b){const x=Buffer.from(String(a)),y=Buffer.from(String(b));return x.length===y.length&&crypto.timingSafeEqual(x,y);}
 function sign(s){return crypto.createHmac('sha256',SECRET).update(s).digest('base64url');}
 function fingerprint(){return crypto.createHash('sha256').update(CODE).digest('hex');}
-function session(){const now=Date.now(),p=Buffer.from(JSON.stringify({v:1,code:fingerprint(),iat:now,exp:now+TEN_YEARS,nonce:crypto.randomBytes(12).toString('hex')})).toString('base64url');return p+'.'+sign(p);}
-function valid(t){if(typeof t!=='string'||t.length>2048)return false;const i=t.lastIndexOf('.');if(i<1||!equal(sign(t.slice(0,i)),t.slice(i+1)))return false;try{const p=JSON.parse(Buffer.from(t.slice(0,i),'base64url').toString());return p.v===1&&p.code===fingerprint()&&Number.isFinite(p.iat)&&p.iat<=Date.now()+60000&&Number.isFinite(p.exp)&&p.exp>Date.now()&&p.exp-p.iat<=TEN_YEARS+1000;}catch{return false;}}
+function session(){const now=Date.now(),p=Buffer.from(JSON.stringify({v:1,code:fingerprint(),iat:now,exp:now+SESSION_TTL,nonce:crypto.randomBytes(12).toString('hex')})).toString('base64url');return p+'.'+sign(p);}
+function valid(t){if(typeof t!=='string'||t.length>2048)return false;const i=t.lastIndexOf('.');if(i<1||!equal(sign(t.slice(0,i)),t.slice(i+1)))return false;try{const p=JSON.parse(Buffer.from(t.slice(0,i),'base64url').toString());return p.v===1&&p.code===fingerprint()&&Number.isFinite(p.iat)&&p.iat<=Date.now()+60000&&Number.isFinite(p.exp)&&p.exp>Date.now()&&p.exp-p.iat<=SESSION_TTL+1000;}catch{return false;}}
 function auth(req,res,next){if(!valid(req.cookies[COOKIE]))return res.status(401).json({error:'Authentification requise'});next();}
 function origin(req,res,next){
  const trusted=isTrustedDashboardRequest({
@@ -97,7 +97,7 @@ app.post('/internal/actions/archive-learning',(req,res)=>{
 app.get('/health',(_q,r)=>r.json({ok:true,service:'meme-radar',at:new Date().toISOString()}));
 app.get('/health/ready',(_q,r)=>{const health=scanner.healthSummary();const ready=health.checks.scanner.ok;r.status(ready?200:503).json({ok:ready,scannerRunning:scanner.running,at:new Date().toISOString()});});
 app.get('/api/system/health',(_q,r)=>r.json({ok:true,...scanner.healthSummary()}));
-app.post('/api/login',loginLimit,(q,r)=>{if(!equal(q.body?.code||'',CODE)){q.bad();return r.status(401).json({error:'Code incorrect'});}q.good();r.cookie(COOKIE,session(),{httpOnly:true,secure:PROD,sameSite:'strict',path:'/',maxAge:TEN_YEARS});r.json({ok:true});});
+app.post('/api/login',loginLimit,(q,r)=>{if(!equal(q.body?.code||'',CODE)){q.bad();return r.status(401).json({error:'Code incorrect'});}q.good();r.cookie(COOKIE,session(),{httpOnly:true,secure:PROD,sameSite:'strict',path:'/',maxAge:SESSION_TTL});r.json({ok:true});});
 app.use('/api',auth,origin);
 app.post('/api/logout',(_q,r)=>{r.clearCookie(COOKIE,{httpOnly:true,secure:PROD,sameSite:'strict',path:'/'});r.json({ok:true});});
 app.get('/api/me',(_q,r)=>r.json({ok:true,authenticated:true}));
