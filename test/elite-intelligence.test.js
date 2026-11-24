@@ -34,6 +34,7 @@ test('wallet network identifies repeated wallets across tokens without asserting
  ]};
  const index=buildEliteIntelligenceIndex(state);
  const result=analyzeWalletNetwork({mint},index);
+ assert.equal(index.tradeEvents,8);
  assert.equal(result.recurrentWallets,4);
  assert.equal(result.adjustment,0);
  assert.match(result.limitations,/ne démontre/);
