@@ -339,13 +339,13 @@ view.addEventListener('click',async e=>{
  if(target.hasAttribute('data-paper-toggle'))return runButtonAction(target,'Mise à jour…',async()=>{const data=await api('/api/paper-trading/config',{method:'POST',body:JSON.stringify({enabled:target.dataset.paperToggle==='true'})});state.paperTrading=data;render('paper');setSyncStatus(data.enabled?'Simulation reprise':'Simulation en pause','good');});
 });
 view.addEventListener('input',e=>{if(e.target.id==='search-token'){state.search=e.target.value;refreshTable();}});
-view.addEventListener('change',e=>{if(e.target.id==='sort-token'){state.sort=e.target.value;refreshTable();}if(e.target.id==='scanner-settings-preset'){const presets={elite:[88,15000,5000,85,20,55,20],prudent:[85,10000,3000,80,15,52,25],balanced:[82,7500,1500,75,10,50,35],large:[76,5000,750,70,8,48,50]};const preset=presets[e.target.value];if(preset){const form=e.target.form;['minScore','minLiquidityUsd','minVolume1hUsd','minCoverage','minTransactions1h','minBuyRatioPct','maxFdvLiquidityRatio'].forEach((key,index)=>{form.elements[key].value=preset[index];});form.elements.requireComprehensiveSecurity.checked=true;}}});
+view.addEventListener('change',e=>{if(e.target.id==='sort-token'){state.sort=e.target.value;refreshTable();}if(e.target.id==='scanner-settings-preset'){const presets={elite:[80,5000,750,70,8,50,35,false],prudent:[85,7500,1500,75,10,52,30,false],balanced:[82,5000,750,70,8,50,35,false],large:[76,5000,750,70,8,48,50,true]};const preset=presets[e.target.value];if(preset){const form=e.target.form;['minScore','minLiquidityUsd','minVolume1hUsd','minCoverage','minTransactions1h','minBuyRatioPct','maxFdvLiquidityRatio'].forEach((key,index)=>{form.elements[key].value=preset[index];});form.elements.requireComprehensiveSecurity.checked=preset[7];}}});
 view.addEventListener('submit',async e=>{
  if(e.target.id==='scanner-settings-form'){
   e.preventDefault();const form=e.target;const button=e.submitter||form.querySelector('button[type="submit"]');
   return runButtonAction(button,'Enregistrement…',async()=>{
    const data=await api('/api/scanner-settings',{method:'PATCH',body:JSON.stringify({preset:form.elements.preset.value,minScore:Number(form.elements.minScore.value),minLiquidityUsd:Number(form.elements.minLiquidityUsd.value),minVolume1hUsd:Number(form.elements.minVolume1hUsd.value),minCoverage:Number(form.elements.minCoverage.value),minTransactions1h:Number(form.elements.minTransactions1h.value),minBuyRatioPct:Number(form.elements.minBuyRatioPct.value),maxFdvLiquidityRatio:Number(form.elements.maxFdvLiquidityRatio.value),requireComprehensiveSecurity:form.elements.requireComprehensiveSecurity.checked,publishOpportunities:form.elements.publishOpportunities.checked,publishRisks:form.elements.publishRisks.checked})});
-   state.scannerSettings=data.settings;await load({full:false});setSyncStatus('Réglages enregistrés','good');
+   state.scannerSettings=data.settings;form.elements.preset.value=data.settings.preset||'custom';renderSettings();setSyncStatus('Réglages enregistrés','good');
   });
  }
  if(e.target.id!=='wallet-form')return;
