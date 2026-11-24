@@ -227,3 +227,8 @@ test('Telegram channel setup uses the native picker instead of asking for a chat
 test('selection cohort dashboard labels the displayed performance as net return',()=>{
  assert.match(js,/Rendement net moyen/);
 });
+
+
+test('dashboard fallback mirrors the actual elite scanner preset',()=>{
+ assert.ok(js.includes("preset:'elite',minScore:80,minLiquidityUsd:5000,minVolume1hUsd:750,minCoverage:70,minTransactions1h:8,minBuyRatioPct:50,maxFdvLiquidityRatio:35,requireComprehensiveSecurity:false"));
+});
