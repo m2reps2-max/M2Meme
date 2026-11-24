@@ -74,7 +74,7 @@ test('social freshness follows X, Nostr or Telegram observations and lists X sou
  const result=tokenDataQuality(xOnly,now);
  const social=result.checks.find(row=>row.key==='social');
  assert.equal(social.available,true);
- assert.equal(social.freshnessMinutes,0);
+ assert.equal(social.freshnessMinutes,0.5);
  assert.ok(!result.issues.some(issue=>issue.key==='social'&&issue.severity==='unknown_timestamp'));
  const summary=dataQualitySummary.call({
   state:{tokens:{xOnly},sources:{}},
