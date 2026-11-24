@@ -74,8 +74,8 @@ test('scanner view no longer exposes the full token catalogue or coverage sort f
 
 test('top candidates require base security evidence and fresh market, security and trade checks',()=>{
  assert.match(selection,/qualifyOpportunity\(t,qualificationSettings\)\.eligible/);
- assert.match(selection,/age\.securityAgeMinutes!==null&&age\.securityAgeMinutes<=95/);
- assert.match(selection,/age\.transactionAgeMinutes!==null&&age\.transactionAgeMinutes<=95/);
+ assert.match(selection,/age\.securityAgeMinutes!==null&&age\.securityAgeMinutes<=MAX_SECURITY_EVIDENCE_AGE_MINUTES/);
+ assert.match(selection,/age\.transactionAgeMinutes!==null&&age\.transactionAgeMinutes<=MAX_TRADE_EVIDENCE_AGE_MINUTES/);
  assert.match(selection,/typeof value==='number'/);
  assert.match(selection,/risk!=='unknown'/);
 });
