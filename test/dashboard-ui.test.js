@@ -7,6 +7,7 @@ const root=path.join(__dirname,'..');
 const html=fs.readFileSync(path.join(root,'public/dashboard.html'),'utf8');
 const js=fs.readFileSync(path.join(root,'public/dashboard.js'),'utf8');
 const selection=fs.readFileSync(path.join(root,'lib/selection.js'),'utf8');
+const server=fs.readFileSync(path.join(root,'index.js'),'utf8');
 
 test('main dashboard navigation has only four simple sections',()=>{
  const nav=html.match(/<nav id="nav"[\s\S]*?<\/nav>/)?.[0]||'';
@@ -231,4 +232,17 @@ test('selection cohort dashboard labels the displayed performance as net return'
 
 test('dashboard fallback mirrors the actual elite scanner preset',()=>{
  assert.ok(js.includes("preset:'elite',minScore:80,minLiquidityUsd:5000,minVolume1hUsd:750,minCoverage:70,minTransactions1h:8,minBuyRatioPct:50,maxFdvLiquidityRatio:35,requireComprehensiveSecurity:false"));
+});
+
+
+test('scanner view shows the real publication diagnosis and configured Elite defaults',()=>{
+ const start=js.indexOf('function renderScanner(){');
+ const end=js.indexOf('\nfunction refreshTable',start);
+ const source=js.slice(start,end);
+ assert.match(server,/publicationDiagnostics:scanner\.scannerPublicationDiagnostics\(\)/);
+ assert.match(source,/p\.publicationDiagnostics/);
+ assert.match(source,/Blocages fréquents/);
+ assert.match(source,/g\.bestMinScore\?\?80/);
+ assert.match(source,/g\.bestMinLiquidityUsd\?\?5000/);
+ assert.match(source,/g\.bestMinVolume1hUsd\?\?750/);
 });
