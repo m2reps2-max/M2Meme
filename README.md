@@ -32,10 +32,10 @@ Ce connecteur utilise l'API web privée non documentée de X. Il peut casser, ê
 | Surveillance des acheteurs découverts | Jusqu'à 5 wallets automatiques, 3 transactions récentes chacun toutes les 10 minutes | Rien |
 | Liens de sites et réseaux sociaux | Métadonnées DexScreener | Rien |
 | Découverte de nouveaux pools sur plusieurs DEX Solana | GeckoTerminal Public API (`/networks/solana/new_pools`) | Rien |
-| Mentions et sentiment communautaire indicatif | Recherche publique Bluesky + relais Nostr NIP-50; Reddit RSS désactivé; X facultatif via SDK Node `x-agent-sdk` à session unique | X_AUTH_TOKEN + X_CT0 |
+| Mentions et sentiment communautaire indicatif | Recherche publique Bluesky + relais Nostr NIP-50; Telegram public; X facultatif via SDK Node `x-agent-sdk` à session unique | X_AUTH_TOKEN + X_CT0 |
 | Analyse des transactions récentes, diversité acheteurs, concentration, bursts 5 secondes et clusters same-block de type bundle | GeckoTerminal pool trades (jusqu'à 300 transactions observées), persistées dans l'historique wallet avec source et déduplication par signature | Rien |
 | Graphe des wallets | Financeurs communs des créateurs observés et achats rapprochés répétés sur plusieurs tokens; niveaux de preuve distincts | Rien |
-| Ajustement limité du score avec qualité des transactions et signal social public | Module local candidate-intel, GeckoTerminal + Reddit + Bluesky | Rien |
+| Ajustement limité du score avec qualité des transactions et signal social public | Module local candidate-intel, GeckoTerminal + Bluesky + Nostr + Telegram + X selon disponibilité | Rien |
 | Calibration hors échantillon | Walk-forward chronologique par mint : premiers 80% des signaux en entraînement, 20% les plus récents en validation, avec comparaison à une base aléatoire et au taux global | Rien |
 | Cohorte prospective sans filtre de liquidité minimum | Tous les tokens découverts avec premier prix observable, y compris pools très faibles et absence de marché après 30 min | Rien |
 | Qualité des données | Complétude et fraîcheur par token, catégories manquantes et échantillons disponibles | Rien |
@@ -183,12 +183,12 @@ Ne partage jamais ces secrets dans une conversation et ne les commits pas sur Gi
 - `SOLANA_RPC_URL` : endpoint RPC Solana alternatif. Si vide, le projet utilise automatiquement `https://api.mainnet.solana.com`.
 - `PORT` : laisse la valeur attendue par FadeHost (souvent injectée automatiquement).
 - `SCAN_INTERVAL_MS` : intervalle du scanner, par défaut 60000 (60 secondes).
-- `GECKO_NEW_POOL_PAGES` : nombre de pages GeckoTerminal à parcourir par cycle (1 à 5), par défaut 4.
+- `GECKO_NEW_POOL_PAGES` : nombre de pages GeckoTerminal à parcourir par cycle (1 à 5), par défaut 5.
 - `GECKO_NEW_POOL_PAGE_WINDOW` : fenêtre totale de pagination GeckoTerminal parcourue en rotation (1 à 10), par défaut 10; augmente la couverture historique sans augmenter le nombre de requêtes par cycle.
-- `ALERT_MIN_SCORE` : score minimal d'alerte, par défaut 78.
+- `ALERT_MIN_SCORE` : score minimal d'alerte, par défaut 80.
 - `MIN_LIQUIDITY_USD` : liquidité minimale, par défaut 5000 USD.
 
-**Aucune autre clé n'est nécessaire.** N'ajoute pas `BIRDEYE_API_KEY`, `HELIUS_API_KEY`, `X_BEARER_TOKEN` ou `PUMPPORTAL_API_KEY` : cette version ne les utilise plus.
+**Clés facultatives :** `HELIUS_API_KEY` active le RPC Helius en priorité avant les RPC publics de secours; `MADEONSOL_API_KEY` active l'enrichissement KOL gratuit; `X_AUTH_TOKEN` et `X_CT0` activent la recherche X via une session personnelle. Aucune clé payante n'est requise. `BIRDEYE_API_KEY`, `X_BEARER_TOKEN` et `PUMPPORTAL_API_KEY` ne sont pas utilisés.
 
 ## Vérification de santé
 
