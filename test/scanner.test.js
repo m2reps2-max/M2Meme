@@ -222,7 +222,7 @@ test('le scanner surveille les sorties du créateur et distingue un swap-like d�
   if(method==='getSignaturesForAddress')return [{signature:'creator-sale-signature-new'},{signature:'creator-sale-signature-old'}];
   if(method==='getTransaction')return {
    slot:123,
-   transaction:{message:{accountKeys:[creator]}},
+   transaction:{message:{accountKeys:[creator],instructions:[{program:'jupiter',parsed:{type:'route'}}]}},
    meta:{
     fee:5000,preBalances:[1000000000],postBalances:[1100000000],
     preTokenBalances:[{mint,owner:creator,uiTokenAmount:{amount:'1000',decimals:0}}],
@@ -348,7 +348,7 @@ test('alerts require fresh market data and the complete elite quality profile',a
   volume:{h1:8000},txns:{h1:{buys:16,sells:4}},
   history:[{at}],security:{checkedAt:new Date(now-5*60_000).toISOString()},
   tradeIntel:{checkedAt:new Date(now-5*60_000).toISOString()},
-  analysis:{score:92,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,factors:{security:95},flags:[]},
+  analysis:{score:92,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,factors:{activity:90,market:90,liquidityQuality:90,security:95},flags:[]},
   ...overrides
  });
  s.state.tokens={
@@ -616,7 +616,7 @@ test('les données absentes d’une paire DexScreener ne remplacent pas les mét
  assert.equal(token.liquidityUsd,12000);
  assert.equal(token.volume.h24,15000);
  assert.deepEqual(token.txns.h1,{buys:20,sells:5});
- assert.equal(token.history.length,1);
+ assert.equal(token.history.length,0,'a stale retained price must not be timestamped as a fresh market observation');
 });
 
 test('un token pré-marché explique explicitement sa couverture de 5 pour cent',()=>{
@@ -701,4 +701,130 @@ test('DexScreener community takeover is recorded as discovery metadata, not a bo
  assert.equal(token.communityTakeover.claimDate,'2026-11-24T10:00:00.000Z');
  assert.equal(token.boosted,false);
  assert.equal(token.security,undefined);
+});
+
+
+test('une liquidité observée à zéro est historisée et déclenche le signal de chute',()=>{
+ const scanner=make(),mint='ZeroLiquidityMint1111111111111111111111111111';
+ scanner.state.tokens[mint]={mint,priceUsd:1,liquidityUsd:10000,fdv:50000,volume:{h1:5000,h24:20000},txns:{h1:{buys:20,sells:10}},history:[{at:Date.now()-60000,priceUsd:1,liquidityUsd:10000,buys1h:20,sells1h:10}]};
+ scanner.pair({chainId:'solana',baseToken:{address:mint,name:'Zero Liquidity',symbol:'ZERO'},priceUsd:0.9,liquidity:{usd:0},fdv:50000,volume:{h1:100,h24:1000},txns:{h1:{buys:1,sells:20}}});
+ const token=scanner.state.tokens[mint];
+ assert.equal(token.history.length,2);
+ assert.equal(token.history[1].liquidityUsd,0);
+ const analysis=scanner.score(token);
+ assert.equal(token.metrics.liquidityChangePct,-100);
+ assert.ok(analysis.flags.some(flag=>flag.code==='LIQUIDITY_DROP'));
+ assert.equal(analysis.hardBlocked,true);
+});
+
+test('le scanner limite les nouveaux tokens lorsque SQLite est indisponible sans supprimer les tokens existants',()=>{
+ const scanner=make();
+ scanner.archive.available=false;
+ const existing='So11111111111111111111111111111111111111112';
+ scanner.state.tokens=Object.fromEntries(Array.from({length:1199},(_,index)=>['ExistingMint'+index,{mint:'ExistingMint'+index,symbol:'OLD'}]));
+ scanner.state.tokens[existing]={mint:existing,symbol:'OLD',sources:[]};
+ scanner.ingestLaunch({mint:existing,name:'Updated Existing',symbol:'UPD',timestamp:Math.floor(Date.now()/1000)});
+ const newMint='NewBoundedMint11111111111111111111111111111';
+ scanner.ingestLaunch({mint:newMint,name:'New Token',symbol:'NEW',timestamp:Math.floor(Date.now()/1000)});
+ assert.equal(scanner.state.tokens[existing].symbol,'UPD');
+ assert.equal(scanner.state.tokens[newMint],undefined);
+ assert.equal(Object.keys(scanner.state.tokens).length,1200);
+});
+
+test('un mouvement de soldes sans instruction DEX vérifiée reste non confirmé',async()=>{
+ const scanner=make();
+ const mint='CreatorToken2222222222222222222222222222222';
+ const creator='CreatorWallet222222222222222222222222222222';
+ scanner.state.tokens[mint]={mint,symbol:'TRANSFER',creator,creatorObservedAtLaunch:true,security:{data:{supply:'10000'}}};
+ scanner.state.wallets=[{address:creator,label:'Creator'}];
+ scanner.rpc=async method=>{
+  if(method==='getSignaturesForAddress')return [{signature:'plain-transfer-signature'}];
+  if(method==='getTransaction')return {
+   slot:456,
+   transaction:{message:{accountKeys:[creator],instructions:[
+    {program:'system',parsed:{type:'transfer',info:{}}}
+   ]}},
+   meta:{fee:5000,preBalances:[1000000000],postBalances:[900000000],
+    preTokenBalances:[{mint,owner:creator,uiTokenAmount:{amount:'1000',decimals:0}}],
+    postTokenBalances:[{mint,owner:creator,uiTokenAmount:{amount:'500',decimals:0}}]}
+  };
+  throw new Error('unexpected RPC '+method);
+ };
+ scanner.save=()=>{};
+ scanner.scoreAll=()=>{};
+ await scanner.refreshWallets();
+ const event=scanner.state.walletTrades[0];
+ assert.equal(event.swapConfirmed,false);
+ assert.equal(event.swapEvidenceStatus,'probable');
+ assert.equal(event.flowType,'token_outflow_unconfirmed');
+ assert.equal(event.quoteReceived,null);
+ assert.equal(scanner.state.tokens[mint].creatorSaleEvents,undefined);
+});
+
+test('les opportunités Telegram sont limitées aux cinq meilleurs candidats sélectionnés',async()=>{
+ const scanner=make(),now=Date.now();
+ scanner.activeAlertThreshold=()=>({threshold:80});
+ scanner.earlyBuyerExitIntel=()=>({alert:false,wallets:0,soldSharePct:0});
+ scanner.selection=()=>({best:[{mint:'best-one'}]});
+ const token=mint=>({
+  mint,symbol:mint,pairAddress:'pair-'+mint,liquidityUsd:20000,fdv:300000,
+  volume:{h1:8000},txns:{h1:{buys:16,sells:4}},history:[{at:now-30000}],
+  security:{checkedAt:new Date(now-5*60000).toISOString()},
+  tradeIntel:{checkedAt:new Date(now-5*60000).toISOString()},
+  analysis:{score:92,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,flags:[],factors:{activity:90,market:90,liquidityQuality:90,security:95}}
+ });
+ scanner.state.tokens={'best-one':token('best-one'),'qualified-but-not-top-five':token('qualified-but-not-top-five')};
+ await scanner.alerts();
+ assert.equal(scanner.state.tokens['best-one'].signalLevel,'opportunity');
+ assert.equal(scanner.state.tokens['qualified-but-not-top-five'].signalLevel,'watch');
+ assert.equal(scanner.state.alerts.filter(row=>row.level==='opportunity').length,1);
+ assert.equal(scanner.state.alerts.find(row=>row.mint==='qualified-but-not-top-five').level,'watch');
+});
+
+
+test('une transaction multi-token ne partage pas artificiellement le même montant de cotation entre plusieurs actifs',async()=>{
+ const scanner=make();
+ const wallet='MultiAssetWallet111111111111111111111111111111';
+ const mintA='MultiAssetTokenA1111111111111111111111111111';
+ const mintB='MultiAssetTokenB1111111111111111111111111111';
+ const usdc='EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGkZwyTDt1v';
+ scanner.state.wallets=[{address:wallet}];
+ scanner.rpc=async method=>{
+  if(method==='getSignaturesForAddress')return [{signature:'multi-asset-swap'}];
+  if(method==='getTransaction')return {
+   slot:789,
+   transaction:{message:{accountKeys:[wallet],instructions:[{program:'jupiter',parsed:{type:'route'}}]}},
+   meta:{fee:5000,preBalances:[1000000000],postBalances:[900000000],
+    preTokenBalances:[
+     {mint:mintA,owner:wallet,uiTokenAmount:{amount:'0',decimals:0}},
+     {mint:mintB,owner:wallet,uiTokenAmount:{amount:'100',decimals:0}},
+     {mint:usdc,owner:wallet,uiTokenAmount:{amount:'0',decimals:6}}
+    ],
+    postTokenBalances:[
+     {mint:mintA,owner:wallet,uiTokenAmount:{amount:'50',decimals:0}},
+     {mint:mintB,owner:wallet,uiTokenAmount:{amount:'150',decimals:0}},
+     {mint:usdc,owner:wallet,uiTokenAmount:{amount:'0',decimals:6}}
+    ]}
+  };
+  throw new Error('unexpected RPC '+method);
+ };
+ scanner.save=()=>{};
+ scanner.scoreAll=()=>{};
+ await scanner.refreshWallets();
+ assert.equal(scanner.state.walletTrades.length,2);
+ assert.ok(scanner.state.walletTrades.every(event=>event.swapConfirmed===false));
+ assert.ok(scanner.state.walletTrades.every(event=>event.swapEvidenceStatus==='probable'));
+ assert.ok(scanner.state.walletTrades.every(event=>event.mint!==usdc));
+});
+
+
+test('le statut expose la pression mémoire et le mode dégradé de l’archive',()=>{
+ const scanner=make();
+ scanner.archive.available=false;
+ scanner.state.tokens=Object.fromEntries(Array.from({length:1200},(_,index)=>['tracked-'+index,{mint:'tracked-'+index}]));
+ const status=scanner.status();
+ assert.equal(status.runtimeMemory.archiveAvailable,false);
+ assert.equal(status.runtimeMemory.trackedTokens,1200);
+ assert.equal(status.runtimeMemory.newTokenDiscoveryPaused,true);
+ assert.ok(Number.isFinite(status.runtimeMemory.current.rssMiB));
 });

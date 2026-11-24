@@ -19,7 +19,9 @@ test('compactToken bounds cold historical arrays without mutating the hot token'
   };
   const compact = compactToken(token);
   assert.equal(compact.history.length, 5);
-  assert.equal(compact.forecasts.length, 8);
+  assert.equal(compact.forecasts.length, 9);
+  assert.equal(compact.forecasts[0].at, 0, 'the first observation remains available for unbiased first-detection analysis');
+  assert.equal(compact.forecasts.at(-1).at, 29);
   assert.equal(compact.smartMoney.wallets.length, 12);
   assert.equal(token.history.length, 20);
   assert.equal(token.forecasts.length, 30);
@@ -106,18 +108,47 @@ test('cold archive forecast export uses bounded keyset pages and returns only co
     const rows = ['ExportMintA111111111111111111111111111111', 'ExportMintB111111111111111111111111111111', 'ExportMintC111111111111111111111111111111'].map((mint, index) => ({
       mint,
       updatedAt: new Date(Date.now() - index * 1000).toISOString(),
-      forecasts: [{ at: Date.now(), score: 70 + index, outcomes: { '1h': { returnPct: 20, label: 'win' } } }]
+      forecasts: Array.from({ length: 12 }, (_, forecastIndex) => ({ at: forecastIndex, score: 70 + index, outcomes: { '1h': { returnPct: 20, label: 'win' } } }))
     }));
     archive.putMany(rows);
     const first = archive.forecastPage('', 2);
     assert.equal(first.scanned, 2);
     assert.equal(first.done, false);
     assert.equal(first.items.length, 2);
-    assert.equal(first.items[0].forecasts.length, 1);
+    assert.equal(first.items[0].forecasts.length, 9);
+    assert.equal(first.items[0].forecasts[0].at, 0, 'archive export must retain the first forecast');
+    assert.equal(first.items[0].forecasts.at(-1).at, 11, 'archive export must also retain the latest forecasts');
     const second = archive.forecastPage(first.nextCursor, 2);
     assert.equal(second.scanned, 1);
     assert.equal(second.done, true);
     assert.equal(second.items.length, 1);
+  } finally {
+    archive.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('compact archive retains an immutable first forecast after the hot rolling window advances', () => {
+  const firstForecast = { id: 'first', at: 1, outcomes: { '1h': { returnPct: 12 } } };
+  const token = { mint: 'FirstForecastMint1111111111111111111111111', firstForecast, forecasts: Array.from({ length: 30 }, (_, i) => ({ id: 'f' + i, at: 100 + i })) };
+  const compact = compactToken(token);
+  assert.equal(compact.forecasts[0].id, 'first');
+  assert.equal(compact.forecasts[0].outcomes['1h'].returnPct, 12);
+  assert.equal(compact.forecasts.length, 9);
+});
+
+
+test('archive permanently switches to degraded mode after a SQLite write failure', { skip: !sqliteAvailable }, () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'meme-radar-archive-failure-'));
+  const archive = new TokenArchive({ file: path.join(dir, 'tokens.sqlite'), maxTokens: 1000 });
+  try {
+    assert.equal(archive.available, true);
+    archive.db.close();
+    assert.throws(() => archive.putMany([{ mint: 'FailureMint111111111111111111111111111111', updatedAt: new Date().toISOString() }]));
+    assert.equal(archive.available, false);
+    assert.equal(archive.db, null);
+    assert.match(archive.lastError, /database|closed|not open/i);
+    assert.equal(archive.selectForScan(10).length, 0);
   } finally {
     archive.close();
     fs.rmSync(dir, { recursive: true, force: true });

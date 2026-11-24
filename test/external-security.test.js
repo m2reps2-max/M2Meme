@@ -22,3 +22,18 @@ test('accepte un rapport imbriqué et borne les données affichées',()=>{
 test('rejette un payload sans rapport exploitable',()=>{
  assert.equal(normalizeGL1TCHReport({error:'unavailable'}),null);
 });
+
+
+test('refuse une réponse GL1TCH qui dépasse la limite de lecture',async()=>{
+ const {inspectExternalSecurity}=require('../lib/external-security');
+ const token={mint:'BoundedExternalSecurityMint111111111111111'};
+ const originalFetch=global.fetch;
+ global.fetch=async()=>({ok:true,status:200,headers:{get:()=>null},text:async()=>'x'.repeat(300000)});
+ try{
+  const result=await inspectExternalSecurity(token);
+  assert.equal(result.status,'unavailable');
+  assert.match(result.error,/volumineuse|limite/i);
+ }finally{
+  global.fetch=originalFetch;
+ }
+});
