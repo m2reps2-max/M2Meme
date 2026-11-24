@@ -834,3 +834,19 @@ test('le statut expose la pression mémoire et le mode dégradé de l’archive'
  assert.equal(status.runtimeMemory.newTokenDiscoveryPaused,true);
  assert.ok(Number.isFinite(status.runtimeMemory.current.rssMiB));
 });
+
+
+test('merged social intelligence carries the newest successful source timestamp',()=>{
+ const s=make();
+ const oldAt='2026-11-24T10:00:00.000Z';
+ const newAt='2026-11-24T10:05:00.000Z';
+ const result=s.mergeSocialIntel({
+  mint:'So11111111111111111111111111111111111111112',
+  symbol:'SOL',
+  name:'Solana',
+  xIntel:{available:true,checkedAt:oldAt,posts:[],sentimentScore:null},
+  telegramIntel:{available:true,checkedAt:newAt,posts:[],sentimentScore:null}
+ });
+ assert.equal(result.checkedAt,newAt);
+ assert.equal(result.available,true);
+});
