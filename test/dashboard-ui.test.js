@@ -246,3 +246,14 @@ test('scanner view shows the real publication diagnosis and configured Elite def
  assert.match(source,/g\.bestMinLiquidityUsd\?\?5000/);
  assert.match(source,/g\.bestMinVolume1hUsd\?\?750/);
 });
+
+
+test('publication diagnostics expose score, quality, freshness, missing factors, bot and outbox status',()=>{
+ assert.match(js,/publicationDiscovery\.scorePass/);
+ assert.match(js,/publicationDiscovery\.qualityPass/);
+ assert.match(js,/publicationDiscovery\.qualifiedButStaleMarket/);
+ assert.match(js,/publicationDiscovery\.qualifiedButStaleEvidence/);
+ assert.match(js,/publicationDiscovery\.qualifiedButMissingFactors/);
+ assert.match(js,/publicationStatus\.botRunning/);
+ assert.match(js,/publicationStatus\.outbox\?\.failed/);
+});
