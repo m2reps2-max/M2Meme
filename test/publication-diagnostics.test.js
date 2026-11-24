@@ -104,3 +104,39 @@ test('disabled opportunity publication is diagnosed without blaming missing scor
  assert.equal(result.rejectionReasons.some(row=>row.reason.includes('Facteurs requis incomplets')),false);
  assert.match(result.diagnosis,/publication des opportunités est désactivée/i);
 });
+
+
+test('diagnostics expose the first failing stage and keep the configured score floor', () => {
+  const token = makeToken({
+    liquidityUsd: 20000, fdv: 200000, volume: { h1: 8000 },
+    txns: { h1: { buys: 16, sells: 4 } },
+    history: [{ at: new Date(NOW - 30_000).toISOString() }],
+    security: { checkedAt: new Date(NOW - 60_000).toISOString() },
+    tradeIntel: { checkedAt: new Date(NOW - 60_000).toISOString() },
+    analysis: { score: 79, coverage: 90, risk: 'observations_only', securityComprehensive: true, hardBlocked: false, flags: [], factors: { activity: 80, market: 80, liquidityQuality: 80, security: 90 } }
+  });
+  const result = scannerPublicationDiagnostics.call(scanner([token]));
+  assert.equal(result.settings.minScore, 80);
+  assert.equal(result.discovery.pipeline.poolLinked, 1);
+  assert.equal(result.discovery.pipeline.score, 0);
+  assert.equal(result.discovery.pipeline.coverage, 0);
+  assert.ok(result.mostBlockedCandidates[0].blockers.includes('Score inférieur au seuil'));
+});
+
+test('qualified candidates with stale security are visible with the exact blocker', () => {
+  const token = makeToken({
+    liquidityUsd: 20000, fdv: 200000, volume: { h1: 8000 },
+    txns: { h1: { buys: 16, sells: 4 } },
+    history: [{ at: new Date(NOW - 30_000).toISOString() }],
+    security: { checkedAt: new Date(NOW - 120 * 60_000).toISOString() },
+    tradeIntel: { checkedAt: new Date(NOW - 60_000).toISOString() },
+    analysis: { score: 90, coverage: 90, risk: 'observations_only', securityComprehensive: true, hardBlocked: false, flags: [], factors: { activity: 80, market: 80, liquidityQuality: 80, security: 90 } }
+  });
+  const result = scannerPublicationDiagnostics.call(scanner([token]));
+  assert.equal(result.discovery.qualityPass, 1);
+  assert.equal(result.discovery.qualifiedButStaleEvidence, 1);
+  assert.equal(result.discovery.pipeline.marketFresh, 1);
+  assert.equal(result.discovery.pipeline.securityFresh, 0);
+  assert.ok(result.mostBlockedCandidates[0].blockers.some(reason => reason.includes('Contrôle de sécurité trop ancien')));
+  assert.ok(result.rejectionReasons.some(row => row.reason === 'Contrôle de sécurité trop ancien'));
+});
