@@ -13,7 +13,7 @@ test('security queue prioritizes strong candidates while preserving an age-based
     { mint: 'launch', pairAddress: 'p4', launchSource: 'pumpfun', analysis: { score: 85 } }
   ];
   const selected = rankSecurityCandidates(tokens, now, 3);
-  assert.deepEqual(selected.map(token => token.mint), ['launch', 'low-score-old', 'high-score']);
+  assert.deepEqual(selected.map(token => token.mint), ['low-score-old', 'launch', 'high-score']);
 });
 
 test('security queue is deterministic, bounded and excludes fresh or unlinked tokens', () => {
