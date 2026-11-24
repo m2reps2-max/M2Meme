@@ -68,3 +68,21 @@ test('elite intelligence aggregates five phases and never penalizes missing evid
  assert.equal(result.phases.learningValidation.validated,false);
  assert.equal(result.adjustment,0);
 });
+
+
+test('repeated rapid buy-sell round trips trigger only a small penalty on a sufficiently large sample',()=>{
+ const rows=[];
+ let sequence=0;
+ for(const wallet of [w1,w2,w3,w4,'GyaE1Vxv111111111111111111111111111111111111','HyaE1Vxv111111111111111111111111111111111111','JyaE1Vxv111111111111111111111111111111111111','KyaE1Vxv111111111111111111111111111111111111','LyaE1Vxv111111111111111111111111111111111111','MyaE1Vxv111111111111111111111111111111111111']){
+  for(let cycle=0;cycle<4;cycle++){
+   rows.push({wallet,direction:'buy',at:100000+sequence++*1000,volumeUsd:20});
+   rows.push({wallet,direction:'sell',at:100000+sequence++*1000,volumeUsd:20});
+  }
+ }
+ const result=analyzeOrganicDemand({tradeIntel:{observedTrades:rows,tradeCount:80,earlyWindow:{complete:true}}},null,Date.now());
+ assert.equal(result.confidence,'moderate');
+ assert.equal(result.shortRoundTripWallets,10);
+ assert.equal(result.shortRoundTripSharePct,100);
+ assert.ok(result.reasons.some(reason=>reason.includes('rotation rapide')));
+ assert.equal(result.adjustment,-2);
+});
