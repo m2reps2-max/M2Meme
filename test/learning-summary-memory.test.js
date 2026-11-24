@@ -6,11 +6,11 @@ const {learningSummary}=require('../lib/learning');
 test('learning summary aggregates forecasts without duplicating full forecast rows',()=>{
  const scanner={state:{tokens:{
   a:{mint:'a',symbol:'AAA',forecasts:[
-   {at:1000,score:80,source:'Pump.fun',launchAgeHours:0.02,liquidityBand:'1k_5k',outcomes:{'1h':{label:'win',returnPct:20},'15m':{label:'win',returnPct:10}}},
-   {at:2000,score:70,source:'Pump.fun',launchAgeHours:0.2,liquidityBand:'1k_5k',outcomes:{'1h':{label:'loss',returnPct:-25}}}
+   {at:1000,score:80,source:'Pump.fun',launchAgeHours:0.02,liquidityBand:'1k_5k',liquidityUsd:100000,outcomes:{'1h':{label:'win',returnPct:20,exitLiquidityUsd:100000},'15m':{label:'win',returnPct:10,exitLiquidityUsd:250}}},
+   {at:2000,score:70,source:'Pump.fun',launchAgeHours:0.2,liquidityBand:'1k_5k',liquidityUsd:100000,outcomes:{'1h':{label:'loss',returnPct:-25,exitLiquidityUsd:100000}}}
   ]},
   b:{mint:'b',symbol:'BBB',forecasts:[
-   {at:3000,score:55,source:'GeckoTerminal pool',launchAgeHours:null,liquidityBand:'under_1k',outcomes:{'1h':{label:'flat',returnPct:10}}}
+   {at:3000,score:55,source:'GeckoTerminal pool',launchAgeHours:null,liquidityBand:'under_1k',liquidityUsd:250,outcomes:{'1h':{label:'flat',returnPct:10}}}
   ]}
  }}};
  const result=learningSummary.call(scanner);
@@ -22,7 +22,8 @@ test('learning summary aggregates forecasts without duplicating full forecast ro
  assert.equal(result.horizonsAvailable.length,5);
  assert.equal(result.cohorts.bySource['Pump.fun'].predictions,2);
  assert.equal(result.cohorts.bySource['Pump.fun'].resolved,2);
- assert.equal(result.cohorts.byLiquidity.under_1k.average1hPct,10);
+ const {netReturnPct}=require('../lib/adaptive-model');
+ assert.equal(result.cohorts.byLiquidity.under_1k.average1hPct,Number(netReturnPct(10,250,250,100).toFixed(2)));
  assert.equal(result.outOfSample.uniqueResolvedTokens,2);
 });
 
