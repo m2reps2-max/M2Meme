@@ -42,8 +42,8 @@ test('les prévisions enregistrent le maximum favorable et le drawdown',()=>{
 
 test('learning segments one-hour outcomes by discovery source and launch age',()=>{
  const result=learningSummary.call({state:{tokens:{
-  a:{mint:'a',forecasts:[{score:80,at:1000,source:'Pump.fun',launchAgeHours:0.02,outcomes:{'1h':{label:'win',returnPct:20}}}]},
-  b:{mint:'b',forecasts:[{score:60,at:2000,source:'GeckoTerminal pool',launchAgeHours:0.2,outcomes:{'1h':{label:'loss',returnPct:-25}}}]}
+  a:{mint:'a',forecasts:[{score:80,at:1000,source:'Pump.fun',launchAgeHours:0.02,liquidityUsd:100000,outcomes:{'1h':{label:'win',returnPct:20,exitLiquidityUsd:100000}}}]},
+  b:{mint:'b',forecasts:[{score:60,at:2000,source:'GeckoTerminal pool',launchAgeHours:0.2,liquidityUsd:100000,outcomes:{'1h':{label:'loss',returnPct:-25,exitLiquidityUsd:100000}}}]}
  }}});
  assert.equal(result.cohorts.bySource['Pump.fun'].winRate1hPct,100);
  assert.equal(result.cohorts.bySource['GeckoTerminal pool'].lossRate1hPct,100);
@@ -157,4 +157,36 @@ test('a validated active-cache model takes priority over a validated cold-archiv
  const result=learningSummary.call(scanner);
  assert.equal(result.adaptiveModel.enabled,true);
  assert.equal(result.adaptiveModel.source,'active_cache');
+});
+
+
+test('net simulated returns, not gross labels, drive win/loss and calibration rates',()=>{
+ const result=learningSummary.call({state:{tokens:{micro:{mint:'micro',forecasts:[{score:80,at:1,source:'test',liquidityBand:'under_1k',liquidityUsd:250,outcomes:{'1h':{label:'win',grossLabel:'win',returnPct:16,grossReturnPct:16,exitLiquidityUsd:250}}}]}}}});
+ assert.equal(result.successRate.evaluated,1);
+ assert.equal(result.successRate.successful,0);
+ assert.equal(result.summary.horizons['1h'].winRatePct,0);
+ assert.equal(result.summary.horizons['1h'].lossRatePct,100);
+ assert.equal(result.cohorts.byLiquidity.under_1k.winRate1hPct,0);
+ assert.equal(result.cohorts.byLiquidity.under_1k.lossRate1hPct,100);
+ assert.equal(result.labels.drawdown['1h'],1);
+ assert.equal(result.grossLabels.win['1h'],1);
+ assert.equal(result.recent[0].outcomes['1h'].netLabel,'drawdown');
+ assert.equal(result.recent[0].outcomes['1h'].label,'drawdown');
+ assert.ok(result.recent[0].outcomes['1h'].returnPct<0);
+ assert.equal(result.recent[0].outcomes['1h'].grossReturnPct,16);
+});
+
+
+test('new forecast records preserve gross labels and expose net labels separately',()=>{
+ const token={mint:'low-liquidity',forecasts:[]};
+ const base={priceUsd:1,liquidityUsd:250,volume1h:10,volume24h:20,buys1h:2,sells1h:1,fdv:10000,score:80,coverage:90,classification:'strong_candidate',risk:'low',flags:[]};
+ recordForecast(token,{...base,at:1000000});
+ recordForecast(token,{...base,at:4600000,priceUsd:1.16});
+ const outcome=token.forecasts[0].outcomes['1h'];
+ assert.equal(outcome.grossReturnPct,16);
+ assert.equal(outcome.returnPct,16);
+ assert.equal(outcome.label,'win');
+ assert.equal(outcome.grossLabel,'win');
+ assert.equal(outcome.netLabel,'drawdown');
+ assert.ok(outcome.netReturnPct<0);
 });
