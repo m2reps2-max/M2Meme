@@ -85,7 +85,7 @@ test('security freshness window matches the hourly background refresh cadence',(
 
 test('watchlist tolerates partial security but not stale market or very stale security',()=>{
  const partial=token(1,{liquidityUsd:7000,volume:{h1:250},analysis:{score:65,coverage:70,risk:'partial',securityComprehensive:false,hardBlocked:false,factors:{market:70,security:80}},security:{}});
- const stale=token(2,{liquidityUsd:7000,volume:{h1:250},security:{checkedAt:new Date(NOW-90*60_000).toISOString()},analysis:{score:66,coverage:70,risk:'partial',securityComprehensive:false,hardBlocked:false,factors:{market:70,security:80}}});
+ const stale=token(2,{liquidityUsd:7000,volume:{h1:250},security:{checkedAt:new Date(NOW-120*60_000).toISOString()},analysis:{score:66,coverage:70,risk:'partial',securityComprehensive:false,hardBlocked:false,factors:{market:70,security:80}}});
  const result=buildSelection([partial,stale],NOW);
  assert.deepEqual(result.observe.map(x=>x.mint),['mint-1']);
 });
