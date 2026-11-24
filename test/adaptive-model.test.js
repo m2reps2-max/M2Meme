@@ -10,7 +10,7 @@ function fixture(count=300){
   const features={activity:x,momentum:x*.8+(i%7),market:x*.7+(i%5),liquidityQuality:x*.6+(i%11),security:x*.5+(i%13)};
   const mint='mint-'+String(i).padStart(4,'0');
   tokens[mint]={mint,liquidityUsd:100000,forecasts:[{
-   at:Date.UTC(2026,0,1)+i*60000,score:100-x,features,
+   at:Date.UTC(2026,0,1)+i*60000,score:100-x,liquidityUsd:100000,features,
    outcomes:{
     '15m':{returnPct:(x-50)*0.8,exitLiquidityUsd:100000},
     '1h':{returnPct:(x-50)*1.5,exitLiquidityUsd:100000},
