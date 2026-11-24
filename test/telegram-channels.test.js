@@ -50,6 +50,8 @@ test('formats a compact Telegram alert with age, security and terminal links', (
   });
   assert.match(message, /\$EX/);
   assert.match(message, /M2 87\/100/);
+  assert.match(message, /\n/);
+  assert.doesNotMatch(message, /\\\\n/);
   assert.match(message, /couverture 92%/);
   assert.match(message, /MC\/FDV/);
   assert.match(message, /LP/);
