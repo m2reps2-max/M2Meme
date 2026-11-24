@@ -43,3 +43,24 @@ test('partial exits do not inflate the count of fully closed wallet positions',(
  assert.equal(row.winRatePct,null);
  assert.equal(row.avgRoiPct,null);
 });
+
+
+test('confirmed early buys count toward early-entry evidence even when quote metadata is absent',()=>{
+ const launch='2026-11-22T00:00:00Z';
+ const state={
+  tokens:{[mint]:{pumpCreatedAt:launch}},
+  wallets:[{address:a}],
+  autoWallets:[],
+  experts:[],
+  walletTrades:[{
+   wallet:a,mint,direction:'buy',signature:'early-no-quote',
+   at:'2026-11-22T00:05:00Z',tokenAmount:100,swapConfirmed:true
+  }]
+ };
+ const row=buildWalletReputation(state).wallets[0];
+ assert.equal(row.confirmedBuys,1);
+ assert.equal(row.earlyTokens,1);
+ assert.equal(row.earlyEntryPct,100);
+ assert.equal(row.closedTrades,0);
+ assert.equal(Object.keys(row.realizedPnlByQuoteAsset).length,0);
+});
