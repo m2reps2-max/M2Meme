@@ -616,7 +616,7 @@ test('les données absentes d’une paire DexScreener ne remplacent pas les mét
  assert.equal(token.liquidityUsd,12000);
  assert.equal(token.volume.h24,15000);
  assert.deepEqual(token.txns.h1,{buys:20,sells:5});
- assert.equal(token.history.length,1);
+ assert.equal(token.history.length,0,'a stale retained price must not be timestamped as a fresh market observation');
 });
 
 test('un token pré-marché explique explicitement sa couverture de 5 pour cent',()=>{
@@ -722,7 +722,7 @@ test('le scanner limite les nouveaux tokens lorsque SQLite est indisponible sans
  scanner.archive.available=false;
  const existing='So11111111111111111111111111111111111111112';
  scanner.state.tokens=Object.fromEntries(Array.from({length:1199},(_,index)=>['ExistingMint'+index,{mint:'ExistingMint'+index,symbol:'OLD'}]));
- scanner.state.tokens[existing]={mint:existing,symbol:'OLD'};
+ scanner.state.tokens[existing]={mint:existing,symbol:'OLD',sources:[]};
  scanner.ingestLaunch({mint:existing,name:'Updated Existing',symbol:'UPD',timestamp:Math.floor(Date.now()/1000)});
  const newMint='NewBoundedMint11111111111111111111111111111';
  scanner.ingestLaunch({mint:newMint,name:'New Token',symbol:'NEW',timestamp:Math.floor(Date.now()/1000)});
