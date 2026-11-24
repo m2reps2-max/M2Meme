@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { classifyTokenMention, analyzeSocialEvidence } = require('../lib/social-evidence');
+const { classifyTokenMention, analyzeSocialEvidence, isPromotionalPost } = require('../lib/social-evidence');
 
 const token = { mint: 'So11111111111111111111111111111111111111112', symbol: 'MOON', name: 'Moon Rocket' };
 
