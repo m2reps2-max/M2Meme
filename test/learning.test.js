@@ -2,6 +2,7 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const {learningSummary,recordForecast}=require('../lib/learning');
+const {netReturnPct}=require('../lib/adaptive-model');
 
 test('le taux de réussite à une heure compte les hausses de 15% ou plus',()=>{
  const scanner={state:{tokens:{
@@ -189,4 +190,15 @@ test('new forecast records preserve gross labels and expose net labels separatel
  assert.equal(outcome.grossLabel,'win');
  assert.equal(outcome.netLabel,'drawdown');
  assert.ok(outcome.netReturnPct<0);
+});
+
+
+test('out-of-sample calibration excludes one-hour outcome records with null gross returns',()=>{
+ const result=learningSummary.call({state:{tokens:{
+  valid:{mint:'valid',forecasts:[{at:1,score:80,liquidityUsd:100000,outcomes:{'1h':{returnPct:20,exitLiquidityUsd:100000}}}]},
+  unresolved:{mint:'unresolved',forecasts:[{at:2,score:80,liquidityUsd:100000,outcomes:{'1h':{returnPct:null,grossReturnPct:null,exitLiquidityUsd:100000}}}]}
+ }}}).outOfSample;
+ assert.equal(result.uniqueResolvedTokens,1);
+ assert.equal(result.training.tokens,1);
+ assert.equal(result.training.averageReturnPct,Number(netReturnPct(20,100000,100000,100).toFixed(2)));
 });
