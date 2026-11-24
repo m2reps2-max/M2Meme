@@ -691,3 +691,14 @@ test('unrecognized mint owner programs cannot qualify the security score',()=>{
  assert.equal(Object.hasOwn(a.factors,'security'),false);
  assert.ok(a.flags.some(x=>x.code==='UNKNOWN_TOKEN_PROGRAM'));
 });
+
+
+test('DexScreener community takeover is recorded as discovery metadata, not a boost or safety signal',()=>{
+ const s=make(),mint='So11111111111111111111111111111111111111112';
+ s.upsert({chainId:'solana',tokenAddress:mint,claimDate:'2026-11-24T10:00:00.000Z',url:'https://dexscreener.com/solana/'+mint,description:'Community maintained token'},'community_takeover');
+ const token=s.state.tokens[mint];
+ assert.ok(token.sources.includes('community_takeover'));
+ assert.equal(token.communityTakeover.claimDate,'2026-11-24T10:00:00.000Z');
+ assert.equal(token.boosted,false);
+ assert.equal(token.security,undefined);
+});

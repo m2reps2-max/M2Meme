@@ -124,3 +124,11 @@ test('Telegram source classification marks obvious calls and signal channels as 
   const posts=parseTelegramPage('<div data-post="solwhaletrending/1"><div class="tgme_widget_message_text">$BONK</div><time datetime="'+new Date(now-1000).toISOString()+'"></time></div>','solwhaletrending',now);
   assert.equal(posts[0].channelType,'promotional');
 });
+
+
+test('Telegram source heuristic is narrow: it filters calls but not generic whale or trading channels',()=>{
+  assert.equal(classifyTelegramChannel('mars100xcryptocalls'),'promotional');
+  assert.equal(classifyTelegramChannel('soltrenchtrending'),'promotional');
+  assert.equal(classifyTelegramChannel('solwhaleintel'),'unverified');
+  assert.equal(classifyTelegramChannel('QwertysQuants'),'unverified');
+});
