@@ -37,12 +37,22 @@ test('recent sells by tracked buyers reduce the convergence score',()=>{
  const sold=buildWalletTokenSignals(state([...base,trade(a,'sell','target-sell','2026-11-22T00:12:00Z',5,{asset:'SOL',amount:.2},902)]),now)[mint].score;
  assert.ok(sold<normal);
 });
-test('buyers entering in the same Solana slot count as one independent cluster',()=>{
+test('buyers in different transactions within the same Solana slot remain independent',()=>{
  const rows=[...provenHistory(a,'a',mint2),...provenHistory(b,'b',mint2),trade(a,'buy','target-a','2026-11-22T00:10:00Z',10,{asset:'SOL',amount:.1},777),trade(b,'buy','target-b','2026-11-22T00:10:00Z',10,{asset:'SOL',amount:.1},777)];
  const signal=buildWalletTokenSignals(state(rows),Date.parse('2026-11-22T00:11:00Z'))[mint];
  assert.equal(signal.trustedWalletBuys,2);
+ assert.equal(signal.independentWallets,2);
+ assert.equal(signal.sameTransactionClusteredWallets,0);
+ assert.equal(signal.qualified,true);
+ assert.ok(signal.score>0);
+});
+
+test('wallets observed in the same transaction are grouped conservatively',()=>{
+ const rows=[...provenHistory(a,'a',mint2),...provenHistory(b,'b',mint2),trade(a,'buy','same-target-tx','2026-11-22T00:10:00Z',10,{asset:'SOL',amount:.1},777),trade(b,'buy','same-target-tx','2026-11-22T00:10:00Z',10,{asset:'SOL',amount:.1},777)];
+ const signal=buildWalletTokenSignals(state(rows),Date.parse('2026-11-22T00:11:00Z'))[mint];
+ assert.equal(signal.trustedWalletBuys,2);
  assert.equal(signal.independentWallets,1);
- assert.equal(signal.sameSlotClusteredWallets,1);
+ assert.equal(signal.sameTransactionClusteredWallets,1);
  assert.equal(signal.qualified,false);
  assert.equal(signal.score,null);
 });
