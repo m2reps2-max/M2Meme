@@ -41,7 +41,7 @@ test('watch candidates are separate, capped at five and clearly retain partial r
  assert.equal(result.observe[0].analysis.securityComprehensive,false);
 });
 
-test('pre-market, unknown-risk, blocked and incomplete top-pick tokens are excluded',()=>{
+test('pre-market, unknown-risk and blocked tokens are excluded while partial evidence remains watch-only',()=>{
  const items=[
   token(1,{pairAddress:null,geckoPoolAddress:null}),
   token(2,{analysis:{...token(2).analysis,coverage:5,score:100}}),
@@ -53,7 +53,7 @@ test('pre-market, unknown-risk, blocked and incomplete top-pick tokens are exclu
  const result=buildSelection(items,NOW);
  assert.equal(result.eligible,5);
  assert.equal(result.best.length,0);
- assert.equal(result.observe.length,0);
+ assert.deepEqual(result.observe.map(x=>x.mint),['mint-5','mint-6']);
 });
 
 test('stale market data cannot enter either shortlist even with a perfect score',()=>{
