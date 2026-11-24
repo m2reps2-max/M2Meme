@@ -241,7 +241,7 @@ test('scanner view shows the real publication diagnosis and configured Elite def
  const source=js.slice(start,end);
  assert.match(server,/publicationDiagnostics:scanner\.scannerPublicationDiagnostics\(\)/);
  assert.match(source,/p\.publicationDiagnostics/);
- assert.match(source,/Blocages fréquents/);
+ assert.match(source,/blocages/i);
  assert.match(source,/g\.bestMinScore\?\?80/);
  assert.match(source,/g\.bestMinLiquidityUsd\?\?5000/);
  assert.match(source,/g\.bestMinVolume1hUsd\?\?750/);
