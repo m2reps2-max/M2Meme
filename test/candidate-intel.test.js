@@ -87,3 +87,17 @@ test('verified social evidence has a material but bounded influence on the ranki
   const weakSocial=scanner.score({...base,socialIntel:{...social,evidence:{...social.evidence,sampledPosts24h:6,uniqueAuthors24h:2,uniqueChannels24h:1}}});
   assert.equal(Object.hasOwn(weakSocial.factors,'social'),false,'small social samples must not receive the full social weight');
 });
+
+
+test('social score weight requires cross-network authors or multiple independent Telegram channels',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'meme-radar-social-diversity-'));
+ const scanner=new MemeScanner({dataFile:path.join(dir,'store.json')});
+ const base={mint:'social-diversity-token',pairAddress:'pool',liquidityUsd:25000,fdv:250000,priceUsd:0.001,ageHours:2,volume:{h1:9000,h24:80000},txns:{h1:{buys:24,sells:6}},history:[{at:Date.now()-120000,buys1h:8,sells1h:3,liquidityUsd:24000,priceUsd:0.0009},{at:Date.now()-60000,buys1h:12,sells1h:4,liquidityUsd:24500,priceUsd:0.00095}],security:{checkedAt:new Date().toISOString(),data:{freezeAuthorityActive:false,mintAuthorityActive:false,isInitialized:true,isToken2022:false,ownerConcentrationAvailable:true,top10HolderPercent:20}}};
+ const social={available:true,mentions1h:10,mentions24h:25,uniqueAuthors24h:12,uniqueChannels24h:1,uniqueSources24h:1,sentimentScore:70,evidence:{sampledPosts24h:18,uniqueAuthors24h:12,uniqueChannels24h:1,uniqueSources24h:1,duplicateSharePct:0,weakMatchSharePct:0}};
+ const singleNetwork=scanner.score({...base,socialIntel:social});
+ assert.equal(Object.hasOwn(singleNetwork.factors,'social'),false,'many authors on one network are not cross-network evidence');
+ const crossNetwork=scanner.score({...base,socialIntel:{...social,uniqueSources24h:2,evidence:{...social.evidence,uniqueSources24h:2}}});
+ assert.equal(crossNetwork.factors.social>=0,true);
+ const telegramSpread=scanner.score({...base,socialIntel:{...social,uniqueChannels24h:3,evidence:{...social.evidence,uniqueChannels24h:3}}});
+ assert.equal(telegramSpread.factors.social>=0,true);
+});
