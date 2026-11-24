@@ -188,7 +188,7 @@ Ne partage jamais ces secrets dans une conversation et ne les commits pas sur Gi
 - `ALERT_MIN_SCORE` : score minimal d'alerte, par défaut 80.
 - `MIN_LIQUIDITY_USD` : liquidité minimale, par défaut 5000 USD.
 
-**Clés facultatives :** `HELIUS_API_KEY` active le RPC Helius en priorité avant les RPC publics de secours; `MADEONSOL_API_KEY` active l'enrichissement KOL gratuit; `X_AUTH_TOKEN` et `X_CT0` activent la recherche X via une session personnelle. Aucune clé payante n'est requise. `BIRDEYE_API_KEY`, `X_BEARER_TOKEN` et `PUMPPORTAL_API_KEY` ne sont pas utilisés.
+**Clés facultatives :** `HELIUS_API_KEY` active le RPC Helius en priorité avant les RPC publics de secours; `X_AUTH_TOKEN` et `X_CT0` activent la recherche X via une session personnelle. Aucune clé payante n'est requise. `BIRDEYE_API_KEY`, `X_BEARER_TOKEN` et `PUMPPORTAL_API_KEY` ne sont pas utilisés.
 
 ## Vérification de santé
 
@@ -299,20 +299,15 @@ Les contrôles de sécurité RPC exposent maintenant, en plus des concentrations
 La page Wallet Intelligence calcule aussi un indice historique indicatif par wallet à partir du rendement du token environ une heure après le premier achat observable pour chaque token. Plusieurs achats du même wallet sur le même token ne comptent qu'une fois. Le score reste masqué avant cinq tokens évalués et est rétréci vers 50 lorsque l'échantillon est faible. Il ne représente pas le PnL réel du wallet : taille des positions, prix exact au bloc, frais, slippage et ventes exécutées ne sont pas connus. Il ne modifie pas automatiquement le score des tokens.
 
 
-## Intelligence des 50 experts KOL et de leurs portefeuilles
+## Réputation des wallets suivis (Helius facultatif)
 
-Une source facultative ajoute un classement dynamique de 50 wallets KOL Solana, les achats/ventes détectés et une reconstruction prudente des positions observées :
+MEME RADAR ne télécharge pas de classement KOL externe et ne prétend pas connaître à l'avance les wallets rentables. Le classement est reconstruit localement à partir des wallets manuels, des acheteurs précoces découverts et des créateurs observés.
 
-- Fournisseur : [MadeOnSol API](https://madeonsol.com/api-docs), endpoints KOL leaderboard et trade feed.
-- Clé gratuite facultative : [madeonsol.com/developer](https://madeonsol.com/developer). La documentation annonce 200 appels/jour sur le plan gratuit, sans paiement requis.
-- Ajouter `MADEONSOL_API_KEY` dans les variables d'environnement FadeHost. Sans cette clé, MEME RADAR continue de fonctionner normalement et le module reste désactivé.
-- Rafraîchissement prévu : flux KOL toutes les 10 minutes et classements PnL / early-entry toutes les 12 heures; maximum 25 profils PnL 30 jours sont actualisés par jour, à raison d'un profil toutes les 30 minutes (les 50 experts tournent donc sur 48 heures), soit environ 173 appels/jour au maximum nominal. Le flux KOL gratuit est retardé d'environ 5 minutes.
-- Les classements combinent rentabilité observée et précocité d'entrée; ils ne se basent pas sur le nombre d'abonnés.
-- Les performances réalisées 30 jours et positions clôturées sont également récupérées toutes les 48 heures par expert via l'endpoint KOL PnL gratuit. Les positions ouvertes affichées sont reconstruites à partir des transactions du flux depuis l'activation. L'historique est incomplet : transferts, swaps non couverts et transactions antérieures peuvent manquer. Le tableau ne prétend donc pas représenter l'intégralité des avoirs on-chain ni un PnL exact.
-- Les étiquettes KOL et les liens sociaux sont des attributions du fournisseur, pas une preuve d'identité personnelle. Les achats/ventes sont des événements publics on-chain; aucune copie automatique ni transaction n'est exécutée.
-
-Le plan gratuit permet le suivi du flux et des classements. Les endpoints de portefeuille universel et certaines données avancées sont réservés aux plans supérieurs; MEME RADAR n'en dépend pas.
-
+- `HELIUS_API_KEY` active Helius comme RPC prioritaire pour récupérer signatures et transactions; les RPC publics restent disponibles en secours. Sans clé, la surveillance continue avec les RPC publics.
+- Les performances ne comptent que les swaps confirmés observés depuis le début du suivi. Les ventes partielles sont agrégées et une position n'est comptée comme clôturée qu'après sortie complète.
+- Les PnL sont calculés séparément par actif de cotation (SOL, USDC, USDT ne sont jamais additionnés). Les montants réellement échangés intègrent le prix et les frais du swap; les frais réseau de transaction ne sont pas déduits.
+- Les wallets découverts automatiquement restent des candidats à observer, pas des « Smart Money » réputés rentables. Un signal de convergence sur un token exige au moins trois positions clôturées observées sur plusieurs tokens pour chaque wallet retenu.
+- L'historique reste partiel : les transactions antérieures au début du suivi, transferts, swaps non détectés et routes non couvertes peuvent manquer. Le score décrit les observations disponibles, pas la performance totale réelle ni l'identité d'une personne.
 
 ## Validation croisée Jupiter et paper trading
 
