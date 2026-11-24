@@ -118,11 +118,32 @@ test('contextual social and valuation warnings do not veto an otherwise qualifie
  assert.equal(qualifyOpportunity(candidate,{}).eligible,true);
 });
 
-test('holder concentration, Token-2022 review and unavailable sell route remain blockers',()=>{
- for(const code of ['HOLDER_CONCENTRATION','TOP1_WALLET_CONCENTRATION','TOP5_WALLET_CONCENTRATION','TOKEN_2022_REVIEW','ELITE_TOKEN2022_EXTENSIONS_UNKNOWN','SELL_ROUTE_UNAVAILABLE']){
+test('verified holder concentration and unreviewed Token-2022 extensions remain blockers',()=>{
+ for(const code of ['HOLDER_CONCENTRATION','TOP1_WALLET_CONCENTRATION','TOP5_WALLET_CONCENTRATION','TOKEN_2022_REVIEW','ELITE_TOKEN2022_EXTENSIONS_UNKNOWN']){
   const candidate=eliteCandidate({analysis:{...eliteCandidate().analysis,risk:'medium',flags:[{level:'warning',code}]}});
   assert.equal(qualifyOpportunity(candidate,{}).eligible,false,code);
  }
+});
+
+test('uncertain sell-route, unverified-account, small creator-sale and contextual warnings do not veto good candidates',()=>{
+ for(const code of ['SELL_ROUTE_UNAVAILABLE','TOP10_ACCOUNT_CONCENTRATION_UNVERIFIED','CREATOR_SELL_OBSERVED','EARLY_WALLET_SELL_CLUSTER','ELITE_ORGANIC_DEMAND_SUSPECT','TOKEN_2022_TRANSFER_HOOK','TOKEN_2022_CONFIDENTIAL_TRANSFER']){
+  const candidate=eliteCandidate({analysis:{...eliteCandidate().analysis,risk:'medium',flags:[{level:'warning',code}]}});
+  assert.equal(qualifyOpportunity(candidate,{}).eligible,true,code);
+ }
+});
+
+test('accepted caution signals remain visible in the qualification result',()=>{
+ const candidate=eliteCandidate({analysis:{...eliteCandidate().analysis,risk:'medium',flags:[
+  {level:'warning',code:'SELL_ROUTE_UNAVAILABLE',message:'Jupiter ne trouve pas de route de vente.'}
+ ]}});
+ const result=qualifyOpportunity(candidate,{});
+ assert.equal(result.eligible,true);
+ assert.deepEqual(result.warnings,['Jupiter ne trouve pas de route de vente.']);
+});
+
+test('critical severity always blocks even when the warning code is normally contextual',()=>{
+ const candidate=eliteCandidate({analysis:{...eliteCandidate().analysis,risk:'medium',flags:[{level:'critical',code:'CREATOR_SELL_OBSERVED'}]}});
+ assert.equal(qualifyOpportunity(candidate,{}).eligible,false);
 });
 
 test('transaction fallback cannot use stale market snapshots or missing security evidence',()=>{
