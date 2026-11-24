@@ -683,3 +683,11 @@ test('security leader rotation refreshes four tokens every five minutes',async()
  await scanner.securityLeaders();
  assert.equal(checked.length,5);
 });
+
+
+test('unrecognized mint owner programs cannot qualify the security score',()=>{
+ const s=make();
+ const a=s.score({txns:{h1:{buys:20,sells:10}},volume:{h1:5000,h24:20000},liquidityUsd:10000,ageHours:2,security:{checkedAt:new Date().toISOString(),data:{tokenProgram:'UnrecognizedMintProgram111111111111111111111',isToken2022:false,isInitialized:true,freezeAuthorityActive:false,mintAuthorityActive:false,ownerConcentrationAvailable:true,top10HolderPercent:20}}});
+ assert.equal(Object.hasOwn(a.factors,'security'),false);
+ assert.ok(a.flags.some(x=>x.code==='UNKNOWN_TOKEN_PROGRAM'));
+});
