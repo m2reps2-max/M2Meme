@@ -337,6 +337,9 @@ test('la santé distingue serveur actif et sources de données dégradées',()=>
  assert.equal(health.state,'healthy');
  assert.equal(health.checks.dexscreener.ok,true);
  assert.equal(health.checks.pumpPortal.ok,false);
+ assert.equal(health.checks.reddit.ok,true);
+ assert.equal(health.checks.reddit.disabled,true);
+ assert.equal(health.checks.reddit.retired,true);
 });
 
 test('alerts require fresh market data and the complete elite quality profile',async()=>{
