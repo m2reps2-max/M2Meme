@@ -61,13 +61,13 @@ test('verified multi-network social evidence has a bounded, material ranking inf
   assert.ok(result.socialConfidence==='limited_sample');
 });
 
-test('same-transaction Smart Money clusters add a bounded warning and modest score penalty',()=>{
-  const baseline=evaluateCandidateIntel({walletReputation:{sameTransactionClusteredWallets:0}});
-  const clustered=evaluateCandidateIntel({walletReputation:{sameTransactionClusteredWallets:2}});
+test('same-slot Smart Money clusters add a bounded warning and modest score penalty',()=>{
+  const baseline=evaluateCandidateIntel({walletReputation:{sameSlotClusteredWallets:0}});
+  const clustered=evaluateCandidateIntel({walletReputation:{sameSlotClusteredWallets:2}});
   assert.equal(clustered.adjustment,-4);
-  assert.ok(clustered.flags.some(flag=>flag.code==='SMART_MONEY_TRANSACTION_CLUSTER'));
-  assert.ok(clustered.reasons.some(reason=>reason.includes('même transaction')));
-  assert.equal(baseline.flags.some(flag=>flag.code==='SMART_MONEY_TRANSACTION_CLUSTER'),false);
+  assert.ok(clustered.flags.some(flag=>flag.code==='SMART_MONEY_SLOT_CLUSTER'));
+  assert.ok(clustered.reasons.some(reason=>reason.includes('même slot')));
+  assert.equal(baseline.flags.some(flag=>flag.code==='SMART_MONEY_SLOT_CLUSTER'),false);
 });
 
 
@@ -88,6 +88,18 @@ test('verified social evidence has a material but bounded influence on the ranki
   assert.equal(Object.hasOwn(weakSocial.factors,'social'),false,'small social samples must not receive the full social weight');
 });
 
+test('promotional Telegram posts do not inflate social mention counts',()=>{
+  const scanner=Object.create(MemeScanner.prototype);
+  const now=new Date().toISOString();
+  const mint='So11111111111111111111111111111111111111112';
+  const merged=scanner.mergeSocialIntel({mint,symbol:'MOON',telegramIntel:{available:true,provider:'Telegram public discovery',mentions1h:100,mentions24h:500,posts:[
+    {source:'Telegram',channel:'solcommunitychat',text:'Contract '+mint,publishedAt:now,link:'https://t.me/solcommunitychat/1'},
+    {source:'Telegram',channel:'solpumpcalls',text:'Contract '+mint+' 100x buy now',publishedAt:now,link:'https://t.me/solpumpcalls/2'}
+  ]}});
+  assert.equal(merged.mentions1h,1);
+  assert.equal(merged.mentions24h,1);
+  assert.equal(merged.evidence.promotionalPosts24h,1);
+});
 
 test('social score weight requires cross-network authors or multiple independent Telegram channels',()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'meme-radar-social-diversity-'));
@@ -107,9 +119,11 @@ test('social merge works without retired Reddit data and labels only connected s
   const scanner=Object.create(MemeScanner.prototype);
   const now=new Date().toISOString();
   const mint='So11111111111111111111111111111111111111112';
-  const merged=scanner.mergeSocialIntel({mint,symbol:'MOON',telegramIntel:{available:true,provider:'Telegram public discovery',mentions1h:1,mentions24h:1,posts:[{source:'Telegram',channel:'solcommunitychat',channelType:'unverified',text:'Contract '+mint,publishedAt:now,link:'https://t.me/solcommunitychat/1'}]}});
+  const merged=scanner.mergeSocialIntel({mint,symbol:'MOON',telegramIntel:{available:true,provider:'Telegram public discovery',mentions1h:999,mentions24h:999,sentimentScore:99,posts:[{source:'Telegram',channel:'solcommunitychat',channelType:'unverified',text:'Contract '+mint,publishedAt:now,link:'https://t.me/solcommunitychat/1'}]}});
   assert.equal(merged.available,true);
   assert.equal(Object.hasOwn(merged,'reddit'),false);
   assert.deepEqual(merged.providers,['Telegram public discovery']);
-  assert.equal(merged.sentimentScore,null,'aggregate Telegram sentiment is not independently verifiable after promotional filtering');
+  assert.equal(merged.mentions1h,1,'mentions come from sampled, non-promotional posts rather than unverified provider counters');
+  assert.equal(merged.mentions24h,1);
+  assert.equal(merged.sentimentScore,null,'aggregate Telegram sentiment is not independently auditable');
 });
