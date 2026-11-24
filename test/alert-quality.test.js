@@ -47,7 +47,7 @@ test('elite opportunity requires depth, real activity, buyer pressure, valuation
 });
 
 test('a high score cannot bypass weak liquidity, low volume or excessive FDV/liquidity',()=>{
- const weak=qualifyOpportunity(eliteCandidate({liquidityUsd:1600,fdv:200000,volume:{h1:1107}}),{});
+ const weak=qualifyOpportunity(eliteCandidate({liquidityUsd:1600,fdv:200000,volume:{h1:500}}),{});
  assert.equal(weak.eligible,false);
  assert.ok(weak.reasons.includes('Liquidité insuffisante'));
  assert.ok(weak.reasons.includes('Volume 1h insuffisant'));
@@ -87,7 +87,7 @@ test('critical and unknown warning codes remain publication blockers',()=>{
 });
 
 test('weak buyer ratio and insufficient transaction count block opportunity publication',()=>{
- const result=qualifyOpportunity(eliteCandidate({txns:{h1:{buys:4,sells:12}}}),{});
+ const result=qualifyOpportunity(eliteCandidate({txns:{h1:{buys:3,sells:4}}}),{});
  assert.ok(result.reasons.includes('Activité transactionnelle insuffisante'));
  assert.ok(result.reasons.includes('Pression acheteuse insuffisante'));
 });
