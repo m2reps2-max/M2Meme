@@ -82,7 +82,7 @@ test('builds DexScreener, GMGN and Axiom buttons only for valid Solana mints',()
     inline_keyboard:[[
       {text:'DexScreener',url:'https://dexscreener.com/solana/'+mint},
       {text:'GMGN',url:'https://gmgn.ai/sol/token/'+mint},
-      {text:'Axiom',url:'https://axiom.trade/token/'+mint}
+      {text:'Axiom',url:'https://axiom.trade/t/'+mint}
     ]]
   });
   assert.equal(buildTelegramAlertKeyboard({mint:'not-a-solana-mint'}),null);
