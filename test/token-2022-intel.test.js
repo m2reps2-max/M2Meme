@@ -53,7 +53,7 @@ test('unknown, account-only, wrong account type and malformed TLV data remain un
   const wrongKind = mintWithExtensions();
   wrongKind[165] = 2;
   assert.equal(inspectToken2022MintExtensions(wrongKind).token2022ExtensionsReviewed, false);
-  const malformed = mintWithExtensions();
+  const malformed = Buffer.concat([mintWithExtensions(), Buffer.alloc(4)]);
   malformed.writeUInt16LE(20, 166);
   malformed.writeUInt16LE(200, 168);
   assert.equal(inspectToken2022MintExtensions(malformed).token2022TlvMalformed, true);
