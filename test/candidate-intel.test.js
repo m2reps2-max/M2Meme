@@ -111,4 +111,5 @@ test('social merge works without retired Reddit data and labels only connected s
   assert.equal(merged.available,true);
   assert.equal(Object.hasOwn(merged,'reddit'),false);
   assert.deepEqual(merged.providers,['Telegram public discovery']);
+  assert.equal(merged.sentimentScore,null,'aggregate Telegram sentiment is not independently verifiable after promotional filtering');
 });

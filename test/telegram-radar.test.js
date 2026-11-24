@@ -119,6 +119,7 @@ test('Telegram source classification marks obvious calls and signal channels as 
   assert.equal(classifyTelegramChannel('solwhaletrending'),'promotional');
   assert.equal(classifyTelegramChannel('mars100xcryptocalls'),'promotional');
   assert.equal(classifyTelegramChannel('solcommunitychat'),'unverified');
+  assert.equal(classifyTelegramChannel('solwhalealerts'),'unverified');
   const now=Date.now();
   const posts=parseTelegramPage('<div data-post="solwhaletrending/1"><div class="tgme_widget_message_text">$BONK</div><time datetime="'+new Date(now-1000).toISOString()+'"></time></div>','solwhaletrending',now);
   assert.equal(posts[0].channelType,'promotional');
