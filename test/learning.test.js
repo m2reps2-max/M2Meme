@@ -78,6 +78,9 @@ test('out-of-sample calibration separates mints and counts one first forecast pe
  assert.equal(result.baselineComparison.randomSameSize.tokens,result.holdoutAtSelectedThreshold.tokens);
  assert.equal(result.baselineComparison.thresholdVsAllValidation,0);
  assert.equal(result.holdoutAtSelectedThreshold.positive15Pct,100);
+ assert.equal(result.returnBasis,'net_simulated');
+ assert.ok(result.training.averageReturnPct<result.training.grossAverageReturnPct);
+ assert.ok(result.holdoutAtSelectedThreshold.averageReturnPct<result.holdoutAtSelectedThreshold.grossAverageReturnPct);
 });
 
 test('une observation tardive résout le forecast et indique sa qualité',()=>{
