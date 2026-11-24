@@ -251,11 +251,11 @@ test('le seuil minimum choisi dans le dashboard reste prioritaire sur un seuil a
 test('a validated adaptive threshold cannot silently raise the score floor set in the dashboard',()=>{
  const scanner=make();
  scanner.state.scannerSettings={minScore:80};
- scanner.learningSummary=()=>({outOfSample:{status:'holdout_available',selectedThreshold:92,validation:{tokens:30},holdoutAtSelectedThreshold:{tokens:24,positive15Pct:62,averageReturnPct:12,loss20Pct:18}}});
+ scanner.learningSummary=()=>({outOfSample:{status:'holdout_available',selectedThreshold:90,validation:{tokens:30},holdoutAtSelectedThreshold:{tokens:24,positive15Pct:62,averageReturnPct:12,loss20Pct:18}}});
  assert.deepEqual(scanner.activeAlertThreshold(),{threshold:80,source:'dashboard',validated:true,holdoutTokens:24});
  const selected=scanner.selection();
  assert.equal(selected.adaptiveThreshold.threshold,80);
- assert.equal(selected.adaptiveThreshold.calibrationThreshold,92);
+ assert.equal(selected.adaptiveThreshold.calibrationThreshold,90);
 });
 
 test('le suivi wallet surveille les nouvelles signatures au lieu de paginer uniquement vers le passé',async()=>{
