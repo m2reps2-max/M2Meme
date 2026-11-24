@@ -147,6 +147,7 @@ test('paper trading estimates slippage from simulated size and observed liquidit
  const {estimateSlippagePct}=require('../lib/paper-trading');
  assert.ok(estimateSlippagePct(1000,100)>estimateSlippagePct(10000,100));
  assert.equal(estimateSlippagePct(null,100),0.10);
+ assert.equal(estimateSlippagePct(0,100),1,'observed zero liquidity means no executable exit');
   assert.equal(estimateSlippagePct(0,100),1,'observed zero exit liquidity means no executable sell route');
  const state=fixture();
  stepPaperTrading(state,selection(),now);
@@ -159,4 +160,23 @@ test('paper trading refuses new simulated entries when liquidity is unknown',()=
  const state=fixture();
  delete state.tokens[mint].liquidityUsd;
  assert.equal(stepPaperTrading(state,selection(),now).openPositions,0);
+});
+
+
+test('unknown liquidity uses the fallback while observed zero liquidity marks an unexitable position',()=>{
+ const unknown=fixture();
+ stepPaperTrading(unknown,selection(),now);
+ unknown.tokens[mint].liquidityUsd=null;
+ unknown.tokens[mint].history.push({at:new Date(now+60000).toISOString(),priceUsd:1.1});
+ const unknownResult=stepPaperTrading(unknown,{best:[]},now+60000);
+ assert.equal(unknown.paperTrading.positions[0].lastExitSlippagePct,0.10);
+ assert.ok(unknownResult.unrealizedPnlUsd>-100);
+
+ const drained=fixture();
+ stepPaperTrading(drained,selection(),now);
+ drained.tokens[mint].liquidityUsd=0;
+ drained.tokens[mint].history.push({at:new Date(now+60000).toISOString(),priceUsd:1.1});
+ const drainedResult=stepPaperTrading(drained,{best:[]},now+60000);
+ assert.equal(drained.paperTrading.positions[0].lastExitSlippagePct,1);
+ assert.ok(drainedResult.unrealizedPnlUsd<0);
 });
