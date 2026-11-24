@@ -87,3 +87,20 @@ test('diagnostics count exact best-selection factor gates instead of reporting f
  assert.ok(result.rejectionReasons.some(x=>x.reason.includes('activité')));
  assert.match(result.diagnosis,/facteur obligatoire/i);
 });
+
+
+test('disabled opportunity publication is diagnosed without blaming missing score factors',()=>{
+ const token=makeToken({
+  liquidityUsd:20000,fdv:200000,volume:{h1:8000},txns:{h1:{buys:16,sells:4}},
+  history:[{at:new Date(NOW-30_000).toISOString()}],
+  security:{checkedAt:new Date(NOW-60_000).toISOString()},
+  tradeIntel:{checkedAt:new Date(NOW-60_000).toISOString()},
+  analysis:{score:90,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,flags:[],factors:{market:80,liquidityQuality:80,security:90}}
+ });
+ const instance=scanner([token]);
+ instance.state.scannerSettings.publishOpportunities=false;
+ const result=scannerPublicationDiagnostics.call(instance);
+ assert.equal(result.discovery.qualifiedButMissingFactors,0);
+ assert.equal(result.rejectionReasons.some(row=>row.reason.includes('Facteurs requis incomplets')),false);
+ assert.match(result.diagnosis,/publication des opportunités est désactivée/i);
+});
