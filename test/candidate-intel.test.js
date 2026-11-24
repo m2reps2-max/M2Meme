@@ -113,3 +113,27 @@ test('social merge works without retired Reddit data and labels only connected s
   assert.deepEqual(merged.providers,['Telegram public discovery']);
   assert.equal(merged.sentimentScore,null,'aggregate Telegram sentiment is not independently verifiable after promotional filtering');
 });
+
+
+test('Telegram provider counters and aggregate sentiment cannot inflate verified social signals',()=>{
+  const scanner=Object.create(MemeScanner.prototype);
+  const now=new Date().toISOString();
+  const mint='So11111111111111111111111111111111111111112';
+  const merged=scanner.mergeSocialIntel({mint,symbol:'MOON',telegramIntel:{available:true,provider:'Telegram public discovery',mentions1h:999,mentions24h:999,sentimentScore:99,posts:[{source:'Telegram',channel:'solcommunitychat',channelType:'unverified',text:'Contract '+mint,publishedAt:now,link:'https://t.me/solcommunitychat/1'}]}});
+  assert.equal(merged.mentions1h,1);
+  assert.equal(merged.mentions24h,1);
+  assert.equal(merged.sentimentScore,null);
+});
+
+test('promotional Telegram posts do not inflate social mention counts',()=>{
+  const scanner=Object.create(MemeScanner.prototype);
+  const now=new Date().toISOString();
+  const mint='So11111111111111111111111111111111111111112';
+  const merged=scanner.mergeSocialIntel({mint,symbol:'MOON',telegramIntel:{available:true,provider:'Telegram public discovery',mentions1h:100,mentions24h:500,posts:[
+    {source:'Telegram',channel:'solcommunitychat',text:'Contract '+mint,publishedAt:now,link:'https://t.me/solcommunitychat/1'},
+    {source:'Telegram',channel:'solpumpcalls',text:'Contract '+mint+' 100x buy now',publishedAt:now,link:'https://t.me/solpumpcalls/2'}
+  ]}});
+  assert.equal(merged.mentions1h,1);
+  assert.equal(merged.mentions24h,1);
+  assert.equal(merged.evidence.promotionalPosts24h,1);
+});
