@@ -11,6 +11,7 @@ test('narrative trends use independent, token-matched public posts and exclude p
     mint, symbol: 'AGENTDOG', name: 'Agent Dog', firstSeenAt: new Date(now - 10 * 60000).toISOString(),
     socialIntel: { posts: [
       { source: 'Bluesky', author: 'alice.bsky.social', text: 'New AI agent token ' + mint, publishedAt: new Date(now - 60000).toISOString(), link: 'bsky:1' },
+      { source: 'Bluesky', author: 'copycat.bsky.social', text: 'New AI agent token ' + mint, publishedAt: new Date(now - 90000).toISOString(), link: 'bsky:duplicate' },
       { source: 'Nostr', author: 'nostr-author-1', text: 'AI agent community ' + mint, publishedAt: new Date(now - 120000).toISOString(), link: 'nostr:1' },
       { source: 'Telegram', channel: 'solcommunitychat', channelType: 'unverified', text: 'AI agent project ' + mint, publishedAt: new Date(now - 180000).toISOString(), link: 'telegram:1' },
       { source: 'Telegram', channel: 'solcallsgems', channelType: 'promotional', text: 'AI agent 100x ' + mint, publishedAt: new Date(now - 240000).toISOString(), link: 'telegram:promo' },
@@ -26,6 +27,7 @@ test('narrative trends use independent, token-matched public posts and exclude p
   assert.equal(ai.mentions24h, 3);
   assert.equal(ai.uniqueAuthors24h, 3);
   assert.equal(ai.uniqueSources24h, 3);
+  assert.equal(ai.duplicatePostsExcluded, 1);
   assert.equal(ai.trend, 'accélération observée');
   assert.equal(ai.evidence, 'mentions publiques token-matchées, non promotionnelles');
 });
