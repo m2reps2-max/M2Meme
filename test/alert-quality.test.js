@@ -91,3 +91,29 @@ test('weak buyer ratio and insufficient transaction count block opportunity publ
  assert.ok(result.reasons.includes('Activité transactionnelle insuffisante'));
  assert.ok(result.reasons.includes('Pression acheteuse insuffisante'));
 });
+
+
+test('fresh DexScreener 1h transactions are a valid fallback without a GeckoTerminal pool ID',()=>{
+ const now=10_000_000;
+ const token={history:[{at:now-60_000}],txns:{h1:{buys:12,sells:4}},security:{checkedAt:new Date(now-30*60_000).toISOString()}};
+ const {assessOpportunityEvidence}=require('../lib/alert-quality');
+ const result=assessOpportunityEvidence(token,now);
+ assert.equal(result.eligible,true);
+ assert.equal(result.transactionSource,'dexscreener_snapshot');
+});
+
+test('GeckoTerminal trade sampling is optional when the current DEX snapshot has real transactions',()=>{
+ const now=10_000_000;
+ const token={pairAddress:'pair-1',geckoPoolAddress:'pool-1',history:[{at:now-30_000}],txns:{h1:{buys:9,sells:2}},security:{checkedAt:new Date(now-20*60_000).toISOString()}};
+ const {assessOpportunityEvidence}=require('../lib/alert-quality');
+ assert.equal(assessOpportunityEvidence(token,now).transactionSource,'dexscreener_snapshot');
+});
+
+test('transaction fallback cannot use stale market snapshots or missing security evidence',()=>{
+ const now=10_000_000;
+ const {assessOpportunityEvidence}=require('../lib/alert-quality');
+ const stale={history:[{at:now-10*60_000}],txns:{h1:{buys:12,sells:4}},security:{checkedAt:new Date(now-20*60_000).toISOString()}};
+ assert.equal(assessOpportunityEvidence(stale,now).eligible,false);
+ const noSecurity={history:[{at:now-30_000}],txns:{h1:{buys:12,sells:4}}};
+ assert.equal(assessOpportunityEvidence(noSecurity,now).eligible,false);
+});
