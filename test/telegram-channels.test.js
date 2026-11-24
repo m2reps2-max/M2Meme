@@ -48,16 +48,16 @@ test('formats a compact Telegram alert with age, security and terminal links', (
     analysis: { score: 87, coverage: 92, securityComprehensive: false, factors: { security: 82 }, flags: [] },
     signalReasons: ['Liquidité correcte', 'Activité acheteurs en hausse']
   });
-  assert.match(message, /\\$EX/);
-  assert.match(message, /M2 87\\/100/);
+  assert.match(message, /\$EX/);
+  assert.match(message, /M2 87\/100/);
   assert.match(message, /couverture 92%/);
-  assert.match(message, /MC\\/FDV/);
+  assert.match(message, /MC\/FDV/);
   assert.match(message, /LP/);
   assert.match(message, /30 min/);
   assert.match(message, /Contrôle de base OK/);
-  assert.match(message, /<code>8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump<\\/code>/);
+  assert.match(message, /<code>8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump<\/code>/);
   assert.match(message, /qualité des signaux, pas une probabilité/);
-  assert.doesNotMatch(message, /Volume \\(1 h\\)|Variation \\(1 h\\)|Phantom/);
+  assert.doesNotMatch(message, /Volume \(1 h\)|Variation \(1 h\)|Phantom/);
 });
 
 test('escapes token-controlled text and keeps risk alerts concise', () => {
