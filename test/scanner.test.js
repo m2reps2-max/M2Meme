@@ -229,6 +229,7 @@ test('le seuil des alertes ne change qu’après une validation hors échantillo
  const scanner=make();
  const previous=process.env.ALERT_MIN_SCORE;
  process.env.ALERT_MIN_SCORE='78';
+ scanner.state.scannerSettings={minScore:78};
  try{
   scanner.learningSummary=()=>({outOfSample:{status:'holdout_available',selectedThreshold:70,validation:{tokens:25},holdoutAtSelectedThreshold:{tokens:22,positive15Pct:60,averageReturnPct:18,loss20Pct:15}}});
   assert.deepEqual(scanner.activeAlertThreshold(),{threshold:78,source:'dashboard',validated:true,holdoutTokens:22});
