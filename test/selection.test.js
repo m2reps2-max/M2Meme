@@ -66,20 +66,21 @@ test('stale market data cannot enter either shortlist even with a perfect score'
  assert.equal(result.diagnostics.missingMarketTimestamp,1);
 });
 
-test('best picks require fresh security and transaction evidence, not only fresh price',()=>{
- const staleSecurity=token(1,{security:{checkedAt:new Date(NOW-90*60_000).toISOString()}});
+test('best picks require fresh security and either recent Gecko trades or a fresh DEX transaction snapshot',()=>{
+ const staleSecurity=token(1,{security:{checkedAt:new Date(NOW-120*60_000).toISOString()}});
  const staleTrades=token(2,{tradeIntel:{checkedAt:new Date(NOW-90*60_000).toISOString()}});
  const result=buildSelection([staleSecurity,staleTrades],NOW);
  assert.equal(result.best.length,0);
  assert.equal(result.diagnostics.bestRejectedStaleSecurity,1);
- assert.equal(result.diagnostics.bestRejectedStaleTransactions,1);
+ assert.equal(result.diagnostics.bestRejectedStaleTransactions,0);
+ assert.equal(result.diagnostics.bestRejectedStaleMarket,0);
 });
 
 test('security freshness window matches the hourly background refresh cadence',()=>{
  const tokenWith45mSecurityAge=token(9,{security:{checkedAt:new Date(NOW-45*60_000).toISOString()}});
  const result=buildSelection([tokenWith45mSecurityAge],NOW);
  assert.equal(result.best.length,1);
- assert.equal(result.qualityGate.bestSecurityMaxAgeMinutes,65);
+ assert.equal(result.qualityGate.bestSecurityMaxAgeMinutes,95);
 });
 
 test('watchlist tolerates partial security but not stale market or very stale security',()=>{
