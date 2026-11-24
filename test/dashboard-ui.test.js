@@ -202,7 +202,7 @@ test('simple settings page exposes scanner thresholds and publication switches',
  assert.match(js,/name="publishRisks"/);
  assert.match(js,/api\('\/api\/scanner-settings'/);
  assert.match(js,/scanner-settings-preset/);
- assert.match(html,/elite-detection-v1/);
+ assert.match(html,/community-narratives-v2/);
 });
 test('scanner settings remain in the existing persisted state and are applied to alert selection',()=>{
  const normalizer=fs.readFileSync(path.join(root,'lib/state-normalizer.js'),'utf8');
@@ -264,6 +264,6 @@ test('home narrative panel exposes observed community acceleration and independe
  assert.match(js,/mentions24h/);
  assert.match(js,/uniqueAuthors24h/);
  assert.match(js,/uniqueSources24h/);
- assert.match(js,/accélération observée/);
+ assert.match(js,/x\.trend/);
  assert.match(js,/mentions publiques vérifiées/);
 });
