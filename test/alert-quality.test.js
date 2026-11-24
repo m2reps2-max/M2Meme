@@ -117,3 +117,22 @@ test('transaction fallback cannot use stale market snapshots or missing security
  const noSecurity={history:[{at:now-30_000}],txns:{h1:{buys:12,sells:4}}};
  assert.equal(assessOpportunityEvidence(noSecurity,now).eligible,false);
 });
+
+
+test('informational and uncertain warnings do not veto a qualified token',()=>{
+ const candidate=eliteCandidate({analysis:{...eliteCandidate().analysis,risk:'medium',flags:[
+  {level:'warning',code:'TOKEN_2022_REVIEW'},
+  {level:'warning',code:'SOCIAL_AUTHOR_CONCENTRATION'},
+  {level:'warning',code:'HIGH_FDV_LIQUIDITY'},
+  {level:'warning',code:'HOLDER_CONCENTRATION'},
+  {level:'warning',code:'SELL_ROUTE_UNAVAILABLE'}
+ ]}});
+ assert.equal(qualifyOpportunity(candidate,{}).eligible,true);
+});
+
+test('dangerous warnings still veto publication',()=>{
+ for(const code of ['MINT_AUTHORITY','CREATOR_SELL_OBSERVED','SELL_PRESSURE','SELL_ROUTE_HIGH_IMPACT']){
+  const candidate=eliteCandidate({analysis:{...eliteCandidate().analysis,risk:'medium',flags:[{level:'warning',code}]}});
+  assert.equal(qualifyOpportunity(candidate,{}).eligible,false,code);
+ }
+});
