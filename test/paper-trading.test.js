@@ -7,7 +7,7 @@ const now = Date.parse('2026-11-23T00:00:00Z');
 const mint = 'TokenMint111111111111111111111111111111111';
 function fixture(price = 1) {
   return {
-    tokens: { [mint]: { mint, symbol: 'TEST', name: 'Test token', priceUsd: price, updatedAt: new Date(now).toISOString(), history: [{ at: new Date(now).toISOString(), priceUsd: price }], jupiterPrice: { priceUsd: price, checkedAt: new Date(now).toISOString(), divergencePct: 0 } } },
+    tokens: { [mint]: { mint, symbol: 'TEST', name: 'Test token', liquidityUsd: 10000, priceUsd: price, updatedAt: new Date(now).toISOString(), history: [{ at: new Date(now).toISOString(), priceUsd: price }], jupiterPrice: { priceUsd: price, checkedAt: new Date(now).toISOString(), divergencePct: 0 } } },
     paperTrading: { enabled: true, initialCapitalUsd: 1000, cashUsd: 1000, positions: [], trades: [] }
   };
 }
@@ -140,4 +140,22 @@ test('reports separate realized cohorts for fixed and learned entry scores with 
   assert.equal(feedback.byScore['75–84'].trades, 1);
   assert.equal(feedback.byLearnedScore['85–100'].trades, 1);
   assert.equal(feedback.byLearnedScore['75–84'].trades, 1);
+});
+
+
+test('paper trading estimates slippage from simulated size and observed liquidity',()=>{
+ const {estimateSlippagePct}=require('../lib/paper-trading');
+ assert.ok(estimateSlippagePct(1000,100)>estimateSlippagePct(10000,100));
+ assert.equal(estimateSlippagePct(null,100),0.10);
+ const state=fixture();
+ stepPaperTrading(state,selection(),now);
+ const position=state.paperTrading.positions[0];
+ assert.equal(position.entrySlippagePct,0.01);
+ assert.equal(position.liquidityAtEntryUsd,10000);
+});
+
+test('paper trading refuses new simulated entries when liquidity is unknown',()=>{
+ const state=fixture();
+ delete state.tokens[mint].liquidityUsd;
+ assert.equal(stepPaperTrading(state,selection(),now).openPositions,0);
 });

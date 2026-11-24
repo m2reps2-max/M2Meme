@@ -101,3 +101,14 @@ test('social score weight requires cross-network authors or multiple independent
  const telegramSpread=scanner.score({...base,socialIntel:{...social,uniqueChannels24h:3,evidence:{...social.evidence,uniqueChannels24h:3}}});
  assert.equal(telegramSpread.factors.social>=0,true);
 });
+
+
+test('social merge works without retired Reddit data and labels only connected sources',()=>{
+  const scanner=Object.create(MemeScanner.prototype);
+  const now=new Date().toISOString();
+  const mint='So11111111111111111111111111111111111111112';
+  const merged=scanner.mergeSocialIntel({mint,symbol:'MOON',telegramIntel:{available:true,provider:'Telegram public discovery',mentions1h:1,mentions24h:1,posts:[{source:'Telegram',channel:'solcommunitychat',channelType:'unverified',text:'Contract '+mint,publishedAt:now,link:'https://t.me/solcommunitychat/1'}]}});
+  assert.equal(merged.available,true);
+  assert.equal(Object.hasOwn(merged,'reddit'),false);
+  assert.deepEqual(merged.providers,['Telegram public discovery']);
+});

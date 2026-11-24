@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { TelegramRadar, extractPublicChannels, extractHeaderChannels, parseTelegramPage, tokenMention } = require('../lib/telegram-radar');
+const { TelegramRadar, extractPublicChannels, extractHeaderChannels, parseTelegramPage, tokenMention, classifyTelegramChannel } = require('../lib/telegram-radar');
 
 test('extracts only public Telegram channel links from token metadata', () => {
   const channels = extractPublicChannels({
@@ -112,4 +112,14 @@ test('default discovery scans up to four configured channels per cycle', async (
 test('Telegram public page rejects an oversized HTML response',async()=>{
  const radar=new TelegramRadar({seedChannels:['memeradarofficial'],fetchImpl:async()=>({ok:true,headers:{get:()=> '600000'},body:new ReadableStream({start(controller){controller.enqueue(new TextEncoder().encode('x'));controller.close();}})})});
  await assert.rejects(()=>radar.channelPosts('memeradarofficial'),/trop volumineuse/);
+});
+
+
+test('Telegram source classification marks obvious calls and signal channels as promotional',()=>{
+  assert.equal(classifyTelegramChannel('solwhaletrending'),'promotional');
+  assert.equal(classifyTelegramChannel('mars100xcryptocalls'),'promotional');
+  assert.equal(classifyTelegramChannel('solcommunitychat'),'unverified');
+  const now=Date.now();
+  const posts=parseTelegramPage('<div data-post="solwhaletrending/1"><div class="tgme_widget_message_text">$BONK</div><time datetime="'+new Date(now-1000).toISOString()+'"></time></div>','solwhaletrending',now);
+  assert.equal(posts[0].channelType,'promotional');
 });
