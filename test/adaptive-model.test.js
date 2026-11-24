@@ -12,11 +12,11 @@ function fixture(count=300){
   tokens[mint]={mint,liquidityUsd:100000,forecasts:[{
    at:Date.UTC(2026,0,1)+i*60000,score:100-x,features,
    outcomes:{
-    '15m':{returnPct:(x-50)*0.8,exitLiquidityUsd:100000}},
-    '1h':{returnPct:(x-50)*1.5,exitLiquidityUsd:100000}},
-    '6h':{returnPct:(x-50)*1.2,exitLiquidityUsd:100000}},
-    '24h':{returnPct:(x-50)*0.7,exitLiquidityUsd:100000}},
-    '7d':{returnPct:(x-50)*0.4,exitLiquidityUsd:100000}}
+    '15m':{returnPct:(x-50)*0.8,exitLiquidityUsd:100000},
+    '1h':{returnPct:(x-50)*1.5,exitLiquidityUsd:100000},
+    '6h':{returnPct:(x-50)*1.2,exitLiquidityUsd:100000},
+    '24h':{returnPct:(x-50)*0.7,exitLiquidityUsd:100000},
+    '7d':{returnPct:(x-50)*0.4,exitLiquidityUsd:100000}
    }
   }]};
  }
