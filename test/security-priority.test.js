@@ -7,7 +7,7 @@ test('security queue prioritizes strong candidates while preserving an age-based
   const now = 10_000_000;
   const tokens = [
     { mint: 'high-score', pairAddress: 'p1', analysis: { score: 92 }, security: { checkedAt: new Date(now - MIN_SECURITY_REFRESH_AGE_MS - 1).toISOString() } },
-    { mint: 'low-score-old', pairAddress: 'p2', analysis: { score: 55 }, security: { checkedAt: new Date(now - 30 * 3600000).toISOString() } },
+    { mint: 'low-score-old', pairAddress: 'p2', analysis: { score: 74 }, security: { checkedAt: new Date(now - 30 * 3600000).toISOString() } },
     { mint: 'fresh', pairAddress: 'p3', analysis: { score: 100 }, security: { checkedAt: new Date(now - 10 * 60000).toISOString() } },
     { mint: 'unlinked', analysis: { score: 100 } },
     { mint: 'launch', pairAddress: 'p4', launchSource: 'pumpfun', analysis: { score: 85 } }
