@@ -89,3 +89,15 @@ test('multi-horizon comparisons use identical resolved token cohorts for all thr
  assert.equal(sevenDay.top.tokens,sevenDay.randomSameSize.tokens);
  assert.equal(sevenDay.top.tokens,18);
 });
+
+
+test('adaptive extraction includes a preserved first forecast outside the rolling window',()=>{
+ const tokens={};
+ for(let i=0;i<12;i++){
+  const mint='first-only-'+i;
+  tokens[mint]={mint,firstForecast:{at:1000+i,score:80,liquidityUsd:100000,features:{activity:70,momentum:60,market:80,liquidityQuality:75,security:90},outcomes:{'1h':{returnPct:20,exitLiquidityUsd:100000}}},forecasts:[]};
+ }
+ const model=buildAdaptiveModel(tokens);
+ assert.equal(model.observations,12);
+ assert.equal(model.enabled,false);
+});
