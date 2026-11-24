@@ -54,3 +54,22 @@ test('RPC endpoints do not contain a Helius URL when no API key is configured',(
  const endpoints=buildRpcEndpoints({heliusApiKey:'',customRpcUrl:''});
  assert.deepEqual(endpoints,['https://api.mainnet.solana.com','https://solana-rpc.publicnode.com']);
 });
+
+
+test('token security metadata reports the RPC provider actually used',async()=>{
+ const original=global.fetch;
+ global.fetch=async()=>{throw new Error('unexpected network request');};
+ try{
+  const mintData=Buffer.alloc(82);
+  mintData[44]=9;mintData[45]=1;
+  const scanner={state:{sources:{solanaRpc:{endpoint:'mainnet.helius-rpc.com'}}},rpc:async(method)=>{
+   if(method==='getAccountInfo')return {value:{data:[mintData.toString('base64')],owner:'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'}};
+   if(method==='getTokenLargestAccounts')return {value:[]};
+   if(method==='getTokenSupply')return {value:{amount:'100',uiAmountString:'100'}};
+   throw new Error('unexpected RPC method '+method);
+  }};
+  const result=await MemeScanner.prototype.inspectSecurity.call(scanner,{mint:'11111111111111111111111111111111'},{persist:false});
+  assert.equal(result.provider,'Helius RPC');
+  assert.equal(result.rpcEndpoint,'mainnet.helius-rpc.com');
+ }finally{global.fetch=original;}
+});
