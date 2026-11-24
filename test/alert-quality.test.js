@@ -132,6 +132,15 @@ test('uncertain sell-route, unverified-account, small creator-sale and contextua
  }
 });
 
+test('accepted caution signals remain visible in the qualification result',()=>{
+ const candidate=eliteCandidate({analysis:{...eliteCandidate().analysis,risk:'medium',flags:[
+  {level:'warning',code:'SELL_ROUTE_UNAVAILABLE',message:'Jupiter ne trouve pas de route de vente.'}
+ ]}});
+ const result=qualifyOpportunity(candidate,{});
+ assert.equal(result.eligible,true);
+ assert.deepEqual(result.warnings,['Jupiter ne trouve pas de route de vente.']);
+});
+
 test('critical severity always blocks even when the warning code is normally contextual',()=>{
  const candidate=eliteCandidate({analysis:{...eliteCandidate().analysis,risk:'medium',flags:[{level:'critical',code:'CREATOR_SELL_OBSERVED'}]}});
  assert.equal(qualifyOpportunity(candidate,{}).eligible,false);
