@@ -216,7 +216,7 @@ test('le seuil des alertes ne change qu’après une validation hors échantillo
  process.env.ALERT_MIN_SCORE='78';
  try{
   scanner.learningSummary=()=>({outOfSample:{status:'holdout_available',selectedThreshold:70,validation:{tokens:25},holdoutAtSelectedThreshold:{tokens:22,positive15Pct:60,averageReturnPct:18,loss20Pct:15}}});
-  assert.deepEqual(scanner.activeAlertThreshold(),{threshold:78,source:'out_of_sample_validation',validated:true,holdoutTokens:22});
+  assert.deepEqual(scanner.activeAlertThreshold(),{threshold:78,source:'dashboard',validated:true,holdoutTokens:22});
   scanner.learningSummary=()=>({outOfSample:{status:'holdout_available',selectedThreshold:65,validation:{tokens:19},holdoutAtSelectedThreshold:{tokens:19,positive15Pct:80,averageReturnPct:40,loss20Pct:5}}});
   assert.deepEqual(scanner.activeAlertThreshold(),{threshold:78,source:'dashboard',validated:false,holdoutTokens:19});
  }finally{
@@ -230,6 +230,16 @@ test('le seuil minimum choisi dans le dashboard reste prioritaire sur un seuil a
  scanner.state.scannerSettings={minScore:84};
  scanner.learningSummary=()=>({outOfSample:{status:'holdout_available',selectedThreshold:70,validation:{tokens:25},holdoutAtSelectedThreshold:{tokens:22,positive15Pct:60,averageReturnPct:18,loss20Pct:15}}});
  assert.deepEqual(scanner.activeAlertThreshold(),{threshold:84,source:'out_of_sample_validation',validated:true,holdoutTokens:22});
+});
+
+test('a validated adaptive threshold cannot silently raise the score floor set in the dashboard',()=>{
+ const scanner=make();
+ scanner.state.scannerSettings={minScore:80};
+ scanner.learningSummary=()=>({outOfSample:{status:'holdout_available',selectedThreshold:92,validation:{tokens:30},holdoutAtSelectedThreshold:{tokens:24,positive15Pct:62,averageReturnPct:12,loss20Pct:18}}});
+ assert.deepEqual(scanner.activeAlertThreshold(),{threshold:80,source:'dashboard',validated:true,holdoutTokens:24});
+ const selected=scanner.selection();
+ assert.equal(selected.adaptiveThreshold.threshold,80);
+ assert.equal(selected.adaptiveThreshold.calibrationThreshold,92);
 });
 
 test('le suivi wallet surveille les nouvelles signatures au lieu de paginer uniquement vers le passé',async()=>{
