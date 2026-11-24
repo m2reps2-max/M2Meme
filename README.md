@@ -97,7 +97,7 @@ Le scanner enrichit automatiquement un pool GeckoTerminal candidat par cycle, en
 - Telegram collection rotates through a capped seed list of 50 public channels (4 per cycle) and reads up to three additional public `t.me/s/<channel>` pages linked in a token's DexScreener social metadata or description. It does not search all of Telegram and cannot read private groups.
 - Telegram channel pages are cached for 15 minutes; up to three public channels per token and three token candidates per social refresh are inspected.
 - Social summaries distinguish mentions, independent authors, Telegram channels and source-network diversity. Repeated identical snippets are surfaced as a possible amplification pattern, never proof of bots or coordination.
-- X/Twitter is not queried because reliable broad search requires paid API access; no unofficial scraping or credentials are silently assumed.
+- X est facultatif : une session personnelle active la recherche ciblée via le SDK Node `x-agent-sdk`. Il n'y a pas de recherche globale garantie; le connecteur reste soumis aux limites et changements de l'interface privée de X.
 - Social evidence is a small, noisy auxiliary factor in the score and never overrides on-chain risk gates.
 
 ## Social Radar gratuit
