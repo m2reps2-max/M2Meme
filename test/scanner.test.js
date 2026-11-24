@@ -355,7 +355,7 @@ test('an otherwise qualified opportunity stays off Telegram while security evide
   mint,symbol:'STALE',pairAddress:'pool-stale',liquidityUsd:12000,fdv:240000,
   volume:{h1:1800},txns:{h1:{buys:12,sells:8}},
   history:[{at:now-30_000}],
-  security:{checkedAt:new Date(now-90*60_000).toISOString()},
+  security:{checkedAt:new Date(now-120*60_000).toISOString()},
   tradeIntel:{checkedAt:new Date(now-5*60_000).toISOString()},
   analysis:{score:84,coverage:85,risk:'observations_only',securityComprehensive:false,hardBlocked:false,flags:[],factors:{activity:80,momentum:80,market:80,liquidityQuality:80,security:90}}
  };
