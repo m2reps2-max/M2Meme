@@ -19,7 +19,9 @@ test('compactToken bounds cold historical arrays without mutating the hot token'
   };
   const compact = compactToken(token);
   assert.equal(compact.history.length, 5);
-  assert.equal(compact.forecasts.length, 8);
+  assert.equal(compact.forecasts.length, 9);
+  assert.equal(compact.forecasts[0].at, 0, 'the first observation remains available for unbiased first-detection analysis');
+  assert.equal(compact.forecasts.at(-1).at, 29);
   assert.equal(compact.smartMoney.wallets.length, 12);
   assert.equal(token.history.length, 20);
   assert.equal(token.forecasts.length, 30);
@@ -122,4 +124,13 @@ test('cold archive forecast export uses bounded keyset pages and returns only co
     archive.close();
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('compact archive retains an immutable first forecast after the hot rolling window advances', () => {
+  const firstForecast = { id: 'first', at: 1, outcomes: { '1h': { returnPct: 12 } } };
+  const token = { mint: 'FirstForecastMint1111111111111111111111111', firstForecast, forecasts: Array.from({ length: 30 }, (_, i) => ({ id: 'f' + i, at: 100 + i })) };
+  const compact = compactToken(token);
+  assert.equal(compact.forecasts[0].id, 'first');
+  assert.equal(compact.forecasts[0].outcomes['1h'].returnPct, 12);
+  assert.equal(compact.forecasts.length, 9);
 });
