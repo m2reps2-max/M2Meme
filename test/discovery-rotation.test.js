@@ -34,3 +34,32 @@ test('fresh discovery batch excludes tokens already prioritized elsewhere', () =
   assert.equal(first.items.some(mint => priority.includes(mint)), false);
   assert.equal(new Set(first.items).size, first.items.length);
 });
+
+
+test('near-threshold score focus prioritizes linked candidates without admitting hard-blocked or high-risk tokens', () => {
+  const { selectScoreFocusCandidates } = require('../lib/discovery-rotation');
+  const candidates = [
+    { mint: 'below-floor', pairAddress: 'pair-a', analysis: { score: 64, risk: 'low' } },
+    { mint: 'at-floor', pairAddress: 'pair-b', liquidityUsd: 1000, analysis: { score: 65, risk: 'low' } },
+    { mint: 'best', geckoPoolAddress: 'pool-c', liquidityUsd: 500, analysis: { score: 92, risk: 'medium' } },
+    { mint: 'blocked', pairAddress: 'pair-d', analysis: { score: 99, risk: 'low', hardBlocked: true } },
+    { mint: 'high-risk', pairAddress: 'pair-e', analysis: { score: 98, risk: 'high' } },
+    { mint: 'unlinked', analysis: { score: 97, risk: 'low' } },
+    { mint: 'unknown-score', pairAddress: 'pair-f', analysis: { risk: 'low' } }
+  ];
+  const selected = selectScoreFocusCandidates(candidates, 80, 30);
+  assert.deepEqual(selected.map(token => token.mint), ['best', 'at-floor']);
+});
+
+test('score focus adapts its floor to the dashboard minimum and remains capped at thirty', () => {
+  const { selectScoreFocusCandidates } = require('../lib/discovery-rotation');
+  const candidates = Array.from({ length: 40 }, (_, index) => ({
+    mint: 'mint-' + index,
+    pairAddress: 'pair-' + index,
+    liquidityUsd: index,
+    analysis: { score: 95 - index, risk: 'low', hardBlocked: false }
+  }));
+  assert.equal(selectScoreFocusCandidates(candidates, 95).length, 15);
+  assert.equal(selectScoreFocusCandidates(candidates, 70).length, 30);
+  assert.equal(selectScoreFocusCandidates(candidates, 70).at(-1).analysis.score, 66);
+});
