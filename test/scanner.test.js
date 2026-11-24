@@ -665,3 +665,24 @@ test('security leader rotation refreshes four tokens every five minutes',async()
  await scanner.securityLeaders();
  assert.equal(checked.length,5);
 });
+
+
+test('Token-2022 with verified mint and freeze authority is scored as partial, not rejected automatically',()=>{
+ const scanner=make();
+ const analysis=scanner.score({
+  txns:{h1:{buys:80,sells:20}},volume:{h1:12000,h24:90000},liquidityUsd:30000,fdv:300000,ageHours:1,
+  security:{checkedAt:new Date().toISOString(),data:{isInitialized:true,isToken2022:true,token2022ExtensionsReviewed:false,freezeAuthorityActive:false,mintAuthorityActive:false,ownerConcentrationAvailable:false}}
+ });
+ assert.equal(analysis.hardBlocked,false);
+ assert.equal(analysis.risk,'medium');
+ assert.ok(Number.isFinite(analysis.factors.security));
+ assert.ok(analysis.factors.security<=85);
+ assert.ok(analysis.flags.some(flag=>flag.code==='TOKEN_2022_REVIEW'));
+});
+
+test('first market snapshot derives a provisional momentum factor from actual 1h transactions',()=>{
+ const scanner=make();
+ const analysis=scanner.score({txns:{h1:{buys:80,sells:20}},volume:{h1:12000,h24:90000},liquidityUsd:30000,fdv:300000,ageHours:1,history:[]});
+ assert.ok(Number.isFinite(analysis.factors.momentum));
+ assert.ok(analysis.factors.momentum>=0&&analysis.factors.momentum<=100);
+});
