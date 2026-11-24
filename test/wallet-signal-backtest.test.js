@@ -50,10 +50,15 @@ test('compares one first signal per token against first-observation baselines',(
  assert.equal(result.byHorizon['1h'].walletSignal.tokens,1);
  assert.equal(result.byHorizon['1h'].firstObservedTokenBaseline.tokens,2);
  assert.equal(result.byHorizon['1h'].sameTokensAtFirstObservation.tokens,1);
- const net25=netReturnPct(25,100000,100000,100),netMinus10=netReturnPct(-10,100000,100000,100),netMinus30=netReturnPct(-30,100000,100000,100);
- assert.equal(result.byHorizon['1h'].signalVsUniverseAverageReturnPct,Number((net25-(netMinus10+netMinus30)/2).toFixed(2)));
- assert.equal(result.byHorizon['1h'].sameTokensAtFirstObservation.averageReturnPct,Number(netMinus10.toFixed(2)));
+ const net25=Number(netReturnPct(25,100000,100000,100).toFixed(2));
+ const netMinus10=Number(netReturnPct(-10,100000,100000,100).toFixed(2));
+ const netMinus30=Number(netReturnPct(-30,100000,100000,100).toFixed(2));
+ assert.equal(result.byHorizon['1h'].walletSignal.averageReturnPct,net25);
+ assert.equal(result.byHorizon['1h'].walletSignal.grossAverageReturnPct,25);
+ assert.equal(result.byHorizon['1h'].sameTokensAtFirstObservation.averageReturnPct,netMinus10);
+ assert.equal(result.byHorizon['1h'].signalVsUniverseAverageReturnPct,Number((net25-result.byHorizon['1h'].firstObservedTokenBaseline.averageReturnPct).toFixed(2)));
  assert.equal(result.byHorizon['1h'].signalVsSameTokensFirstObservationPct,Number((net25-netMinus10).toFixed(2)));
+ assert.equal(result.byHorizon['1h'].firstObservedTokenBaseline.grossAverageReturnPct,Number(((-10-30)/2).toFixed(2)));
 });
 test('returns an explicit insufficient-data status when no wallet signal exists',()=>{
  const state=fixture();state.walletTrades=state.walletTrades.filter(x=>x.mint!==target);
@@ -67,5 +72,5 @@ test('ignores forecasts with no resolved outcome and does not duplicate a token 
  const result=buildWalletSignalBacktest(state);
  assert.equal(result.summary.signalTokens,1);
  assert.equal(result.byHorizon['1h'].walletSignal.tokens,1);
- assert.equal(result.byHorizon['1h'].walletSignal.averageReturnPct,25);
+ assert.equal(result.byHorizon['1h'].walletSignal.averageReturnPct,Number(netReturnPct(25,100000,100000,100).toFixed(2)));
 });
