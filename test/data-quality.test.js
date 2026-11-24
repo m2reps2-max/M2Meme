@@ -65,3 +65,20 @@ test('un volume horaire seul ne valide pas la mesure de marché 24h requise par 
  const result=tokenDataQuality({mint:'hourly-only',priceUsd:1,liquidityUsd:10000,volume:{h1:500},history:[]},1000000);
  assert.equal(result.checks.find(x=>x.key==='market').available,false);
 });
+
+
+test('social freshness follows X, Nostr or Telegram observations and lists X source health',()=>{
+ const now=9_000_000;
+ const at=new Date(now-30000).toISOString();
+ const xOnly={mint:'x-only',xIntel:{available:true,checkedAt:at,posts:[]},socialIntel:{available:true}};
+ const result=tokenDataQuality(xOnly,now);
+ const social=result.checks.find(row=>row.key==='social');
+ assert.equal(social.available,true);
+ assert.equal(social.freshnessMinutes,0.5);
+ assert.ok(!result.issues.some(issue=>issue.key==='social'&&issue.severity==='unknown_timestamp'));
+ const summary=dataQualitySummary.call({
+  state:{tokens:{xOnly},sources:{}},
+  status:()=>({xSocial:{connected:true,lastSuccess:at}})
+ },now);
+ assert.equal(summary.sources.find(row=>row.key==='xSocial').status,'connected');
+});
