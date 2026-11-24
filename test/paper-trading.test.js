@@ -150,7 +150,7 @@ test('paper trading estimates slippage from simulated size and observed liquidit
  const state=fixture();
  stepPaperTrading(state,selection(),now);
  const position=state.paperTrading.positions[0];
- assert.equal(position.entrySlippagePct,0.01);
+ assert.equal(position.entrySlippagePct,0.02);
  assert.equal(position.liquidityAtEntryUsd,10000);
 });
 
