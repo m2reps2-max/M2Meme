@@ -780,3 +780,39 @@ test('les opportunités Telegram sont limitées aux cinq meilleurs candidats sé
  assert.equal(scanner.state.alerts.filter(row=>row.level==='opportunity').length,1);
  assert.equal(scanner.state.alerts.find(row=>row.mint==='qualified-but-not-top-five').level,'watch');
 });
+
+
+test('une transaction multi-token ne partage pas artificiellement le même montant de cotation entre plusieurs actifs',async()=>{
+ const scanner=make();
+ const wallet='MultiAssetWallet111111111111111111111111111111';
+ const mintA='MultiAssetTokenA1111111111111111111111111111';
+ const mintB='MultiAssetTokenB1111111111111111111111111111';
+ const usdc='EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGkZwyTDt1v';
+ scanner.state.wallets=[{address:wallet}];
+ scanner.rpc=async method=>{
+  if(method==='getSignaturesForAddress')return [{signature:'multi-asset-swap'}];
+  if(method==='getTransaction')return {
+   slot:789,
+   transaction:{message:{accountKeys:[wallet],instructions:[{program:'jupiter',parsed:{type:'route'}}]}},
+   meta:{fee:5000,preBalances:[1000000000],postBalances:[900000000],
+    preTokenBalances:[
+     {mint:mintA,owner:wallet,uiTokenAmount:{amount:'0',decimals:0}},
+     {mint:mintB,owner:wallet,uiTokenAmount:{amount:'100',decimals:0}},
+     {mint:usdc,owner:wallet,uiTokenAmount:{amount:'0',decimals:6}}
+    ],
+    postTokenBalances:[
+     {mint:mintA,owner:wallet,uiTokenAmount:{amount:'50',decimals:0}},
+     {mint:mintB,owner:wallet,uiTokenAmount:{amount:'150',decimals:0}},
+     {mint:usdc,owner:wallet,uiTokenAmount:{amount:'0',decimals:6}}
+    ]}
+  };
+  throw new Error('unexpected RPC '+method);
+ };
+ scanner.save=()=>{};
+ scanner.scoreAll=()=>{};
+ await scanner.refreshWallets();
+ assert.equal(scanner.state.walletTrades.length,2);
+ assert.ok(scanner.state.walletTrades.every(event=>event.swapConfirmed===false));
+ assert.ok(scanner.state.walletTrades.every(event=>event.swapEvidenceStatus==='probable'));
+ assert.ok(scanner.state.walletTrades.every(event=>event.mint!==usdc));
+});
