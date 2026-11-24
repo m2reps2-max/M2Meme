@@ -649,3 +649,19 @@ test('Telegram est déclaré configuré avant le premier canal et son état de c
  assert.equal(status.channels,0);
  assert.equal(status.enabledChannels,0);
 });
+
+
+test('security leader rotation refreshes four tokens every five minutes',async()=>{
+ const scanner=make();
+ const now=Date.now();
+ scanner.state.tokens=Object.fromEntries(Array.from({length:5},(_,i)=>['security-'+i,{mint:'security-'+i,pairAddress:'pair-'+i,liquidityUsd:10000}]));
+ const checked=[];
+ scanner.inspectSecurity=async token=>{checked.push(token.mint);token.security={checkedAt:new Date().toISOString(),data:{}};};
+ scanner.inspectExternalSecurity=async()=>null;
+ scanner.lastSecurity=now-5*60_000-1;
+ await scanner.securityLeaders();
+ assert.equal(checked.length,4);
+ scanner.lastSecurity=Date.now()-5*60_000-1;
+ await scanner.securityLeaders();
+ assert.equal(checked.length,5);
+});
