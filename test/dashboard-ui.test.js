@@ -222,3 +222,8 @@ test('Telegram channel setup uses the native picker instead of asking for a chat
  assert.doesNotMatch(js,/name="chatId"/);
  assert.doesNotMatch(js,/id="channel-form"/);
 });
+
+
+test('selection cohort dashboard labels the displayed performance as net return',()=>{
+ assert.match(js,/Rendement net moyen/);
+});
