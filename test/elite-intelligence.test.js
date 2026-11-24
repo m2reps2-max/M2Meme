@@ -29,8 +29,8 @@ test('organic demand requires a meaningful sample and reports uncertainty',()=>{
 
 test('wallet network identifies repeated wallets across tokens without asserting identity',()=>{
  const state={tokens:{},walletTrades:[
-  ...[w1,w2,w3,w4].map((wallet,i)=>({wallet,mint,direction:'buy',at:new Date(100000+i*1000).toISOString()})),
-  ...[w1,w2,w3,w4].map((wallet,i)=>({wallet,mint:other,direction:'buy',at:new Date(200000+i*1000).toISOString()}))
+  ...[w1,w2,w3,w4].map((wallet,i)=>({wallet,mint,direction:'buy',at:new Date(100000+i*1000).toISOString(),swapConfirmed:true})),
+  ...[w1,w2,w3,w4].map((wallet,i)=>({wallet,mint:other,direction:'buy',at:new Date(200000+i*1000).toISOString(),swapConfirmed:true}))
  ]};
  const index=buildEliteIntelligenceIndex(state);
  const result=analyzeWalletNetwork({mint},index);
@@ -85,4 +85,19 @@ test('repeated rapid buy-sell round trips trigger only a small penalty on a suff
  assert.equal(result.shortRoundTripSharePct,100);
  assert.ok(result.reasons.some(reason=>reason.includes('rotation rapide')));
  assert.equal(result.adjustment,-2);
+});
+
+
+test('unconfirmed GeckoTerminal trade samples cannot create recurring wallet-network links',()=>{
+ const state={tokens:{},walletTrades:[
+  ...[w1,w2,w3,w4].map((wallet,i)=>({wallet,mint,direction:'buy',at:new Date(100000+i*1000).toISOString(),swapConfirmed:false,source:'gecko_pool_sample'})),
+  ...[w1,w2,w3,w4].map((wallet,i)=>({wallet,mint:other,direction:'buy',at:new Date(200000+i*1000).toISOString(),swapConfirmed:false,source:'gecko_pool_sample'}))
+ ]};
+ const index=buildEliteIntelligenceIndex(state);
+ const result=analyzeWalletNetwork({mint},index);
+ assert.equal(index.tradeEvents,0);
+ assert.equal(result.trackedBuyers,0);
+ assert.equal(result.recurrentWallets,0);
+ assert.equal(result.adjustment,0);
+ assert.equal(result.status,'insufficient_data');
 });
