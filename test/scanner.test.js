@@ -14,8 +14,8 @@ test('les preuves sociales multi-auteurs sont un facteur pondéré et augmentent
  const withSocial=s.score(t);
  const withoutSocial=s.score({...t,socialIntel:null});
  assert.ok(Number.isFinite(withSocial.factors.social));
- assert.equal(withSocial.coverage,withoutSocial.coverage+10);
- assert.equal(withSocial.baseScore,withSocial.score);
+ assert.equal(withSocial.coverage,withoutSocial.coverage,'le social influence le score, pas la couverture des preuves de base');
+ assert.notEqual(withSocial.baseScore,withoutSocial.baseScore,'les preuves sociales vérifiées doivent réellement peser dans le classement');
 });
 
 test('les données sociales et wallet inconnues ne sont pas inventées',()=>{const s=make();const a=s.score({txns:{h1:{buys:1,sells:1}},volume:{h1:1,h24:2},liquidityUsd:100,ageHours:1,smartMoney:{hits:0,wallets:[]}});assert.equal(Object.hasOwn(a.factors,'social'),false);assert.equal(Object.hasOwn(a.factors,'smartMoney'),false);assert.equal(Object.hasOwn(a.factors,'narrative'),false);});
