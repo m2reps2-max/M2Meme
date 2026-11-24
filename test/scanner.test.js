@@ -348,7 +348,7 @@ test('alerts require fresh market data and the complete elite quality profile',a
   volume:{h1:8000},txns:{h1:{buys:16,sells:4}},
   history:[{at}],security:{checkedAt:new Date(now-5*60_000).toISOString()},
   tradeIntel:{checkedAt:new Date(now-5*60_000).toISOString()},
-  analysis:{score:92,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,factors:{security:95},flags:[]},
+  analysis:{score:92,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,factors:{activity:90,market:90,liquidityQuality:90,security:95},flags:[]},
   ...overrides
  });
  s.state.tokens={
@@ -720,8 +720,9 @@ test('une liquidité observée à zéro est historisée et déclenche le signal 
 test('le scanner limite les nouveaux tokens lorsque SQLite est indisponible sans supprimer les tokens existants',()=>{
  const scanner=make();
  scanner.archive.available=false;
- scanner.state.tokens=Object.fromEntries(Array.from({length:1200},(_,index)=>['ExistingMint'+index,{mint:'ExistingMint'+index,symbol:'OLD'}]));
- const existing='ExistingMint0';
+ const existing='So11111111111111111111111111111111111111112';
+ scanner.state.tokens=Object.fromEntries(Array.from({length:1199},(_,index)=>['ExistingMint'+index,{mint:'ExistingMint'+index,symbol:'OLD'}]));
+ scanner.state.tokens[existing]={mint:existing,symbol:'OLD'};
  scanner.ingestLaunch({mint:existing,name:'Updated Existing',symbol:'UPD',timestamp:Math.floor(Date.now()/1000)});
  const newMint='NewBoundedMint11111111111111111111111111111';
  scanner.ingestLaunch({mint:newMint,name:'New Token',symbol:'NEW',timestamp:Math.floor(Date.now()/1000)});
