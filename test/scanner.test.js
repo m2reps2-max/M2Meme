@@ -816,3 +816,15 @@ test('une transaction multi-token ne partage pas artificiellement le même monta
  assert.ok(scanner.state.walletTrades.every(event=>event.swapEvidenceStatus==='probable'));
  assert.ok(scanner.state.walletTrades.every(event=>event.mint!==usdc));
 });
+
+
+test('le statut expose la pression mémoire et le mode dégradé de l’archive',()=>{
+ const scanner=make();
+ scanner.archive.available=false;
+ scanner.state.tokens=Object.fromEntries(Array.from({length:1200},(_,index)=>['tracked-'+index,{mint:'tracked-'+index}]));
+ const status=scanner.status();
+ assert.equal(status.runtimeMemory.archiveAvailable,false);
+ assert.equal(status.runtimeMemory.trackedTokens,1200);
+ assert.equal(status.runtimeMemory.newTokenDiscoveryPaused,true);
+ assert.ok(Number.isFinite(status.runtimeMemory.current.rssMiB));
+});
