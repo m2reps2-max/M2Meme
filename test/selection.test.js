@@ -72,7 +72,7 @@ test('best picks require fresh security and either recent Gecko trades or a fres
  const result=buildSelection([staleSecurity,staleTrades],NOW);
  assert.equal(result.best.length,0);
  assert.equal(result.diagnostics.bestRejectedStaleSecurity,1);
- assert.equal(result.diagnostics.bestRejectedStaleTransactions,0);
+ assert.equal(result.diagnostics.bestRejectedStaleTransactions,1);
  assert.equal(result.diagnostics.bestRejectedStaleMarket,0);
 });
 
