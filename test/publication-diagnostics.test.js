@@ -45,7 +45,7 @@ test('diagnostics distinguish discovery API health from actual DexScreener marke
  instance.state.sources.dexscreener={ok:true,at:new Date(NOW).toISOString()};
  instance.state.sources.dexMarket={ok:false,attemptedBatches:3,succeededBatches:0,pairs:0,snapshots:0,error:'HTTP 429'};
  const result=scannerPublicationDiagnostics.call(instance);
- assert.equal(result.discovery.sourceStatus.dexscreener.ok,true);
+ assert.equal(result.discovery.sourceStatus.dexscreener.connected,true);
  assert.equal(result.discovery.sourceStatus.dexMarket.ok,false);
  assert.equal(result.discovery.sourceStatus.dexMarket.error,'HTTP 429');
 });
