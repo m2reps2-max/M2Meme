@@ -3,6 +3,8 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const {evaluateMomentumRisk}=require('../lib/momentum-risk');
 
+const tradeProof=()=>({checkedAt:new Date().toISOString(),tradeCount:40,uniqueBuyers:15,top5BuyerSharePct:52,buyVolumeUsd:12000,sellVolumeUsd:7000});
+
 test('a +200% move is contextual and never excluded by itself',()=>{
  const result=evaluateMomentumRisk({priceChange:{m5:4,h1:85,h24:210},volume:{m5:10000,h1:90000},txns:{m5:{buys:30,sells:8}}});
  assert.equal(result.detectors.extendedMove,true);
@@ -94,8 +96,9 @@ test('a vertical +592% move without fresh five-minute confirmation is blocked',(
  assert.equal(result.status,'unconfirmed_vertical_move');
 });
 test('a vertical move with positive five-minute price, buyers and relative volume is not automatically blocked',()=>{
- const result=evaluateMomentumRisk({priceChange:{m5:4,h1:592,h24:592},volume:{m5:5000,h1:45000},txns:{m5:{buys:18,sells:5}}});
+ const result=evaluateMomentumRisk({priceChange:{m5:4,h1:592,h24:592},volume:{m5:5000,h1:45000},txns:{m5:{buys:18,sells:5}},tradeIntel:tradeProof()});
  assert.equal(result.detectors.verticalMoveUnconfirmed,false);
+ assert.equal(result.detectors.independentDemand,true);
  assert.equal(result.blockPublication,false);
 });
 test('a sustained fall since first observations blocks a high-scoring candidate',()=>{
@@ -116,7 +119,8 @@ test('a young pool with a +207% hourly move remains eligible when fresh momentum
   pairCreatedAt:Date.now()-9*60_000,
   priceChange:{m5:4,h1:207,h24:207},
   volume:{m5:5000,h1:45000},
-  txns:{m5:{buys:18,sells:5}}
+  txns:{m5:{buys:18,sells:5}},
+  tradeIntel:tradeProof()
  });
  assert.equal(result.detectors.lateLaunchVertical,true);
  assert.equal(result.detectors.lateLaunchMomentumConfirmed,true);
@@ -155,5 +159,19 @@ test('a young pool without an extreme hourly pump is not blocked by the anti-cha
 test('a strong hourly move without reliable pool age is not treated as a young-pool pump',()=>{
  const result=evaluateMomentumRisk({priceChange:{m5:4,h1:207,h24:207},volume:{m5:5000,h1:45000},txns:{m5:{buys:18,sells:5}}});
  assert.equal(result.detectors.lateLaunchVertical,false);
+ assert.equal(result.blockPublication,false);
+});
+
+test('a vertical move with short-term buying pressure but no independent demand is blocked',()=>{
+ const result=evaluateMomentumRisk({priceChange:{m5:4,h1:592,h24:592},volume:{m5:5000,h1:45000},txns:{m5:{buys:18,sells:5}}});
+ assert.equal(result.detectors.shortTermMomentumConfirmed,true);
+ assert.equal(result.detectors.independentDemand,false);
+ assert.equal(result.detectors.verticalMoveUnconfirmed,true);
+ assert.equal(result.blockPublication,true);
+});
+
+test('a +207% young launch can pass when independent trade demand is verified',()=>{
+ const result=evaluateMomentumRisk({pairCreatedAt:Date.now()-9*60_000,priceChange:{m5:4,h1:207,h24:207},volume:{m5:5000,h1:45000},txns:{m5:{buys:18,sells:5}},tradeIntel:tradeProof()});
+ assert.equal(result.detectors.lateLaunchMomentumConfirmed,true);
  assert.equal(result.blockPublication,false);
 });
