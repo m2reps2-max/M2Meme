@@ -170,7 +170,18 @@ function renderResults(){
   const tone=v=>v==null?'neutral':Number(v)>=0?'good':'bad';
   const reasons=(a.reasons||[]).slice(0,2).map(x=>esc(x)).join(' · ')||'Raisons historiques non archivées';
   const flags=(a.flags||[]).slice(0,2).map(x=>esc(x.message||x)).join(' · ');
-  return `<tr><td><b>${esc(row.name)}</b><small class="subtle">$${esc(row.symbol)} · ${date(row.publishedAt)}</small><small class="subtle mono">${esc(short(row.mint))}</small></td><td><b>${a.score??'—'}/100</b><small class="subtle">${a.coverage??'—'}% couverture</small></td><td>${usd(row.basePriceUsd)} → ${usd(row.currentPriceUsd)}<small class="subtle ${tone(ret)}">${ret==null?(row.currentState==='stale'?'Prix ancien':'Prix actuel indisponible'):auditCell(ret)}</small></td><td><b class="${tone(one.returnPct)}">${auditCell(one.returnPct)}</b></td><td><b class="${tone(six.returnPct)}">${auditCell(six.returnPct)}</b></td><td><small>${reasons}</small><small class="subtle">${flags||(snap.analysis?.risk?'Risque : '+esc(snap.analysis.risk):'Détail des risques non archivé')}</small></td></tr>`;
+  const totalTrades=Number(snap.buys1h||0)+Number(snap.sells1h||0);
+  const buyPct=totalTrades?Math.round(Number(snap.buys1h||0)/totalTrades*100):null;
+  const ageMinutes=snap.pairCreatedAt&&snap.capturedAt?Math.max(0,Math.round((Number(snap.capturedAt)-Date.parse(snap.pairCreatedAt))/60000)):null;
+  const marketContext=[
+   ageMinutes==null?null:'Pool '+ageMinutes+' min',
+   snap.liquidityUsd?'Liq. '+usd(snap.liquidityUsd):null,
+   snap.volume1hUsd?'Vol. 1h '+usd(snap.volume1hUsd):null,
+   buyPct==null?null:'Achats '+buyPct+'%',
+   snap.fdv?'FDV '+usd(snap.fdv):null
+  ].filter(Boolean).join(' · ')||'Contexte de marché non archivé';
+  const factors=Object.entries(snap.analysis?.factors||{}).filter(([,v])=>typeof v==='number'&&Number.isFinite(v)).slice(0,4).map(([k,v])=>esc(k)+' '+Math.round(v)).join(' · ');
+  return `<tr><td><b>${esc(row.name)}</b><small class="subtle">$${esc(row.symbol)} · ${date(row.publishedAt)}</small><small class="subtle mono">${esc(short(row.mint))}</small></td><td><b>${a.score??'—'}/100</b><small class="subtle">${a.coverage??'—'}% couverture</small></td><td>${usd(row.basePriceUsd)} → ${usd(row.currentPriceUsd)}<small class="subtle ${tone(ret)}">${ret==null?(row.currentState==='stale'?'Prix ancien':'Prix actuel indisponible'):auditCell(ret)}</small></td><td><b class="${tone(one.returnPct)}">${auditCell(one.returnPct)}</b></td><td><b class="${tone(six.returnPct)}">${auditCell(six.returnPct)}</b></td><td><small>${reasons}</small><small class="subtle">${marketContext}</small><small class="subtle">${factors?'Facteurs : '+factors+' · ':''}${flags||(snap.analysis?.risk?'Risque : '+esc(snap.analysis.risk):'Détail des risques non archivé')}</small></td></tr>`;
  }).join('');
  const auditHtml=`<article class="panel detail-card"><div class="section-heading"><div><h3>Audit des publications Telegram</h3><p class="muted">Pourquoi le bot a sélectionné chaque token, et ce qu’il est devenu ensuite.</p></div><button class="mini-btn" id="refresh-telegram-audit">Actualiser</button></div>${auditRows.length?`<div class="table-wrap"><table><thead><tr><th>Publication</th><th>Score</th><th>Entrée → actuel</th><th>1 h</th><th>6 h</th><th>Raisons / risques au moment du choix</th></tr></thead><tbody>${auditRowsHtml}</tbody></table></div>`:'<p class="muted">Aucune publication suivie disponible. Les anciennes publications non suivies par le bot ne peuvent pas être recalculées sans historique de prix fiable.</p>'}<p class="footnote">Le rendement actuel n’est affiché que si le dernier prix observé est récent et provient de la même source que le prix d’entrée. Les données historiques absentes sont signalées, jamais reconstituées artificiellement.</p></article>`;
  const best=state.selectionPerformance?.groups?.best||{};
