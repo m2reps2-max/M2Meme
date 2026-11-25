@@ -54,7 +54,7 @@ test('formats a curated best-memecoin post with market details and terminal link
   assert.match(message, /MEMECOIN RETENUE/);
   assert.match(message, /DONNÉES DU MARCHÉ/);
   assert.match(message, /Volume \(1 h\)/);
-  assert.match(message, /transactions/);
+  assert.match(message, /Transactions/);
   assert.match(message, /\n/);
   assert.doesNotMatch(message, /\\\\n/);
   assert.ok(message.includes('couverture <b>92%</b>'));
