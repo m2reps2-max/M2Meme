@@ -75,8 +75,8 @@ test('renders a compact designed footer with publication growth and six mileston
   row.lastCurrentObservedAt = BASE + 60 * 60 * 1000;
   const message = formatTelegramPerformanceMessage(row, BASE + 60 * 60 * 1000);
   assert.match(message, /MEMECOIN RETENUE/);
-  assert.match(message, /🪙 <i>Test Coin · \$TEST<\\/i>/);
-  assert.match(message, /<b>📈 PERFORMANCE<\\/b>/);
+  assert.ok(message.includes('🪙 <i>Test Coin · $TEST</i>'));
+  assert.ok(message.includes('<b>📈 PERFORMANCE</b>'));
   assert.match(message, /Depuis publication : ▲\+50,0%/);
   assert.ok(message.includes('1H ▲+20,0%'));
   assert.ok(message.includes('2H —'));
