@@ -152,6 +152,19 @@ test('persists only bounded, valid performance entries', () => {
   }))).length, 1000);
 });
 
+test('refreshes the card once when its last market snapshot becomes stale', () => {
+  const row = entry();
+  const firstAt = BASE + 60 * 1000;
+  collectTelegramPerformanceUpdates([row], { [mint]: token(0.0011, firstAt) }, firstAt);
+  markTelegramPerformanceRendered(row, firstAt);
+
+  const staleAt = BASE + 7 * 60 * 1000;
+  const staleToken = { [mint]: token(0.0011, firstAt) };
+  assert.equal(collectTelegramPerformanceUpdates([row], staleToken, staleAt).length, 1);
+  markTelegramPerformanceRendered(row, staleAt);
+  assert.equal(collectTelegramPerformanceUpdates([row], staleToken, staleAt + 60 * 1000).length, 0);
+});
+
 test('current return refresh is throttled to hourly updates unless a milestone resolves', () => {
   const row = entry();
   for (const horizon of HORIZONS) row.horizons[horizon.key] = { priceUsd: 0.001, observedAt: BASE + horizon.offsetMs, returnPct: 0 };
