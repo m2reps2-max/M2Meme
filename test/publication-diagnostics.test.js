@@ -73,6 +73,22 @@ test('diagnostics distinguish discovery API health from actual DexScreener marke
  assert.equal(result.discovery.sourceStatus.dexMarket.error,'HTTP 429');
 });
 
+test('watch-only candidates are not misdiagnosed as Telegram delivery failures',()=>{
+ const token=makeToken({
+  liquidityUsd:20000,fdv:200000,volume:{h1:8000},txns:{h1:{buys:16,sells:4}},
+  history:[{at:new Date(NOW-30_000).toISOString()}],
+  analysis:{score:90,coverage:90,risk:'partial',hardBlocked:false,flags:[]}
+ });
+ const instance=scanner([token],{bot:{isRunning:()=>true}});
+ instance.state.telegramChannels=[{id:'channel-1',enabled:true,chatId:'-1001234567890'}];
+ const result=scannerPublicationDiagnostics.call(instance);
+ assert.equal(result.discovery.watchEligible,1);
+ assert.equal(result.discovery.qualityPass,0);
+ assert.equal(result.discovery.opportunityEligible,0);
+ assert.match(result.diagnosis,/contrôle on-chain de base/i);
+ assert.doesNotMatch(result.diagnosis,/Telegram/i);
+});
+
 test('diagnostics identify Telegram delivery configuration blockers', () => {
   const token = makeToken({
     liquidityUsd: 20000, fdv: 200000, volume: { h1: 8000 },
