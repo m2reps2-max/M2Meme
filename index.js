@@ -6,6 +6,7 @@ const helmet=require('helmet');
 const cookieParser=require('cookie-parser');
 const {Bot,InlineKeyboard}=require('grammy');
 const {MemeScanner}=require('./lib/scanner');
+const {renderTelegramPerformancePng}=require('./lib/telegram-preview-image');
 const {getPaperTradingSummary,setPaperTradingEnabled,stepPaperTrading}=require('./lib/paper-trading');
 const {buildHeliusWalletSnapshot}=require('./lib/helius-wallet-intel');
 const {resolveTelegramToken}=require('./lib/telegram-config');
@@ -47,7 +48,7 @@ function origin(req,res,next){
 function loginLimit(req,res,next){const key=String(req.ip||'unknown'),now=Date.now();if(now-lastLoginCleanup>60000||fails.size>2000){for(const [ip,row] of fails)if(row.until<=now)fails.delete(ip);lastLoginCleanup=now;}if(fails.size>=5000&&!fails.has(key))return res.status(429).json({error:'Trop de tentatives. Réessaie plus tard.'});let x=fails.get(key)||{n:0,until:now+900000};if(x.until<now)x={n:0,until:now+900000};if(x.n>=8)return res.status(429).json({error:'Trop de tentatives. Réessaie plus tard.'});req.bad=()=>{x.n++;fails.set(key,x);};req.good=()=>fails.delete(key);next();}
 const TELEGRAM_TOKEN=resolveTelegramToken(process.env);
 let bot=null;if(TELEGRAM_TOKEN){bot=new Bot(TELEGRAM_TOKEN);const kb=()=>URL?new InlineKeyboard().url('Ouvrir MEME RADAR',URL):null;bot.command('start',ctx=>ctx.reply('Bienvenue sur MEME RADAR.',kb()?{reply_markup:kb()}:undefined));bot.command('dashboard',ctx=>ctx.reply(URL?'Ouvre ton dashboard privé : '+URL:'Configure DASHBOARD_URL pour recevoir le lien du dashboard.'));bot.command('help',ctx=>ctx.reply('Commandes : /start /dashboard /scan /opportunities /help. Recherche uniquement, aucun achat automatique.'));bot.on('my_chat_member',ctx=>{const update=ctx.update.my_chat_member;const result=upsertTelegramChannel(scanner.state.telegramChannels,update.chat,update.new_chat_member);if(!result.ok){console.warn('[telegram channel discovery]',result.error);return;}if(result.ignored)return;scanner.state.telegramChannels=result.channels;scanner.state.telegramChannelsConfigured=true;try{scanner.save();console.log('[telegram] channel membership updated',{chatId:String(update.chat.id),title:update.chat.title,status:update.new_chat_member?.status,canPostMessages:result.channel?.canPostMessages});}catch(error){console.error('[telegram channel discovery] save failed:',error.message);}});}
-const scanner=new MemeScanner({dataFile:path.join(__dirname,'data','store.json'),bot,telegramChatId:process.env.TELEGRAM_CHAT_ID});
+const scanner=new MemeScanner({dataFile:path.join(__dirname,'data','store.json'),bot,telegramChatId:process.env.TELEGRAM_CHAT_ID,telegramPreviewBaseUrl:URL||'https://m2meme.fadehost.app'});
 let lastManual=0;
 app.post('/internal/actions/historical-benchmark',(req,res)=>{
  const expected=String(process.env.MEME_RADAR_ACTIONS_TOKEN||'');
@@ -98,6 +99,53 @@ app.get('/health',(_q,r)=>r.json({ok:true,service:'meme-radar',at:new Date().toI
 app.get('/health/ready',(_q,r)=>{const health=scanner.healthSummary();const ready=health.checks.scanner.ok;r.status(ready?200:503).json({ok:ready,scannerRunning:scanner.running,at:new Date().toISOString()});});
 app.get('/api/system/health',(_q,r)=>r.json({ok:true,...scanner.healthSummary()}));
 app.post('/api/login',loginLimit,(q,r)=>{if(!equal(q.body?.code||'',CODE)){q.bad();return r.status(401).json({error:'Code incorrect'});}q.good();r.cookie(COOKIE,session(),{httpOnly:true,secure:PROD,sameSite:'strict',path:'/',maxAge:SESSION_TTL});r.json({ok:true});});
+function escapePreviewMeta(value){
+ return String(value??'').replace(/[&<>"']/g,character=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
+}
+function previewReturn(entry){
+ const price=Number(entry.lastCurrentPriceUsd),base=Number(entry.basePriceUsd);
+ if(!Number.isFinite(price)||price<=0||!Number.isFinite(base)||base<=0)return '—';
+ const value=(price/base-1)*100,rounded=Number(value.toFixed(1));
+ return (rounded>0?'+':'')+rounded.toFixed(1).replace('.',',')+' %';
+}
+function findTelegramPreview(req){
+ const id=String(req.params.id||'');
+ if(!/^[A-Za-z0-9_-]{20,40}$/.test(id))return null;
+ return scanner.state.telegramPerformance.find(row=>row.previewId===id)||null;
+}
+app.get('/telegram-preview/:id/image.png',(req,res)=>{
+ const entry=findTelegramPreview(req);
+ if(!entry)return res.status(404).type('text').send('Preview indisponible');
+ try{
+  const png=renderTelegramPerformancePng(entry,Date.now());
+  res.status(200).set('Content-Type','image/png').set('Cache-Control','no-store, max-age=0').set('X-Content-Type-Options','nosniff').send(png);
+ }catch(error){
+  console.error('[telegram preview image]',String(error.message||error).slice(0,160));
+  res.status(500).type('text').send('Preview indisponible');
+ }
+});
+app.get('/telegram-preview/:id',(req,res)=>{
+ const entry=findTelegramPreview(req);
+ if(!entry)return res.status(404).type('text').send('Preview indisponible');
+ const base=URL||'https://m2meme.fadehost.app';
+ const version=String(req.query.v||entry.lastCurrentObservedAt||entry.publishedAt).slice(0,100);
+ const pageUrl=base+'/telegram-preview/'+entry.previewId+'?v='+encodeURIComponent(version);
+ const imageUrl=base+'/telegram-preview/'+entry.previewId+'/image.png?v='+encodeURIComponent(version);
+ const identity=[entry.tokenName,entry.tokenSymbol?String.fromCharCode(36)+entry.tokenSymbol:''].filter(Boolean).join(' · ')||'Memecoin';
+ const title=identity+' — Performance M2Meme';
+ const description='Depuis publication : '+previewReturn(entry)+'. Suivi aux échéances 1 h, 2 h, 3 h, 6 h, 10 h et 24 h.';
+ const html='<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+  +'<meta name="robots" content="noindex,nofollow"><meta property="og:type" content="website">'
+  +'<meta property="og:site_name" content="M2Meme"><meta property="og:title" content="'+escapePreviewMeta(title)+'">'
+  +'<meta property="og:description" content="'+escapePreviewMeta(description)+'">'
+  +'<meta property="og:url" content="'+escapePreviewMeta(pageUrl)+'"><meta property="og:image" content="'+escapePreviewMeta(imageUrl)+'">'
+  +'<meta property="og:image:secure_url" content="'+escapePreviewMeta(imageUrl)+'"><meta property="og:image:type" content="image/png">'
+  +'<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">'
+  +'<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="'+escapePreviewMeta(title)+'">'
+  +'<meta name="twitter:description" content="'+escapePreviewMeta(description)+'"><meta name="twitter:image" content="'+escapePreviewMeta(imageUrl)+'">'
+  +'<title>'+escapePreviewMeta(title)+'</title></head><body><p>'+escapePreviewMeta(description)+'</p><img src="'+escapePreviewMeta(imageUrl)+'" width="1200" height="630" alt="Performance M2Meme"></body></html>';
+ res.status(200).set('Cache-Control','no-store, max-age=0').type('html').send(html);
+});
 app.use('/api',auth,origin);
 app.post('/api/logout',(_q,r)=>{r.clearCookie(COOKIE,{httpOnly:true,secure:PROD,sameSite:'strict',path:'/'});r.json({ok:true});});
 app.get('/api/me',(_q,r)=>r.json({ok:true,authenticated:true}));

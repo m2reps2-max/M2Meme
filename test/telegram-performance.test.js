@@ -8,6 +8,8 @@ const {
   createTelegramPerformanceEntry,
   collectTelegramPerformanceUpdates,
   formatTelegramPerformanceMessage,
+  buildTelegramPreviewUrl,
+  telegramPerformancePreviewVersion,
   markTelegramPerformanceRendered
 } = require('../lib/telegram-performance');
 
@@ -20,6 +22,7 @@ function entry() {
   return createTelegramPerformanceEntry({
     mint, chatId: '-1001234567890', messageId: 42,
     originalMessage: '<b>💎 MEMECOIN RETENUE</b>',
+    previewId: 'Abcdefghijklmnopqrstuvwx',
     token: token(0.001, BASE - 30000),
     publishedAt: BASE
   });
@@ -68,23 +71,38 @@ test('marks a missed milestone unavailable instead of inventing a return', () =>
   assert.equal(row.horizons['2h'], undefined);
 });
 
-test('renders a compact designed footer with publication growth and six milestones', () => {
+test('keeps the Telegram message compact and exposes a native preview link', () => {
   const row = entry();
   row.horizons['1h'] = { priceUsd: 0.0012, observedAt: BASE + 60 * 60 * 1000, returnPct: 20 };
   row.lastCurrentPriceUsd = 0.0015;
   row.lastCurrentObservedAt = BASE + 60 * 60 * 1000;
-  const message = formatTelegramPerformanceMessage(row, BASE + 60 * 60 * 1000);
+  const baseUrl = 'https://m2meme.fadehost.app';
+  const message = formatTelegramPerformanceMessage(row, BASE + 60 * 60 * 1000, baseUrl);
   assert.match(message, /MEMECOIN RETENUE/);
-  assert.ok(message.includes('🪙 <i>Test Coin · $TEST</i>'));
-  assert.ok(message.includes('<b>📈 PERFORMANCE</b>'));
-  assert.match(message, /Depuis publication : ▲\+50,0%/);
-  assert.ok(message.includes('1H ▲+20,0%'));
-  assert.ok(message.includes('2H —'));
-  assert.ok(message.includes('24H —'));
-  assert.equal((message.match(/<code>/g) || []).length, 2);
-  assert.doesNotMatch(message, /<pre>|Ouvrir sur/);
-  assert.ok(message.trimEnd().endsWith('</i>'));
+  assert.ok(message.includes('DexScreener</a> · <a href="https://gmgn.ai/'));
+  assert.ok(message.includes('Axiom</a>'));
+  assert.ok(message.includes('<a href="https://m2meme.fadehost.app/telegram-preview/Abcdefghijklmnopqrstuvwx?v='));
+  assert.doesNotMatch(message, /<b>📈 PERFORMANCE|Depuis publication|1H ▲|<pre>|Ouvrir sur/);
+  assert.equal(buildTelegramPreviewUrl('http://m2meme.fadehost.app', row.previewId, 1), '');
+  assert.equal(buildTelegramPreviewUrl(baseUrl, 'invalid id', 1), '');
+  assert.ok(telegramPerformancePreviewVersion(row).startsWith(String(row.lastCurrentObservedAt) + '-1h20'));
 });
+
+test('normalizes only opaque preview identifiers', () => {
+  const row = entry();
+  const valid = normalizeTelegramPerformance([row])[0];
+  assert.equal(valid.previewId, row.previewId);
+  const invalid = normalizeTelegramPerformance([{ ...row, previewId: 'https://evil.example' }])[0];
+  assert.equal(invalid.previewId, null);
+});
+
+test('renders a real PNG image for the Telegram Open Graph preview', () => {
+  const { renderTelegramPerformancePng } = require('../lib/telegram-preview-image');
+  const png = renderTelegramPerformancePng(entry(), BASE);
+  assert.equal(png.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
+  assert.ok(png.length > 1000);
+});
+
 
 test('migrates legacy tracked messages to a Phantom-only inline keyboard', () => {
   const row = entry();
