@@ -83,6 +83,20 @@ test('formats the original post and all requested horizons as a compact monospac
   assert.ok(message.includes('</pre>'));
 });
 
+test('migrates legacy tracked messages to a Phantom-only inline keyboard', () => {
+  const row = entry();
+  row.replyMarkup = { inline_keyboard: [[
+    { text: 'DexScreener', url: 'https://dexscreener.com/solana/' + mint },
+    { text: 'GMGN', url: 'https://gmgn.ai/sol/token/' + mint },
+    { text: 'Axiom', url: 'https://axiom.trade/t/' + mint },
+    { text: '👻 Acheter sur Phantom', url: 'https://phantom.com/tokens/solana/' + mint }
+  ]] };
+  const normalized = normalizeTelegramPerformance([row])[0];
+  assert.deepEqual(normalized.replyMarkup, { inline_keyboard: [[
+    { text: '👻 Acheter avec Phantom', url: 'https://phantom.com/tokens/solana/' + mint }
+  ]] });
+});
+
 test('persists only bounded, valid performance entries', () => {
   const row = entry();
   const normalized = normalizeTelegramPerformance([row, null, { id: 'bad' }]);
