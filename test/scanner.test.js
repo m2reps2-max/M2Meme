@@ -967,11 +967,15 @@ test('DexScreener crée un snapshot pour un mint présent côté quote avec son 
   priceNative:'1000',
   liquidity:{usd:50000},
   fdv:9000000,
+  info:{socials:[{type:'twitter',url:'https://x.com/base-token'}],websites:[{url:'https://base-token.example'}],imageUrl:'https://example.com/base.png'},
   volume:{h1:12000,h24:80000},
   txns:{h1:{buys:30,sells:10}}
  },mint);
  const token=scanner.state.tokens[mint];
  assert.equal(created,true);
+ assert.deepEqual(token.socials,[],'base-token socials must not be attributed to quote token');
+ assert.deepEqual(token.websites,[]);
+ assert.equal(token.imageUrl,undefined);
  assert.equal(token.symbol,'QST');
  assert.equal(token.priceUsd,0.2);
  assert.equal(token.liquidityUsd,50000);
