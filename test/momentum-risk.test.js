@@ -3,7 +3,7 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const {evaluateMomentumRisk}=require('../lib/momentum-risk');
 
-const tradeProof=()=>({checkedAt:new Date().toISOString(),tradeCount:40,uniqueBuyers:15,top5BuyerSharePct:52,buyVolumeUsd:12000,sellVolumeUsd:7000});
+const tradeProof=()=>({rpcConfirmed:true,checkedAt:new Date().toISOString(),tradeCount:40,uniqueBuyers:15,top5BuyerSharePct:52,buyVolumeUsd:12000,sellVolumeUsd:7000});
 
 test('a +200% move is contextual and never excluded by itself',()=>{
  const result=evaluateMomentumRisk({priceChange:{m5:4,h1:85,h24:210},volume:{m5:10000,h1:90000},txns:{m5:{buys:30,sells:8}}});
@@ -173,5 +173,29 @@ test('a vertical move with short-term buying pressure but no independent demand 
 test('a +207% young launch can pass when independent trade demand is verified',()=>{
  const result=evaluateMomentumRisk({pairCreatedAt:Date.now()-9*60_000,priceChange:{m5:4,h1:207,h24:207},volume:{m5:5000,h1:45000},txns:{m5:{buys:18,sells:5}},tradeIntel:tradeProof()});
  assert.equal(result.detectors.lateLaunchMomentumConfirmed,true);
+ assert.equal(result.blockPublication,false);
+});
+
+test('GeckoTerminal sampled trades alone never count as independent demand for a vertical move',()=>{
+ const sampledOnly={checkedAt:new Date().toISOString(),tradeCount:40,uniqueBuyers:15,top5BuyerSharePct:52,buyVolumeUsd:12000,sellVolumeUsd:7000,earlyWindow:{complete:true}};
+ const result=evaluateMomentumRisk({priceChange:{m5:4,h1:592,h24:592},volume:{m5:5000,h1:45000},txns:{m5:{buys:18,sells:5}},tradeIntel:sampledOnly,analysis:{factors:{earlyBuyerSignal:90}}});
+ assert.equal(result.detectors.tradeIntelFresh,true);
+ assert.equal(result.detectors.verifiedTradeDemand,false);
+ assert.equal(result.detectors.verifiedEarlyBuyerDemand,false);
+ assert.equal(result.detectors.independentDemand,false);
+ assert.equal(result.blockPublication,true);
+});
+
+test('RPC-confirmed trade evidence may validate demand when its sample is sufficiently broad',()=>{
+ const result=evaluateMomentumRisk({priceChange:{m5:4,h1:592,h24:592},volume:{m5:5000,h1:45000},txns:{m5:{buys:18,sells:5}},tradeIntel:tradeProof()});
+ assert.equal(result.detectors.verifiedTradeDemand,true);
+ assert.equal(result.detectors.independentDemand,true);
+ assert.equal(result.blockPublication,false);
+});
+
+test('qualified wallets with confirmed swap history can validate demand without Gecko sample trust',()=>{
+ const result=evaluateMomentumRisk({priceChange:{m5:4,h1:592,h24:592},volume:{m5:5000,h1:45000},txns:{m5:{buys:18,sells:5}},walletReputation:{qualified:true,score:72}});
+ assert.equal(result.detectors.verifiedWalletDemand,true);
+ assert.equal(result.detectors.independentDemand,true);
  assert.equal(result.blockPublication,false);
 });
