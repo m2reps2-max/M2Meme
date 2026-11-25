@@ -80,7 +80,7 @@ test('formats the original post and all requested horizons as a compact monospac
   assert.match(message, /2 h +En attente/);
   assert.match(message, /24 h +En attente/);
   assert.match(message, /ACTUEL +🟢 \\+50,00 %/);
-  assert.match(message, /<\\/pre>/);
+  assert.ok(message.includes('</pre>'));
 });
 
 test('persists only bounded, valid performance entries', () => {
