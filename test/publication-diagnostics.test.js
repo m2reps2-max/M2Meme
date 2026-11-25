@@ -205,6 +205,7 @@ test('diagnostics expose token-level security inspection evidence without exposi
     security: {
       checkedAt: new Date(NOW - 60_000).toISOString(),
       provider: 'Helius RPC',
+      error: 'security object inspection error',
       data: {
         tokenProgram: 'unknown-program',
         isInitialized: true,
@@ -214,7 +215,6 @@ test('diagnostics expose token-level security inspection evidence without exposi
         ownerConcentrationAvailable: false
       }
     },
-    securityCheckError: 'sample inspection error',
     securityRetryAt: new Date(NOW + 60_000).toISOString(),
     securityCheckFailureCount: 2,
     analysis: { score: 90, coverage: 90, risk: 'partial', hardBlocked: false, flags: [] }
@@ -226,8 +226,9 @@ test('diagnostics expose token-level security inspection evidence without exposi
   assert.equal(inspection.isInitialized, true);
   assert.equal(inspection.mintAuthorityKnown, true);
   assert.equal(inspection.freezeAuthorityKnown, true);
-  assert.equal(inspection.factorAvailable, false);
-  assert.equal(inspection.lastError, 'sample inspection error');
+  assert.equal(inspection.securityFactorAvailable, false);
+  assert.equal(inspection.baseSecurityGatePassed, false);
+  assert.equal(inspection.lastError, 'security object inspection error');
   assert.equal(inspection.failureCount, 2);
   assert.equal(JSON.stringify(inspection).includes('apiKey'), false);
 });
