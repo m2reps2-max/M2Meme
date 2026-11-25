@@ -50,23 +50,23 @@ test('formats a curated best-memecoin post with market details and terminal link
   });
   assert.match(message, /\$EX/);
   assert.match(message, /87\/100/);
-  assert.match(message, /MEMECOIN SÉLECTIONNÉE/);
+  assert.match(message, /MEMECOIN RETENUE/);
   assert.match(message, /DONNÉES DU MARCHÉ/);
   assert.match(message, /Volume 1 h/);
   assert.match(message, /transactions/);
   assert.match(message, /\n/);
   assert.doesNotMatch(message, /\\\\n/);
   assert.ok(message.includes('couverture <b>92%</b>'));
-  assert.match(message, /Capitalisation/);
+  assert.match(message, /Valorisation estimée \\(FDV\\)/);
   assert.match(message, /Liquidité/);
   assert.match(message, /30 min/);
-  assert.match(message, /Contrôle on-chain de base OK/);
+  assert.match(message, /Contrôle on-chain de base validé/);
   assert.match(message, /<code>8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump<\/code>/);
-  assert.match(message, /n’est pas une promesse de performance/);
+  assert.match(message, /ne garantit aucun rendement/);
   assert.doesNotMatch(message, /Volume \(1 h\)|Variation \(1 h\)|Phantom/);
 });
 
-test('escapes token-controlled text and keeps risk alerts concise', () => {
+test('keeps the channel selection in French and never leaks raw foreign-language signal text', () => {\n  const message = formatTelegramAlert({\n    name: 'Token Name', symbol: 'TN', mint: '8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump',\n    fdv: 10000, liquidityUsd: 6000, volume: { h1: 900 }, txns: { h1: { buys: 12, sells: 4 } }, ageMinutes: 8,\n    analysis: { score: 91, coverage: 88, factors: { security: 90 }, flags: [{ level: 'warning', message: 'Low liquidity and suspicious activity' }] },\n    signalReasons: ['All checks passed']\n  });\n  assert.match(message, /MEMECOIN RETENUE/);\n  assert.match(message, /Valorisation estimée/);\n  assert.match(message, /Liquidité/);\n  assert.match(message, /Contrôle de sécurité/);\n  assert.doesNotMatch(message, /Low liquidity|suspicious activity|All checks passed/);\n});\n\ntest('escapes token-controlled text and keeps risk alerts concise', () => {
   const message = formatTelegramAlert({
     name: 'Offchain <script> & Co', symbol: 'OFF&', mint: '5jv4h9dam2xtheatffvqfjpnhj2gmd3443auuxisccgm',
     liquidityUsd: 1650, fdv: 2056, ageMinutes: 10,
