@@ -32,3 +32,11 @@ test('never-inspected linked tokens are prioritized over stale refreshes',()=>{
  const staleHigh={mint:'stale-high',pairAddress:'old-pool',analysis:{score:95},security:{checkedAt:new Date(now-2*3600000).toISOString()}};
  assert.deepEqual(rankSecurityCandidates([staleHigh,neverChecked],now,1).map(x=>x.mint),['never-checked']);
 });
+
+
+test('security queue skips candidates in retry cooldown so one failing mint cannot starve the queue',()=>{
+ const now=90_000_000;
+ const blocked={mint:'rpc-failing',pairAddress:'pool-a',analysis:{score:99},securityRetryAt:new Date(now+120000).toISOString()};
+ const next={mint:'next-candidate',pairAddress:'pool-b',analysis:{score:85}};
+ assert.deepEqual(rankSecurityCandidates([blocked,next],now,2).map(x=>x.mint),['next-candidate']);
+});
