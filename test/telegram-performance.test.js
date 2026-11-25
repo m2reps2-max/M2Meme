@@ -96,11 +96,36 @@ test('normalizes only opaque preview identifiers', () => {
   assert.equal(invalid.previewId, null);
 });
 
-test('renders a real PNG image for the Telegram Open Graph preview', () => {
-  const { renderTelegramPerformancePng } = require('../lib/telegram-preview-image');
-  const png = renderTelegramPerformancePng(entry(), BASE);
+test('renders a premium PNG and labels every unavailable milestone instead of leaving blank cells', () => {
+  const { renderTelegramPerformancePng, buildTelegramPreviewMetrics } = require('../lib/telegram-preview-image');
+  const row = entry();
+  const metrics = buildTelegramPreviewMetrics(row, BASE + 30 * 60 * 1000);
+  assert.equal(metrics.currentState, 'a jour');
+  assert.equal(metrics.cells[0].value, 'EN ATTENTE');
+  assert.equal(metrics.cells[5].value, 'EN ATTENTE');
+  const png = renderTelegramPerformancePng(row, BASE + 30 * 60 * 1000);
   assert.equal(png.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
   assert.ok(png.length > 1000);
+});
+
+test('does not present an old market snapshot as a current return', () => {
+  const { buildTelegramPreviewMetrics } = require('../lib/telegram-preview-image');
+  const row = entry();
+  row.lastCurrentObservedAt = BASE - 10 * 60 * 1000;
+  row.lastCurrentPriceUsd = 0.002;
+  const metrics = buildTelegramPreviewMetrics(row, BASE);
+  assert.equal(metrics.currentReturn, null);
+  assert.equal(metrics.currentState, 'donnee ancienne');
+  assert.equal(metrics.observedAt, 0);
+});
+
+test('labels a missed market observation explicitly after the capture window', () => {
+  const { buildTelegramPreviewMetrics } = require('../lib/telegram-preview-image');
+  const row = entry();
+  const metrics = buildTelegramPreviewMetrics(row, BASE + 70 * 60 * 1000);
+  assert.equal(metrics.cells[0].value, 'NON CAPTURE');
+  row.horizons['1h'] = { missed: true };
+  assert.equal(buildTelegramPreviewMetrics(row, BASE + 70 * 60 * 1000).cells[0].value, 'N/D');
 });
 
 
