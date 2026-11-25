@@ -68,7 +68,7 @@ test('marks a missed milestone unavailable instead of inventing a return', () =>
   assert.equal(row.horizons['2h'], undefined);
 });
 
-test('formats the original post, all requested horizons and the live return', () => {
+test('formats the original post and all requested horizons as a compact monospace performance table', () => {
   const row = entry();
   row.horizons['1h'] = { priceUsd: 0.0012, observedAt: BASE + 60 * 60 * 1000, returnPct: 20 };
   row.lastCurrentPriceUsd = 0.0015;
@@ -76,8 +76,8 @@ test('formats the original post, all requested horizons and the live return', ()
   const message = formatTelegramPerformanceMessage(row, BASE + 60 * 60 * 1000);
   assert.match(message, /MEMECOIN RETENUE/);
   assert.match(message, /1 h : <b>🟢 \+20,00 %/);
-  assert.match(message, /2 h : <b>En attente/);
-  assert.match(message, /24 h : <b>En attente/);
+  assert.match(message, /2 h +En attente/);
+  assert.match(message, /24 h +En attente/);
   assert.match(message, /Depuis la publication :<\/b> 🟢 \+50,00 %/);
 });
 
