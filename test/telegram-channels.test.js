@@ -41,7 +41,7 @@ test('verdicts are labels, not probability claims', () => {
   assert.equal(scoreVerdict(99, 'danger'), 'RISQUE IMPORTANT');
 });
 
-test('formats a compact Telegram alert with age, security and terminal links', () => {
+test('formats a curated best-memecoin post with market details and terminal links', () => {
   const message = formatTelegramAlert({
     name: 'Example Token', symbol: 'EX', mint: '8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump',
     liquidityUsd: 12000, fdv: 43000, ageMinutes: 30,
@@ -49,16 +49,20 @@ test('formats a compact Telegram alert with age, security and terminal links', (
     signalReasons: ['Liquidité correcte', 'Activité acheteurs en hausse']
   });
   assert.match(message, /\$EX/);
-  assert.match(message, /M2 87\/100/);
+  assert.match(message, /87\/100/);
+  assert.match(message, /MEMECOIN SÉLECTIONNÉE/);
+  assert.match(message, /DONNÉES DU MARCHÉ/);
+  assert.match(message, /Volume 1 h/);
+  assert.match(message, /transactions/);
   assert.match(message, /\n/);
   assert.doesNotMatch(message, /\\\\n/);
-  assert.match(message, /couverture 92%/);
-  assert.match(message, /MC\/FDV/);
-  assert.match(message, /LP/);
+  assert.ok(message.includes('couverture <b>92%</b>'));
+  assert.match(message, /Capitalisation/);
+  assert.match(message, /Liquidité/);
   assert.match(message, /30 min/);
-  assert.match(message, /Contrôle de base OK/);
+  assert.match(message, /Contrôle on-chain de base OK/);
   assert.match(message, /<code>8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump<\/code>/);
-  assert.match(message, /qualité des signaux, pas une probabilité/);
+  assert.match(message, /n’est pas une promesse de performance/);
   assert.doesNotMatch(message, /Volume \(1 h\)|Variation \(1 h\)|Phantom/);
 });
 
@@ -68,7 +72,7 @@ test('escapes token-controlled text and keeps risk alerts concise', () => {
     liquidityUsd: 1650, fdv: 2056, ageMinutes: 10,
     analysis: { score: 71, coverage: 75, hardBlocked: true, flags: [{ level: 'critical', message: 'Chute du prix > 20% sur 5 minutes' }] }
   }, 'danger');
-  assert.ok(message.startsWith('🚨 <b>ALERTE RISQUE</b>'));
+  assert.ok(message.startsWith('🚨 <b>RISQUE DÉTECTÉ</b>'));
   assert.match(message, /Offchain &lt;script&gt; &amp; Co/);
   assert.match(message, /RISQUE IMPORTANT/);
   assert.match(message, /Sécurité : <b>BLOQUÉE/);
