@@ -10,7 +10,8 @@ const {
   formatTelegramPerformanceMessage,
   buildTelegramPreviewUrl,
   telegramPerformancePreviewVersion,
-  markTelegramPerformanceRendered
+  markTelegramPerformanceRendered,
+  selectPerformanceMarketObservation
 } = require('../lib/telegram-performance');
 
 const BASE = Date.UTC(2026, 10, 25, 12, 0, 0);
@@ -54,6 +55,34 @@ test('records six milestone returns from the scanner current market snapshots', 
   assert.equal(row.horizons['1h'].returnPct, 20);
   assert.equal(row.horizons['2h'], undefined);
   assert.equal(HORIZONS.map(x => x.key).join(','), '1h,2h,3h,6h,10h,24h');
+});
+
+test('continues tracking the publication provider when the token latest source switches', () => {
+  const row = entry();
+  const latestGecko = token(0.004, BASE + 2 * 60 * 1000);
+  latestGecko.marketObservationSource = 'geckoterminal';
+  latestGecko.history = [
+    { at: BASE + 60 * 1000, source: 'dexscreener', priceUsd: 0.00125 },
+    { at: BASE + 2 * 60 * 1000, source: 'geckoterminal', priceUsd: 0.004 },
+    { at: BASE + 3 * 60 * 1000, source: 'dexscreener', priceUsd: 0.0014 }
+  ];
+  const updates = collectTelegramPerformanceUpdates([row], { [mint]: latestGecko }, BASE + 3 * 60 * 1000);
+  assert.equal(updates.length, 1);
+  assert.equal(row.lastCurrentPriceUsd, 0.0014);
+  assert.equal(row.lastCurrentObservedAt, BASE + 3 * 60 * 1000);
+  assert.equal(selectPerformanceMarketObservation(latestGecko, 'dexscreener', BASE + 3 * 60 * 1000).priceUsd, 0.0014);
+});
+
+test('refreshes current performance every five minutes instead of once per hour', () => {
+  const row = entry();
+  for (const horizon of HORIZONS) row.horizons[horizon.key] = { priceUsd: 0.001, observedAt: BASE + horizon.offsetMs, returnPct: 0 };
+  const firstAt = BASE + 60 * 1000;
+  collectTelegramPerformanceUpdates([row], { [mint]: token(0.0011, firstAt) }, firstAt);
+  markTelegramPerformanceRendered(row, firstAt);
+  const nextAt = BASE + 6 * 60 * 1000;
+  const updates = collectTelegramPerformanceUpdates([row], { [mint]: token(0.0012, nextAt) }, nextAt);
+  assert.equal(updates.length, 1);
+  assert.equal(row.lastCurrentPriceUsd, 0.0012);
 });
 
 test('does not mix prices from a different market provider into the same performance series', () => {
@@ -165,11 +194,12 @@ test('refreshes the card once when its last market snapshot becomes stale', () =
   assert.equal(collectTelegramPerformanceUpdates([row], staleToken, staleAt + 60 * 1000).length, 0);
 });
 
-test('current return refresh is throttled to hourly updates unless a milestone resolves', () => {
+test('current return refresh is throttled to five-minute updates unless a milestone resolves', () => {
   const row = entry();
   for (const horizon of HORIZONS) row.horizons[horizon.key] = { priceUsd: 0.001, observedAt: BASE + horizon.offsetMs, returnPct: 0 };
-  collectTelegramPerformanceUpdates([row], { [mint]: token(0.0011, BASE + 10 * 60 * 1000) }, BASE + 10 * 60 * 1000);
-  markTelegramPerformanceRendered(row, BASE + 10 * 60 * 1000);
-  assert.equal(collectTelegramPerformanceUpdates([row], { [mint]: token(0.0013, BASE + 20 * 60 * 1000) }, BASE + 20 * 60 * 1000).length, 0);
-  assert.equal(collectTelegramPerformanceUpdates([row], { [mint]: token(0.0014, BASE + 70 * 60 * 1000) }, BASE + 70 * 60 * 1000).length, 1);
+  const firstAt = BASE + 10 * 60 * 1000;
+  collectTelegramPerformanceUpdates([row], { [mint]: token(0.0011, firstAt) }, firstAt);
+  markTelegramPerformanceRendered(row, firstAt);
+  assert.equal(collectTelegramPerformanceUpdates([row], { [mint]: token(0.0013, BASE + 14 * 60 * 1000) }, BASE + 14 * 60 * 1000).length, 0);
+  assert.equal(collectTelegramPerformanceUpdates([row], { [mint]: token(0.0014, BASE + 16 * 60 * 1000) }, BASE + 16 * 60 * 1000).length, 1);
 });
