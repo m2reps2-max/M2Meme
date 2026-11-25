@@ -7,6 +7,7 @@ const cookieParser=require('cookie-parser');
 const {Bot,InlineKeyboard}=require('grammy');
 const {MemeScanner}=require('./lib/scanner');
 const {renderTelegramPerformancePng}=require('./lib/telegram-preview-image');
+const {buildTelegramPublicationAudit}=require('./lib/telegram-audit');
 const {getPaperTradingSummary,setPaperTradingEnabled,stepPaperTrading}=require('./lib/paper-trading');
 const {buildHeliusWalletSnapshot}=require('./lib/helius-wallet-intel');
 const {resolveTelegramToken}=require('./lib/telegram-config');
@@ -169,6 +170,11 @@ app.get('/api/tokens',(q,r)=>{const tokens=scanner.tokens({sort:String(q.query.s
 app.get('/api/token/:mint',async(q,r)=>{try{const token=await scanner.detail(q.params.mint);let social=null;if(q.query.social==='true')social=await scanner.social(q.params.mint).catch(e=>({configured:true,error:e.message}));r.json({ok:true,token,social});}catch(e){r.status(404).json({error:e.message});}});
 app.post('/api/scan',async(_q,r)=>{if(Date.now()-lastManual<20000)return r.status(429).json({error:'Attends 20 secondes avant un nouveau scan.'});lastManual=Date.now();try{r.json({ok:true,result:await scanner.scan(),overview:scanner.overview()});}catch(e){r.status(503).json({error:e.message});}});
 app.get('/api/alerts',(_q,r)=>r.json({ok:true,alerts:scanner.state.alerts.slice(-150).reverse()}));
+app.get('/api/telegram/publication-audit',(q,r)=>{
+ const limit=Math.min(100,Math.max(1,Number(q.query.limit)||50));
+ const publications=buildTelegramPublicationAudit({performance:scanner.state.telegramPerformance,alerts:scanner.state.alerts,tokens:scanner.state.tokens,limit,now:Date.now()});
+ r.json({ok:true,generatedAt:new Date().toISOString(),count:publications.length,publications});
+});
 app.get('/api/watchlist',(_q,r)=>r.json({ok:true,watchlist:scanner.state.watchlist}));
 app.post('/api/watchlist',(q,r)=>{try{r.json({ok:true,watchlist:scanner.addWatch(String(q.body?.mint||''))});}catch(e){r.status(400).json({error:e.message});}});
 app.delete('/api/watchlist/:mint',(q,r)=>r.json({ok:true,watchlist:scanner.removeWatch(q.params.mint)}));
