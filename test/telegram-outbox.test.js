@@ -98,18 +98,21 @@ test('normalizes malformed and duplicate persisted rows safely', () => {
 test('keeps the generated Phantom buy button through the real outbox normalization path', () => {
   const mint = '8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump';
   const replyMarkup = buildTelegramAlertKeyboard({ mint });
-  assert.equal(replyMarkup.inline_keyboard[0][3].text, '👻 Acheter sur Phantom');
+  assert.equal(replyMarkup.inline_keyboard[0].length, 1);
+  assert.equal(replyMarkup.inline_keyboard[0][0].text, '👻 Acheter avec Phantom');
   const entry = createTelegramOutboxEntry({ alertId: 'alert', chatId: 'channel', message: 'Alert', replyMarkup });
   assert.deepEqual(normalizeTelegramOutbox([entry])[0].replyMarkup, replyMarkup);
 });
 
-test('persists only a validated Phantom inline button across restart normalization',()=>{
+test('persists only the Phantom inline buy button; platform links belong in the message footer',()=>{
   const mint='8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump';
-  const replyMarkup={inline_keyboard:[[{text:'👻 Acheter sur Phantom',url:'https://phantom.com/tokens/solana/'+mint}]]};
+  const replyMarkup={inline_keyboard:[[{text:'👻 Acheter avec Phantom',url:'https://phantom.com/tokens/solana/'+mint}]]};
   const entry=createTelegramOutboxEntry({alertId:'phantom',chatId:'chat',message:'Alert',replyMarkup});
   assert.deepEqual(normalizeTelegramOutbox([entry])[0].replyMarkup,replyMarkup);
   const unsafe=createTelegramOutboxEntry({alertId:'unsafe',chatId:'chat',message:'Alert',replyMarkup:{inline_keyboard:[[{text:'Acheter',url:'https://evil.example/'+mint}]]}});
   assert.equal(unsafe.replyMarkup,null);
+  const oldDexButtons=createTelegramOutboxEntry({alertId:'old-dex',chatId:'chat',message:'Alert',replyMarkup:{inline_keyboard:[[{text:'DexScreener',url:'https://dexscreener.com/solana/'+mint}]]}});
+  assert.equal(oldDexButtons.replyMarkup,null,'DexScreener, GMGN and Axiom must not appear as inline buttons');
   const forgedDex=createTelegramOutboxEntry({alertId:'forged',chatId:'chat',message:'Alert',replyMarkup:{inline_keyboard:[[{text:'DexScreener',url:'https://evil.example/'+mint}]]}});
   assert.equal(forgedDex.replyMarkup,null);
 });
