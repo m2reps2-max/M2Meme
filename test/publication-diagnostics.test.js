@@ -41,6 +41,7 @@ test('diagnostics explain strict Elite rejection and stale snapshots without wea
 
 test('diagnostics distinguish discovery API health from actual DexScreener market refresh health',()=>{
  const instance=scanner([makeToken()]);
+ instance.state.sources ||= {};
  instance.state.sources.dexscreener={ok:true,at:new Date(NOW).toISOString()};
  instance.state.sources.dexMarket={ok:false,attemptedBatches:3,succeededBatches:0,pairs:0,snapshots:0,error:'HTTP 429'};
  const result=scannerPublicationDiagnostics.call(instance);
