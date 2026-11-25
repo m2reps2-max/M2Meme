@@ -158,8 +158,7 @@ test('transaction fallback cannot use stale market snapshots or missing security
 test('required external security rejects missing, unavailable, caution and unknown reports',()=>{
  const base=eliteCandidate();
  for(const externalSecurity of [undefined,{status:'unavailable'},{status:'ok',verdict:'CAUTION',score:70,confidence:90},{status:'ok',verdict:'UNKNOWN',score:90,confidence:90}]){
-  const result=qualifyOpportunity({...base,externalSecurity},{requireExternalSecurity:true});
-  assert.equal(result.eligible,false);
+  const result=qualifyOpportunity({...base,externalSecurity},{requireExternalSecurity:true});assert.equal(result.eligible,false);
  }
 });
 test('required external security accepts only a sufficiently confident clean or low-risk report',()=>{
