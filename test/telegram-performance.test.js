@@ -85,7 +85,7 @@ test('keeps the Telegram message compact and exposes a native preview link', () 
   assert.doesNotMatch(message, /<b>📈 PERFORMANCE|Depuis publication|1H ▲|<pre>|Ouvrir sur/);
   assert.equal(buildTelegramPreviewUrl('http://m2meme.fadehost.app', row.previewId, 1), '');
   assert.equal(buildTelegramPreviewUrl(baseUrl, 'invalid id', 1), '');
-  assert.ok(telegramPerformancePreviewVersion(row).startsWith(String(row.lastCurrentObservedAt) + '-1h:20'));
+  assert.ok(telegramPerformancePreviewVersion(row).startsWith(String(row.lastCurrentObservedAt) + '-1h20'));
 });
 
 test('normalizes only opaque preview identifiers', () => {
