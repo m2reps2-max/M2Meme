@@ -203,6 +203,30 @@ test('un nouveau pool GeckoTerminal est intégré sans inventer un créateur', (
 });
 
 
+
+test('a scan skipped during background work schedules an automatic retry',async()=>{
+ const scanner=make();
+ scanner.running=true;
+ scanner.backgroundTaskRunning='wallets';
+ const result=await scanner.scan();
+ assert.equal(result.skipped,true);
+ assert.equal(result.reason,'background_task_busy');
+ assert.equal(result.retryScheduled,true);
+ assert.ok(scanner.scanRetryTimer);
+ scanner.stop();
+ assert.equal(scanner.scanRetryTimer,null);
+});
+
+test('releasing a background task schedules the waiting market scan',async()=>{
+ const scanner=make();
+ scanner.running=true;
+ scanner.scan=async()=>({ok:true});
+ const result=await scanner.runBackgroundTask('social',async()=>({ok:true}),252);
+ assert.deepEqual(result,{ok:true});
+ assert.ok(scanner.scanRetryTimer);
+ scanner.stop();
+});
+
 test('GeckoTerminal market observations create timestamped snapshots usable by publication freshness',()=>{
  const scanner=make();
  const mint='11111111111111111111111111111111';
