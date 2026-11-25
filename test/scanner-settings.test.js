@@ -15,6 +15,7 @@ test('defaults to the elite profile with multiple independent quality thresholds
   assert.equal(settings.minBuyRatioPct, 50);
   assert.equal(settings.maxFdvLiquidityRatio, 35);
   assert.equal(settings.requireComprehensiveSecurity, false);
+  assert.equal(settings.requireExternalSecurity, true);
 });
 
 test('migrates the old untouched balanced default to elite without breaking custom thresholds', () => {
@@ -85,4 +86,9 @@ test('scanner settings survive the existing state normalization and persistence 
   assert.equal(restored.scannerSettings.minLiquidityUsd, PRESETS.large.minLiquidityUsd);
   assert.equal(restored.scannerSettings.minVolume1hUsd, PRESETS.large.minVolume1hUsd);
   assert.equal(restored.scannerSettings.publishRisks, false);
+});
+
+test('external safety verification stays mandatory after loading old saved settings',()=>{
+ assert.equal(normalizeScannerSettings({version:3,minScore:80}).requireExternalSecurity,true);
+ assert.equal(normalizeState({...freshState(),scannerSettings:{version:3,minScore:80}}).scannerSettings.requireExternalSecurity,true);
 });
