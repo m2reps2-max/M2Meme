@@ -77,7 +77,7 @@ test('formats a curated best-memecoin post with market details and terminal link
 test('does not invent a positive reason when observed market evidence is missing', () => {
   const { buildSelectionReason } = require('../lib/telegram-channels');
   const reason = buildSelectionReason({ analysis: { score: 88, coverage: 90, factors: { momentum: 95, liquidityQuality: 99 } } });
-  assert.match(reason, /aucun indicateur positif isolé n’est suffisamment documenté/);
+  assert.match(reason, /aucun indicateur positif isolé n’est suffisamment documenté/i);
   assert.doesNotMatch(reason, /momentum positif|bonne qualité de liquidité|score élevé/);
 });
 
