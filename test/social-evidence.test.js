@@ -91,3 +91,42 @@ test('Telegram promotional heuristic does not blacklist generic whale or trader 
   assert.equal(isPromotionalPost({channel:'solcallsgems'},'telegram'),true);
   assert.equal(isPromotionalPost({channel:'soltrenchtrending'},'telegram'),true);
 });
+
+
+test('social evidence measures acceleration, independent communities and identity quality', () => {
+  const now = Date.now();
+  const posts = [
+    { source: 'X', author: 'alice', text: 'Watching $MOON before it trends', publishedAt: new Date(now - 5 * 60000).toISOString(), link: 'x:1', likes: 8, reposts: 3 },
+    { source: 'Bluesky', author: 'bob.bsky.social', text: 'Moon Rocket $MOON looks interesting', publishedAt: new Date(now - 15 * 60000).toISOString(), link: 'bsky:1', likes: 4 },
+    { source: 'Nostr', author: 'npub-bob', text: 'Contract ' + token.mint + ' is getting attention', publishedAt: new Date(now - 35 * 60000).toISOString(), link: 'nostr:1' },
+    { source: 'X', author: 'carol', text: 'Researching $MOON today', publishedAt: new Date(now - 90 * 60000).toISOString(), link: 'x:2', likes: 2 }
+  ];
+  const evidence = analyzeSocialEvidence(posts, token, now);
+  assert.equal(evidence.sampledMentions1h, 3);
+  assert.equal(evidence.sampledMentionsPrevious1h, 1);
+  assert.equal(evidence.uniqueAuthors24h, 4);
+  assert.equal(evidence.independentEntities24h, 4);
+  assert.equal(evidence.exactMatchSharePct, 100);
+  assert.equal(evidence.accelerating, true);
+  assert.ok(evidence.socialMomentumScore > 50);
+  assert.equal(evidence.confidence, 'early_signal');
+  const { evaluateSocialIntel } = require('../lib/candidate-intel');
+  const scored = evaluateSocialIntel({ available: true, mentions1h: 3, mentions24h: 4, evidence });
+  assert.equal(scored.confidence, 'early_signal');
+  assert.ok(scored.score > 50);
+});
+
+test('social evidence does not grant early-signal confidence to ticker spam or copied posts', () => {
+  const now = Date.now();
+  const posts = Array.from({ length: 5 }, (_, index) => ({
+    source: 'X', author: 'same-account', text: 'MOON MOON MOON', link: 'x:spam:' + index,
+    publishedAt: new Date(now - index * 60000).toISOString()
+  }));
+  const evidence = analyzeSocialEvidence(posts, token, now);
+  assert.equal(evidence.weakMatchSharePct, 100);
+  assert.equal(evidence.independentEntities24h, 1);
+  assert.notEqual(evidence.confidence, 'early_signal');
+  const { evaluateSocialIntel } = require('../lib/candidate-intel');
+  const scored = evaluateSocialIntel({ available: true, mentions1h: 5, mentions24h: 5, evidence });
+  assert.notEqual(scored.confidence, 'early_signal');
+});
