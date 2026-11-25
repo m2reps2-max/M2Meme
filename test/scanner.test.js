@@ -17,6 +17,10 @@ test('les preuves sociales multi-auteurs sont un facteur pondéré et augmentent
  assert.ok(Number.isFinite(withSocial.factors.social));
  assert.equal(withSocial.coverage,withoutSocial.coverage,'le social influence le score, pas la couverture des preuves de base');
  assert.ok(Math.abs(withSocial.baseScore-withoutSocial.baseScore)>0.1,'la preuve sociale vérifiée doit réellement peser dans le score');
+ assert.ok(withSocial.baseScore>withoutSocial.baseScore,'l’absence de preuve sociale ne doit plus laisser le score se recalculer uniquement sur les facteurs de marché');
+ assert.ok(withoutSocial.baseScore<90,'sans preuve sociale, le score doit intégrer un a priori neutre de 50/100 plutôt que renormaliser les seuls facteurs positifs');
+ assert.ok(withoutSocial.missingFactors.includes('social'),'le manque de preuve sociale doit être visible dans les facteurs manquants');
+ assert.equal(withoutSocial.readiness,'partial','une analyse sans preuve sociale ne doit pas être présentée comme complète');
  assert.ok(Math.abs(withSocial.baseScore-withoutSocial.baseScore)<=10,'la preuve sociale ne doit pas dominer le classement');
  assert.equal(Object.hasOwn(lowSocial.factors,'social'),false,'un petit échantillon social ne doit pas être pondéré');
 });
