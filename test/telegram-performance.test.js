@@ -14,7 +14,7 @@ const {
 const BASE = Date.UTC(2026, 10, 25, 12, 0, 0);
 const mint = '8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump';
 function token(price, at) {
-  return { priceUsd: price, marketObservedAt: new Date(at).toISOString() };
+  return { priceUsd: price, marketObservedAt: new Date(at).toISOString(), marketObservationSource: 'dexscreener' };
 }
 function entry() {
   return createTelegramPerformanceEntry({
@@ -51,6 +51,13 @@ test('records six milestone returns from the scanner current market snapshots', 
   assert.equal(row.horizons['1h'].returnPct, 20);
   assert.equal(row.horizons['2h'], undefined);
   assert.equal(HORIZONS.map(x => x.key).join(','), '1h,2h,3h,6h,10h,24h');
+});
+
+test('does not mix prices from a different market provider into the same performance series', () => {
+  const row = entry();
+  const otherProvider = { [mint]: { ...token(0.002, BASE + 60 * 60 * 1000), marketObservationSource: 'geckoterminal' } };
+  assert.equal(collectTelegramPerformanceUpdates([row], otherProvider, BASE + 60 * 60 * 1000).length, 0);
+  assert.equal(row.horizons['1h'], undefined);
 });
 
 test('marks a missed milestone unavailable instead of inventing a return', () => {
