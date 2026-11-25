@@ -77,10 +77,9 @@ test('persists only bounded, valid performance entries', () => {
 
 test('current return refresh is throttled to hourly updates unless a milestone resolves', () => {
   const row = entry();
+  for (const horizon of HORIZONS) row.horizons[horizon.key] = { priceUsd: 0.001, observedAt: BASE + horizon.offsetMs, returnPct: 0 };
   collectTelegramPerformanceUpdates([row], { [mint]: token(0.0011, BASE + 10 * 60 * 1000) }, BASE + 10 * 60 * 1000);
   markTelegramPerformanceRendered(row, BASE + 10 * 60 * 1000);
-  row.lastCurrentPriceUsd = 0.0013;
-  row.lastCurrentObservedAt = BASE + 20 * 60 * 1000;
   assert.equal(collectTelegramPerformanceUpdates([row], { [mint]: token(0.0013, BASE + 20 * 60 * 1000) }, BASE + 20 * 60 * 1000).length, 0);
   assert.equal(collectTelegramPerformanceUpdates([row], { [mint]: token(0.0014, BASE + 70 * 60 * 1000) }, BASE + 70 * 60 * 1000).length, 1);
 });
