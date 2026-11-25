@@ -770,12 +770,12 @@ test('security refresh can run below the 700 MiB RSS guard',async()=>{
  try{
   process.memoryUsage=()=>({heapUsed:61*1048576,external:5*1048576,rss:690*1048576});
   await scanner.securityLeaders();
-  assert.equal(checked.length,2);
+  assert.equal(checked.length,4);
   assert.ok(scanner.lastSecurity>0);
  }finally{process.memoryUsage=original;}
 });
 
-test('security leader rotation refreshes two tokens every minute without parallelizing RPC work',async()=>{
+test('security leader rotation refreshes up to five tokens every minute without parallelizing RPC work',async()=>{
  const scanner=make();
  const now=Date.now();
  scanner.state.tokens=Object.fromEntries(Array.from({length:5},(_,i)=>['security-'+i,{mint:'security-'+i,pairAddress:'pair-'+i,liquidityUsd:10000}]));
@@ -784,10 +784,7 @@ test('security leader rotation refreshes two tokens every minute without paralle
  scanner.inspectExternalSecurity=async()=>null;
  scanner.lastSecurity=now-60_000-1;
  await scanner.securityLeaders();
- assert.equal(checked.length,2);
- scanner.lastSecurity=Date.now()-60_000-1;
- await scanner.securityLeaders();
- assert.equal(checked.length,4);
+ assert.equal(checked.length,5);
  scanner.lastSecurity=Date.now()-60_000-1;
  await scanner.securityLeaders();
  assert.equal(checked.length,5);
