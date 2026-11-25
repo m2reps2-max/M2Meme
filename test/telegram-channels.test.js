@@ -93,7 +93,7 @@ test('escapes token-controlled text and keeps risk alerts concise', () => {
   assert.ok(message.startsWith('🚨 <b>RISQUE DÉTECTÉ</b>'));
   assert.match(message, /Offchain &lt;script&gt; &amp; Co/);
   assert.match(message, /RISQUE IMPORTANT/);
-  assert.match(message, /Sécurité : <b>Contrôle de sécurité bloquant/);
+  assert.doesNotMatch(message, /Sécurité :|CONTRÔLE DE SÉCURITÉ/);
   assert.match(message, /Chute du prix &gt; 20% sur 5 minutes/);
   assert.doesNotMatch(message, /<script>/);
 });
