@@ -3,7 +3,7 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const {
  buildEliteIntelligenceIndex,analyzeOrganicDemand,analyzeWalletNetwork,
- analyzeHolderAndTokenSecurity,analyzeLearningValidation,buildDiscoveryCoverage,
+ analyzeHolderAndTokenSecurity,analyzeHolderConcentrationRisk,assessSevereWashTrading,analyzeLearningValidation,buildDiscoveryCoverage,
  evaluateEliteIntelligence
 }=require('../lib/elite-intelligence');
 
@@ -101,4 +101,58 @@ test('unconfirmed GeckoTerminal trade samples cannot create recurring wallet-net
  assert.equal(result.recurrentWallets,0);
  assert.equal(result.adjustment,0);
  assert.equal(result.status,'insufficient_data');
+});
+
+
+test('holder concentration applies graduated penalties and blocks extreme verified ownership',()=>{
+ const mild=analyzeHolderConcentrationRisk({ownerConcentrationAvailable:true,top10HolderPercent:18,top1OwnerPercent:4,top20HolderPercent:35});
+ assert.equal(mild.level,'notice');
+ assert.equal(mild.adjustment,-2);
+ const high=analyzeHolderConcentrationRisk({ownerConcentrationAvailable:true,top10HolderPercent:32,top1OwnerPercent:8,top20HolderPercent:60});
+ assert.equal(high.level,'warning');
+ assert.ok(high.adjustment<=-5);
+ const extreme=analyzeHolderConcentrationRisk({ownerConcentrationAvailable:true,top10HolderPercent:48,top1OwnerPercent:27,top20HolderPercent:90});
+ assert.equal(extreme.level,'critical');
+ assert.ok(extreme.adjustment<=-10);
+});
+
+test('missing holder evidence is unknown and never receives an invented penalty',()=>{
+ const result=analyzeHolderConcentrationRisk({ownerConcentrationAvailable:false,top10HolderPercent:null});
+ assert.equal(result.status,'unavailable');
+ assert.equal(result.adjustment,0);
+ assert.equal(result.level,'none');
+});
+
+test('wash trading blocks only when independent high-confidence indicators and confirmed RPC events converge',()=>{
+ const risky={confidence:'moderate',sampleSize:80,repeatedAmountSharePct:40};
+ const events=[];
+ for(let i=0;i<10;i++){
+  const wallet=String.fromCharCode(65+i)+'yaE1Vxv111111111111111111111111111111111111';
+  for(let cycle=0;cycle<4;cycle++){
+   events.push({wallet,mint,direction:'buy',at:100000+i*10000+cycle*2000,slot:cycle});
+   events.push({wallet,mint,direction:'sell',at:101000+i*10000+cycle*2000,slot:cycle});
+  }
+ }
+ const index={byMint:new Map([[mint,events]])};
+ assert.equal(assessSevereWashTrading(risky,{mint},index).confirmed,true);
+ const weak={...risky,sampleSize:25};
+ assert.equal(assessSevereWashTrading(weak,{mint},index).confirmed,false);
+ const incomplete={...risky,repeatedAmountSharePct:10};
+ assert.equal(assessSevereWashTrading(incomplete,{mint},index).confirmed,false);
+ assert.equal(assessSevereWashTrading(risky,{mint},{byMint:new Map()}).confirmed,false,'market samples alone must never block');
+});
+
+test('elite intelligence blocks extreme holder concentration and severe wash-trading evidence',()=>{
+ const concentrated=evaluateEliteIntelligence({mint,security:{checkedAt:new Date().toISOString(),data:{ownerConcentrationAvailable:true,top10HolderPercent:50,top1OwnerPercent:28,top20HolderPercent:90,holderSampleAccounts:20}}},{tokens:{[mint]:{}},walletTrades:[]});
+ assert.ok(concentrated.flags.some(flag=>flag.code==='ELITE_HOLDER_CONCENTRATION_CRITICAL'&&flag.level==='critical'));
+ const rows=[];
+ for(let i=0;i<10;i++){
+  const wallet=String.fromCharCode(65+i)+'yaE1Vxv111111111111111111111111111111111111';
+  for(let cycle=0;cycle<4;cycle++){
+   rows.push({wallet,mint,direction:'buy',at:100000+i*10000+cycle*2000,slot:cycle,swapConfirmed:true,volumeUsd:20});
+   rows.push({wallet,mint,direction:'sell',at:101000+i*10000+cycle*2000,slot:cycle,swapConfirmed:true,volumeUsd:20});
+  }
+ }
+ const wash=evaluateEliteIntelligence({mint,tradeIntel:{observedTrades:rows,tradeCount:80,sameBlockBuyerClusters:3,earlyWindow:{complete:true}}},{tokens:{[mint]:{}},walletTrades:rows});
+ assert.ok(wash.flags.some(flag=>flag.code==='ELITE_WASH_TRADING_HIGH_CONFIDENCE'&&flag.level==='critical'));
 });
