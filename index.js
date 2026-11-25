@@ -102,9 +102,9 @@ app.post('/api/login',loginLimit,(q,r)=>{if(!equal(q.body?.code||'',CODE)){q.bad
 function escapePreviewMeta(value){
  return String(value??'').replace(/[&<>"']/g,character=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 }
-function previewReturn(entry){
- const price=Number(entry.lastCurrentPriceUsd),base=Number(entry.basePriceUsd);
- if(!Number.isFinite(price)||price<=0||!Number.isFinite(base)||base<=0)return '—';
+function previewReturn(entry,now=Date.now()){
+ const price=Number(entry.lastCurrentPriceUsd),base=Number(entry.basePriceUsd),observedAt=Number(entry.lastCurrentObservedAt);
+ if(!Number.isFinite(price)||price<=0||!Number.isFinite(base)||base<=0||!Number.isFinite(observedAt)||observedAt<=0||observedAt>now+30000||now-observedAt>5*60*1000)return '—';
  const value=(price/base-1)*100,rounded=Number(value.toFixed(1));
  return (rounded>0?'+':'')+rounded.toFixed(1).replace('.',',')+' %';
 }

@@ -96,11 +96,36 @@ test('normalizes only opaque preview identifiers', () => {
   assert.equal(invalid.previewId, null);
 });
 
-test('renders a real PNG image for the Telegram Open Graph preview', () => {
-  const { renderTelegramPerformancePng } = require('../lib/telegram-preview-image');
-  const png = renderTelegramPerformancePng(entry(), BASE);
+test('renders a premium PNG and labels every unavailable milestone instead of leaving blank cells', () => {
+  const { renderTelegramPerformancePng, buildTelegramPreviewMetrics } = require('../lib/telegram-preview-image');
+  const row = entry();
+  const metrics = buildTelegramPreviewMetrics(row, BASE);
+  assert.equal(metrics.currentState, 'a jour');
+  assert.equal(metrics.cells[0].value, 'EN ATTENTE');
+  assert.equal(metrics.cells[5].value, 'EN ATTENTE');
+  const png = renderTelegramPerformancePng(row, BASE);
   assert.equal(png.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
   assert.ok(png.length > 1000);
+});
+
+test('does not present an old market snapshot as a current return', () => {
+  const { buildTelegramPreviewMetrics } = require('../lib/telegram-preview-image');
+  const row = entry();
+  row.lastCurrentObservedAt = BASE - 10 * 60 * 1000;
+  row.lastCurrentPriceUsd = 0.002;
+  const metrics = buildTelegramPreviewMetrics(row, BASE);
+  assert.equal(metrics.currentReturn, null);
+  assert.equal(metrics.currentState, 'donnee ancienne');
+  assert.equal(metrics.observedAt, 0);
+});
+
+test('labels a missed market observation explicitly after the capture window', () => {
+  const { buildTelegramPreviewMetrics } = require('../lib/telegram-preview-image');
+  const row = entry();
+  const metrics = buildTelegramPreviewMetrics(row, BASE + 70 * 60 * 1000);
+  assert.equal(metrics.cells[0].value, 'NON CAPTURE');
+  row.horizons['1h'] = { missed: true };
+  assert.equal(buildTelegramPreviewMetrics(row, BASE + 70 * 60 * 1000).cells[0].value, 'N/D');
 });
 
 
@@ -125,6 +150,19 @@ test('persists only bounded, valid performance entries', () => {
   assert.equal(normalizeTelegramPerformance(Array.from({ length: 1005 }, (_, i) => ({
     ...row, id: 'row-' + i, messageId: i + 1
   }))).length, 1000);
+});
+
+test('refreshes the card once when its last market snapshot becomes stale', () => {
+  const row = entry();
+  const firstAt = BASE + 60 * 1000;
+  collectTelegramPerformanceUpdates([row], { [mint]: token(0.0011, firstAt) }, firstAt);
+  markTelegramPerformanceRendered(row, firstAt);
+
+  const staleAt = BASE + 7 * 60 * 1000;
+  const staleToken = { [mint]: token(0.0011, firstAt) };
+  assert.equal(collectTelegramPerformanceUpdates([row], staleToken, staleAt).length, 1);
+  markTelegramPerformanceRendered(row, staleAt);
+  assert.equal(collectTelegramPerformanceUpdates([row], staleToken, staleAt + 60 * 1000).length, 0);
 });
 
 test('current return refresh is throttled to hourly updates unless a milestone resolves', () => {
