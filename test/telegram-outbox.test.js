@@ -6,6 +6,7 @@ const {
   retryDelay, claimDueTelegramOutbox, markTelegramOutboxSent,
   markTelegramOutboxFailed
 } = require('../lib/telegram-outbox');
+const { buildTelegramAlertKeyboard } = require('../lib/telegram-channels');
 
 test('creates one stable outbox entry per alert and Telegram destination', () => {
   const input = { alertId: '2026-11-23T12:00:00.000Z:Mint:opportunity', chatId: '-1001234567890', message: 'Hello', now: '2026-11-23T12:00:00.000Z' };
@@ -92,6 +93,14 @@ test('normalizes malformed and duplicate persisted rows safely', () => {
   assert.equal(rows[0].message, 'first');
   assert.equal(rows[0].parseMode, null);
   assert.equal(rows[0].attempts, 0);
+});
+
+test('keeps the generated Phantom buy button through the real outbox normalization path', () => {
+  const mint = '8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump';
+  const replyMarkup = buildTelegramAlertKeyboard({ mint });
+  assert.equal(replyMarkup.inline_keyboard[0][3].text, '👻 Acheter sur Phantom');
+  const entry = createTelegramOutboxEntry({ alertId: 'alert', chatId: 'channel', message: 'Alert', replyMarkup });
+  assert.deepEqual(normalizeTelegramOutbox([entry])[0].replyMarkup, replyMarkup);
 });
 
 test('persists only a validated Phantom inline button across restart normalization',()=>{
