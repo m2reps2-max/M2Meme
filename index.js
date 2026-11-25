@@ -6,7 +6,7 @@ const helmet=require('helmet');
 const cookieParser=require('cookie-parser');
 const {Bot,InlineKeyboard}=require('grammy');
 const {MemeScanner}=require('./lib/scanner');
-const {renderTelegramPerformancePng}=require('./lib/telegram-preview-image');
+const {renderTelegramPerformancePng,findTelegramPreviewEntry}=require('./lib/telegram-preview-image');
 const {buildTelegramPublicationAudit}=require('./lib/telegram-audit');
 const {getPaperTradingSummary,setPaperTradingEnabled,stepPaperTrading}=require('./lib/paper-trading');
 const {buildHeliusWalletSnapshot}=require('./lib/helius-wallet-intel');
@@ -112,7 +112,7 @@ function previewReturn(entry,now=Date.now()){
 function findTelegramPreview(req){
  const id=String(req.params.id||'');
  if(!/^[A-Za-z0-9_-]{20,40}$/.test(id))return null;
- return scanner.state.telegramPerformance.find(row=>row.previewId===id)||null;
+ return findTelegramPreviewEntry(scanner.state.telegramPerformance,scanner.telegramPreviewSeeds,id,Date.now());
 }
 app.get('/telegram-preview/:id/image.png',(req,res)=>{
  const entry=findTelegramPreview(req);
