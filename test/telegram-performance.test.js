@@ -14,7 +14,7 @@ const {
 const BASE = Date.UTC(2026, 10, 25, 12, 0, 0);
 const mint = '8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump';
 function token(price, at) {
-  return { priceUsd: price, marketObservedAt: new Date(at).toISOString(), marketObservationSource: 'dexscreener' };
+  return { priceUsd: price, marketObservedAt: new Date(at).toISOString(), marketObservationSource: 'dexscreener', name: 'Test Coin', symbol: 'TEST' };
 }
 function entry() {
   return createTelegramPerformanceEntry({
@@ -68,19 +68,21 @@ test('marks a missed milestone unavailable instead of inventing a return', () =>
   assert.equal(row.horizons['2h'], undefined);
 });
 
-test('formats the original post and all requested horizons as a compact monospace performance table', () => {
+test('renders a compact designed footer with publication growth and six milestones', () => {
   const row = entry();
   row.horizons['1h'] = { priceUsd: 0.0012, observedAt: BASE + 60 * 60 * 1000, returnPct: 20 };
   row.lastCurrentPriceUsd = 0.0015;
   row.lastCurrentObservedAt = BASE + 60 * 60 * 1000;
   const message = formatTelegramPerformanceMessage(row, BASE + 60 * 60 * 1000);
   assert.match(message, /MEMECOIN RETENUE/);
-  assert.match(message, /<pre>PÉRIODE   VARIATION/);
-  assert.ok(message.includes('1 h      🟢 +20,00 %'));
-  assert.ok(message.includes('2 h      En attente'));
-  assert.ok(message.includes('24 h     En attente'));
-  assert.ok(message.includes('ACTUEL   🟢 +50,00 %'));
-  assert.ok(message.includes('</pre>'));
+  assert.ok(message.includes('🪙 <i>Test Coin · $TEST</i>'));
+  assert.ok(message.includes('<b>📈 PERFORMANCE</b>'));
+  assert.match(message, /Depuis publication : ▲\+50,0%/);
+  assert.ok(message.includes('1H ▲+20,0%'));
+  assert.ok(message.includes('2H —'));
+  assert.ok(message.includes('24H —'));
+  assert.equal((message.match(/<code>/g) || []).length, 2);
+  assert.doesNotMatch(message, /<pre>/);
 });
 
 test('migrates legacy tracked messages to a Phantom-only inline keyboard', () => {
