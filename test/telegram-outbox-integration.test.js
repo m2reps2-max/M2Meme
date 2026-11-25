@@ -8,13 +8,28 @@ const path = require('node:path');
 const { MemeScanner } = require('../lib/scanner');
 const { createTelegramOutboxEntry } = require('../lib/telegram-outbox');
 
-function make() {
+function make(options = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'meme-radar-outbox-integration-'));
-  return new MemeScanner({ dataFile: path.join(dir, 'store.json') });
+  return new MemeScanner({ dataFile: path.join(dir, 'store.json'), ...options });
 }
 
 function enqueue(scanner, { alertId = 'alert-1', chatId = '-1001234567890', message = 'Alerte de test' } = {}) {
-  scanner.state.telegramOutbox.push(createTelegramOutboxEntry({ alertId, chatId, message }));
+  const mint = '8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump';
+  const at = new Date().toISOString();
+  const level = alertId;
+  const resolvedAlertId = at + ':' + mint + ':' + level;
+  scanner.state.tokens[mint] = {
+    mint, name: 'Test Coin', symbol: 'TEST', priceUsd: 0.001,
+    marketObservedAt: at, marketObservationSource: 'dexscreener'
+  };
+  scanner.state.alerts.push({
+    mint, at, level, symbol: 'TEST',
+    decisionSnapshot: {
+      priceUsd: 0.001, marketObservedAt: at,
+      marketObservationSource: 'dexscreener'
+    }
+  });
+  scanner.state.telegramOutbox.push(createTelegramOutboxEntry({ alertId: resolvedAlertId, chatId, message }));
   scanner.state.telegramChannels = [{ chatId, label: 'Canal test', enabled: true, lastSentAt: null, lastError: null }];
 }
 
@@ -32,11 +47,45 @@ test('Telegram outbox sends, removes and persists a delivered message', async ()
   assert.equal(calls[0][1], 'Alerte de test');
   assert.equal(calls[0][2].parse_mode, 'HTML');
   assert.equal(scanner.state.telegramOutbox.length, 0);
+  assert.equal(scanner.state.telegramPerformance.length, 1);
+  assert.equal(scanner.state.telegramPerformance[0].basePriceUsd, 0.001);
+  assert.equal(scanner.state.telegramPerformance[0].priceSource, 'dexscreener');
   assert.ok(scanner.state.telegramChannels[0].lastSentAt);
   assert.equal(scanner.state.telegramChannels[0].lastError, null);
 
   const restored = new MemeScanner({ dataFile: scanner.file });
   assert.equal(restored.state.telegramOutbox.length, 0);
+});
+
+test('makes the preview and its initial percentage available during the Telegram send request', async () => {
+  const { findTelegramPreviewEntry, buildTelegramPreviewMetrics } = require('../lib/telegram-preview-image');
+  const scanner = make({ telegramPreviewBaseUrl: 'https://m2meme.fadehost.app' });
+  let previewId = null;
+  scanner.bot = {
+    api: {
+      sendMessage: async (_chatId, message) => {
+        const match = message.match(/telegram-preview\/([A-Za-z0-9_-]{20,40})/);
+        assert.ok(match, 'the outgoing message must contain the preview URL');
+        previewId = match[1];
+        const seed = findTelegramPreviewEntry(
+          scanner.state.telegramPerformance, scanner.telegramPreviewSeeds, previewId
+        );
+        assert.ok(seed, 'Telegram must be able to fetch the preview before sendMessage resolves');
+        const metrics = buildTelegramPreviewMetrics(seed);
+        assert.equal(metrics.currentReturn, 0);
+        assert.equal(metrics.currentState, 'a jour');
+        return { message_id: 44 };
+      }
+    }
+  };
+  enqueue(scanner);
+
+  const result = await scanner.drainTelegramOutbox();
+
+  assert.deepEqual(result, { sent: 1, failed: 0, pending: 0 });
+  assert.equal(scanner.state.telegramPerformance[0].previewId, previewId);
+  assert.equal(scanner.telegramPreviewSeeds.size, 0,
+    'the temporary seed is replaced by the persisted performance entry after delivery');
 });
 
 test('Telegram API failure is persisted as a retryable message and survives restart', async () => {
