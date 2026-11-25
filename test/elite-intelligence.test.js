@@ -137,7 +137,7 @@ test('elite intelligence blocks extreme holder concentration and severe wash-tra
  assert.ok(concentrated.flags.some(flag=>flag.code==='ELITE_HOLDER_CONCENTRATION_CRITICAL'&&flag.level==='critical'));
  const rows=[];
  for(let i=0;i<10;i++){
-  const wallet='W'+String.fromCharCode(97+i)+'aE1Vxv111111111111111111111111111111111111';
+  const wallet=String.fromCharCode(65+i)+'yaE1Vxv111111111111111111111111111111111111';
   for(let cycle=0;cycle<4;cycle++){
    rows.push({wallet,direction:'buy',at:100000+i*10000+cycle*2000,volumeUsd:20});
    rows.push({wallet,direction:'sell',at:101000+i*10000+cycle*2000,volumeUsd:20});
