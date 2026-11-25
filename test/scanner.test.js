@@ -953,3 +953,50 @@ test('merged social intelligence carries the newest successful source timestamp'
  assert.equal(result.checkedAt,newAt);
  assert.equal(result.available,true);
 });
+
+test('DexScreener crée un snapshot pour un mint présent côté quote avec son prix USD normalisé',()=>{
+ const scanner=make();
+ const mint='QuoteSideMint11111111111111111111111111111';
+ scanner.state.tokens[mint]={mint,sources:[],history:[],smartMoney:{hits:0,wallets:[]}};
+ const created=scanner.pair({
+  chainId:'solana',
+  baseToken:{address:'So11111111111111111111111111111111111111112',name:'Wrapped SOL',symbol:'SOL'},
+  quoteToken:{address:mint,name:'Quote Side Token',symbol:'QST'},
+  pairAddress:'quote-side-pool',
+  priceUsd:'200',
+  priceNative:'1000',
+  liquidity:{usd:50000},
+  fdv:9000000,
+  volume:{h1:12000,h24:80000},
+  txns:{h1:{buys:30,sells:10}}
+ },mint);
+ const token=scanner.state.tokens[mint];
+ assert.equal(created,true);
+ assert.equal(token.symbol,'QST');
+ assert.equal(token.priceUsd,0.2);
+ assert.equal(token.liquidityUsd,50000);
+ assert.equal(token.fdv,undefined,'base-token FDV must not be assigned to quote token');
+ assert.equal(token.history.length,1);
+ assert.equal(token.history[0].priceUsd,0.2);
+ assert.equal(token.history[0].source,'dexscreener');
+});
+
+test('un mint côté quote sans priceNative ne reçoit pas le prix du base token comme snapshot',()=>{
+ const scanner=make();
+ const mint='QuoteWithoutNativePrice1111111111111111111';
+ scanner.state.tokens[mint]={mint,sources:[],history:[],smartMoney:{hits:0,wallets:[]}};
+ const created=scanner.pair({
+  chainId:'solana',
+  baseToken:{address:'So11111111111111111111111111111111111111112',name:'Wrapped SOL',symbol:'SOL'},
+  quoteToken:{address:mint,name:'Quote Side Token',symbol:'QST'},
+  pairAddress:'quote-side-pool-no-native',
+  priceUsd:'200',
+  liquidity:{usd:50000},
+  volume:{h1:12000,h24:80000},
+  txns:{h1:{buys:30,sells:10}}
+ },mint);
+ assert.equal(created,false);
+ assert.equal(scanner.state.tokens[mint].history.length,0);
+ assert.equal(scanner.state.tokens[mint].priceUsd,undefined);
+});
+
