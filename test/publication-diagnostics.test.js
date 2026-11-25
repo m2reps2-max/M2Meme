@@ -195,7 +195,7 @@ test('qualified candidates with stale security are visible with the exact blocke
 
 test('diagnostics expose a production build fingerprint and the actual configured score threshold',()=>{
  const result=scannerPublicationDiagnostics.call(scanner([makeToken()]));
- assert.equal(result.buildFingerprint,'m2meme-diagnostics-v2-20261125');
+ assert.equal(result.buildFingerprint,'m2meme-diagnostics-v3-20261125');
  assert.equal(result.publication.configuredThreshold,80);
 });
 
