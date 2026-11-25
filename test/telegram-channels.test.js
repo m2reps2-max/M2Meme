@@ -57,7 +57,7 @@ test('formats a curated best-memecoin post with market details and terminal link
   assert.match(message, /Transactions/);
   assert.match(message, /\n/);
   assert.doesNotMatch(message, /\\\\n/);
-  assert.ok(message.includes('couverture <b>92%</b>'));
+  assert.ok(message.includes('couverture de l’analyse <b>92%</b>'));
   assert.match(message, /Valorisation estimée \(FDV\)/);
   assert.match(message, /Liquidité/);
   assert.match(message, /30 min/);
