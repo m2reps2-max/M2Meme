@@ -62,11 +62,20 @@ test('formats a curated best-memecoin post with market details and terminal link
   assert.match(message, /Liquidité/);
   assert.match(message, /30 min/);
   assert.match(message, /Pourquoi elle ressort/);
-  assert.match(message, /achats dominent nettement/);
+  assert.match(message, /18 achats contre 2 ventes/);
+  assert.match(message, /90 % des transactions sont des achats/);
   assert.doesNotMatch(message, /CONTRÔLE DE SÉCURITÉ|Contrôle on-chain|Contrôles approfondis/);
   assert.match(message, /<code>8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump<\/code>/);
   assert.doesNotMatch(message, /Cette sélection repose|ne garantit aucun rendement/);
   assert.doesNotMatch(message, /Variation \\(1 h\\)|Phantom/);
+});
+
+
+test('does not invent a positive reason when observed market evidence is missing', () => {
+  const { buildSelectionReason } = require('../lib/telegram-channels');
+  const reason = buildSelectionReason({ analysis: { score: 88, coverage: 90, factors: { momentum: 95, liquidityQuality: 99 } } });
+  assert.match(reason, /aucun indicateur positif isolé n’est suffisamment documenté/);
+  assert.doesNotMatch(reason, /momentum positif|bonne qualité de liquidité|score élevé/);
 });
 
 test('keeps the channel selection in French and never leaks raw foreign-language signal text', () => {
