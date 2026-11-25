@@ -44,8 +44,8 @@ test('verdicts are labels, not probability claims', () => {
 test('formats a curated best-memecoin post with market details and terminal links', () => {
   const message = formatTelegramAlert({
     name: 'Example Token', symbol: 'EX', mint: '8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump',
-    liquidityUsd: 12000, fdv: 43000, ageMinutes: 30,
-    analysis: { score: 87, coverage: 92, securityComprehensive: false, factors: { security: 82 }, flags: [] },
+    liquidityUsd: 12000, fdv: 43000, ageMinutes: 30, volume: { h1: 4000 }, txns: { h1: { buys: 18, sells: 2 } },
+    analysis: { score: 87, coverage: 92, securityComprehensive: false, factors: { security: 82, buyRatio: 90, momentum: 75 }, flags: [] },
     signalReasons: ['Liquidité correcte', 'Activité acheteurs en hausse']
   });
   assert.match(message, /\$EX/);
