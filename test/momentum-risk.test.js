@@ -110,3 +110,33 @@ test('a sharp retracement from the recent peak blocks publication',()=>{
  assert.equal(result.detectors.severePeakDrawdown,true);
  assert.equal(result.blockPublication,true);
 });
+
+test('a young pool with a +150% hourly pump is blocked even when five-minute buys still look strong',()=>{
+ const result=evaluateMomentumRisk({
+  pairCreatedAt:Date.now()-9*60_000,
+  priceChange:{m5:4,h1:207,h24:207},
+  volume:{m5:5000,h1:45000},
+  txns:{m5:{buys:18,sells:5}}
+ });
+ assert.equal(result.detectors.lateLaunchVertical,true);
+ assert.equal(result.blockPublication,true);
+ assert.equal(result.status,'late_launch_vertical');
+ assert.ok(result.signals.some(x=>/entrée tardive/i.test(x)));
+});
+
+test('a young pool without an extreme hourly pump is not blocked by the anti-chase rule',()=>{
+ const result=evaluateMomentumRisk({
+  pairCreatedAt:Date.now()-9*60_000,
+  priceChange:{m5:4,h1:65,h24:65},
+  volume:{m5:5000,h1:45000},
+  txns:{m5:{buys:18,sells:5}}
+ });
+ assert.equal(result.detectors.lateLaunchVertical,false);
+ assert.equal(result.blockPublication,false);
+});
+
+test('a strong hourly move without reliable pool age is not treated as a young-pool pump',()=>{
+ const result=evaluateMomentumRisk({priceChange:{m5:4,h1:207,h24:207},volume:{m5:5000,h1:45000},txns:{m5:{buys:18,sells:5}}});
+ assert.equal(result.detectors.lateLaunchVertical,false);
+ assert.equal(result.blockPublication,false);
+});
