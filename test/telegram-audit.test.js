@@ -16,7 +16,7 @@ const alert = {
   flags: [{ level: 'warning', message: 'Momentum très élevé' }],
   reasons: ['Tous les critères sont validés.'],
   qualification: { eligible: true },
-  decisionSnapshot: { priceUsd: 0.001, liquidityUsd: 20000, ageMinutes: 9, factors: { momentum: 95 } }
+  decisionSnapshot: { priceUsd: 0.001, liquidityUsd: 20000, ageMinutes: 9, factors: { momentum: 95 }, momentumRisk: { status: 'late_launch_exhaustion', blockPublication: true, metrics: { priceChange5mPct: -8, priceChange1hPct: 207, buyRatio5mPct: 38, relativeVolume5m: 0.42 }, signals: ['La demande 5 min ne confirme plus la hausse'] } }
 };
 const token = {
   priceUsd: 0.0005,
@@ -32,6 +32,9 @@ test('joins a Telegram publication to its nearest alert and reports the exact cu
   });
   assert.equal(row.alert.score, 84);
   assert.equal(row.alert.decisionSnapshot.factors.momentum, 95);
+  assert.equal(row.alert.decisionSnapshot.momentumRisk.status, 'late_launch_exhaustion');
+  assert.equal(row.alert.decisionSnapshot.momentumRisk.metrics.buyRatio5mPct, 38);
+  assert.equal(row.alert.decisionSnapshot.momentumRisk.signals[0], 'La demande 5 min ne confirme plus la hausse');
   assert.equal(row.currentReturnPct, -50);
   assert.equal(row.currentState, 'fresh');
   assert.equal(row.horizons['1h'].returnPct, -40);
