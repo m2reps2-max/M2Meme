@@ -54,6 +54,9 @@ test('formats a curated best-memecoin post with market details and terminal link
   assert.match(message, /MEMECOIN RETENUE/);
   assert.match(message, /DONNÉES DU MARCHÉ/);
   assert.match(message, /Volume \(1 h\)/);
+  assert.match(message, /<a href="https:\/\/dexscreener\.com\/solana\//);
+  assert.match(message, /<a href="https:\/\/gmgn\.ai\/sol\/token\//);
+  assert.match(message, /<a href="https:\/\/axiom\.trade\/t\//);
   assert.match(message, /Transactions/);
   assert.match(message, /\n/);
   assert.doesNotMatch(message, /\\\\n/);
