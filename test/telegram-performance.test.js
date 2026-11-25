@@ -6,6 +6,7 @@ const {
   extractMintFromAlertId,
   normalizeTelegramPerformance,
   createTelegramPerformanceEntry,
+  resolveTelegramPublicationBaseline,
   collectTelegramPerformanceUpdates,
   formatTelegramPerformanceMessage,
   buildTelegramPreviewUrl,
@@ -33,6 +34,32 @@ test('extracts the token mint from an ISO-timestamped alert id', () => {
   const alertId = '2026-11-25T18:10:30.123Z:' + mint + ':opportunity';
   assert.equal(extractMintFromAlertId(alertId), mint);
   assert.equal(extractMintFromAlertId('invalid:alert:id'), '');
+});
+
+test('recovers a fresh publication baseline from the immutable alert snapshot when live token state is missing', () => {
+  const snapshot = {
+    priceUsd: 0.0025,
+    marketObservedAt: new Date(BASE - 45000).toISOString(),
+    marketObservationSource: 'geckoterminal'
+  };
+  assert.deepEqual(resolveTelegramPublicationBaseline(null, snapshot, BASE), {
+    priceUsd: 0.0025,
+    observedAt: BASE - 45000,
+    source: 'geckoterminal'
+  });
+});
+
+test('prefers the newest fresh observation and rejects stale fallback snapshots', () => {
+  const current = token(0.003, BASE - 10000);
+  const snapshot = {
+    priceUsd: 0.0025,
+    marketObservedAt: new Date(BASE - 45000).toISOString(),
+    marketObservationSource: 'geckoterminal'
+  };
+  assert.equal(resolveTelegramPublicationBaseline(current, snapshot, BASE).priceUsd, 0.003);
+  assert.equal(resolveTelegramPublicationBaseline(null, {
+    ...snapshot, marketObservedAt: new Date(BASE - 6 * 60 * 1000).toISOString()
+  }, BASE), null);
 });
 
 test('captures a lightweight publication baseline without storing a price history', () => {
