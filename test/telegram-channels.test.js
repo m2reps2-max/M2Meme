@@ -54,6 +54,9 @@ test('formats a curated best-memecoin post with market details and terminal link
   assert.match(message, /MEMECOIN RETENUE/);
   assert.match(message, /DONNÉES DU MARCHÉ/);
   assert.match(message, /Volume \(1 h\)/);
+  assert.match(message, /<a href="https:\/\/dexscreener\.com\/solana\//);
+  assert.match(message, /<a href="https:\/\/gmgn\.ai\/sol\/token\//);
+  assert.match(message, /<a href="https:\/\/axiom\.trade\/t\//);
   assert.match(message, /Transactions/);
   assert.match(message, /\n/);
   assert.doesNotMatch(message, /\\\\n/);
@@ -107,16 +110,15 @@ test('escapes token-controlled text and keeps risk alerts concise', () => {
   assert.doesNotMatch(message, /<script>/);
 });
 
-test('builds DexScreener, GMGN and Axiom buttons only for valid Solana mints',()=>{
+test('builds only the Phantom buy button; other platforms are clickable footer links',()=>{
   const mint='8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump';
   assert.deepEqual(buildTelegramAlertKeyboard({mint}),{
-    inline_keyboard:[[
-      {text:'DexScreener',url:'https://dexscreener.com/solana/'+mint},
-      {text:'GMGN',url:'https://gmgn.ai/sol/token/'+mint},
-      {text:'Axiom',url:'https://axiom.trade/t/'+mint},
-      {text:'👻 Acheter sur Phantom',url:'https://phantom.com/tokens/solana/'+mint}
-    ]]
+    inline_keyboard:[[{text:'👻 Acheter avec Phantom',url:'https://phantom.com/tokens/solana/'+mint}]]
   });
+  const message=formatTelegramAlert({symbol:'EX',name:'Example',mint,analysis:{score:85,coverage:90},liquidityUsd:10000});
+  assert.match(message,/<a href="https:\/\/dexscreener\.com\/solana\//);
+  assert.match(message,/<a href="https:\/\/gmgn\.ai\/sol\/token\//);
+  assert.match(message,/<a href="https:\/\/axiom\.trade\/t\//);
   assert.equal(buildTelegramAlertKeyboard({mint:'not-a-solana-mint'}),null);
   assert.equal(buildTelegramAlertKeyboard({mint:''}),null);
 });

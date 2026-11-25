@@ -68,17 +68,33 @@ test('marks a missed milestone unavailable instead of inventing a return', () =>
   assert.equal(row.horizons['2h'], undefined);
 });
 
-test('formats the original post, all requested horizons and the live return', () => {
+test('formats the original post and all requested horizons as a compact monospace performance table', () => {
   const row = entry();
   row.horizons['1h'] = { priceUsd: 0.0012, observedAt: BASE + 60 * 60 * 1000, returnPct: 20 };
   row.lastCurrentPriceUsd = 0.0015;
   row.lastCurrentObservedAt = BASE + 60 * 60 * 1000;
   const message = formatTelegramPerformanceMessage(row, BASE + 60 * 60 * 1000);
   assert.match(message, /MEMECOIN RETENUE/);
-  assert.match(message, /1 h : <b>🟢 \+20,00 %/);
-  assert.match(message, /2 h : <b>En attente/);
-  assert.match(message, /24 h : <b>En attente/);
-  assert.match(message, /Depuis la publication :<\/b> 🟢 \+50,00 %/);
+  assert.match(message, /<pre>PÉRIODE   VARIATION/);
+  assert.ok(message.includes('1 h      🟢 +20,00 %'));
+  assert.ok(message.includes('2 h      En attente'));
+  assert.ok(message.includes('24 h     En attente'));
+  assert.ok(message.includes('ACTUEL   🟢 +50,00 %'));
+  assert.ok(message.includes('</pre>'));
+});
+
+test('migrates legacy tracked messages to a Phantom-only inline keyboard', () => {
+  const row = entry();
+  row.replyMarkup = { inline_keyboard: [[
+    { text: 'DexScreener', url: 'https://dexscreener.com/solana/' + mint },
+    { text: 'GMGN', url: 'https://gmgn.ai/sol/token/' + mint },
+    { text: 'Axiom', url: 'https://axiom.trade/t/' + mint },
+    { text: '👻 Acheter sur Phantom', url: 'https://phantom.com/tokens/solana/' + mint }
+  ]] };
+  const normalized = normalizeTelegramPerformance([row])[0];
+  assert.deepEqual(normalized.replyMarkup, { inline_keyboard: [[
+    { text: '👻 Acheter avec Phantom', url: 'https://phantom.com/tokens/solana/' + mint }
+  ]] });
 });
 
 test('persists only bounded, valid performance entries', () => {
