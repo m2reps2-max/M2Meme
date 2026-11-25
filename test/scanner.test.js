@@ -731,6 +731,25 @@ test('Telegram est déclaré configuré avant le premier canal et son état de c
 });
 
 
+test('a memory-deferred scan does not masquerade as a completed scan',async()=>{
+ const scanner=make();
+ scanner.running=true;
+ scanner.state.lastScanCompletedAt='2026-11-25T00:00:00.000Z';
+ scanner.state.lastScanCompletedDurationMs=1234;
+ const original=process.memoryUsage;
+ try{
+  process.memoryUsage=()=>({heapUsed:61*1048576,external:5*1048576,rss:250*1048576});
+  const result=await scanner.scan();
+  assert.equal(result.skipped,true);
+  assert.equal(result.reason,'memory_budget');
+  assert.equal(scanner.state.lastScanCompletedAt,'2026-11-25T00:00:00.000Z');
+  assert.equal(scanner.state.lastScanCompletedDurationMs,1234);
+ }finally{
+  process.memoryUsage=original;
+  scanner.stop();
+ }
+});
+
 test('security memory guard does not consume the five-minute retry window',async()=>{
  const scanner=make();
  scanner.state.tokens=Object.fromEntries(Array.from({length:4},(_,i)=>['security-'+i,{mint:'security-'+i,pairAddress:'pair-'+i,liquidityUsd:10000}]));
