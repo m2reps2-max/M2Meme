@@ -82,7 +82,8 @@ test('renders a compact designed footer with publication growth and six mileston
   assert.ok(message.includes('2H —'));
   assert.ok(message.includes('24H —'));
   assert.equal((message.match(/<code>/g) || []).length, 2);
-  assert.doesNotMatch(message, /<pre>/);
+  assert.doesNotMatch(message, /<pre>|Ouvrir sur/);
+  assert.ok(message.trimEnd().endsWith('</i>'));
 });
 
 test('migrates legacy tracked messages to a Phantom-only inline keyboard', () => {

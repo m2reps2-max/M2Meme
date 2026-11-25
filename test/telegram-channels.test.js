@@ -54,7 +54,7 @@ test('formats a curated best-memecoin post with market details and terminal link
   assert.match(message, /MEMECOIN RETENUE/);
   assert.match(message, /DONNÉES DU MARCHÉ/);
   assert.match(message, /Volume \(1 h\)/);
-  assert.match(message, /<a href="https:\/\/dexscreener\.com\/solana\//);
+  assert.match(message, /<i><a href="https:\/\/dexscreener\.com\/solana\//);
   assert.match(message, /<a href="https:\/\/gmgn\.ai\/sol\/token\//);
   assert.match(message, /<a href="https:\/\/axiom\.trade\/t\//);
   assert.match(message, /Transactions/);
@@ -64,11 +64,11 @@ test('formats a curated best-memecoin post with market details and terminal link
   assert.match(message, /Valorisation estimée \(FDV\)/);
   assert.match(message, /Liquidité/);
   assert.match(message, /30 min/);
-  assert.match(message, /Pourquoi elle ressort/);
+  assert.match(message, /💡 sur 1 h/);
   assert.match(message, /18 achats contre 2 ventes/);
   assert.match(message, /90 % des transactions sont des achats/);
-  assert.doesNotMatch(message, /CONTRÔLE DE SÉCURITÉ|Contrôle on-chain|Contrôles approfondis/);
-  assert.match(message, /<code>8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump<\/code>/);
+  assert.doesNotMatch(message, /CONTRÔLE DE SÉCURITÉ|Contrôle on-chain|Contrôles approfondis|Ouvrir sur|Pourquoi elle ressort/);
+  assert.ok(message.includes('<b>📋CONTRAT</b>\n<code>8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump</code>'));
   assert.doesNotMatch(message, /Cette sélection repose|ne garantit aucun rendement/);
   assert.doesNotMatch(message, /Variation \\(1 h\\)|Phantom/);
 });
@@ -77,7 +77,7 @@ test('formats a curated best-memecoin post with market details and terminal link
 test('does not invent a positive reason when observed market evidence is missing', () => {
   const { buildSelectionReason } = require('../lib/telegram-channels');
   const reason = buildSelectionReason({ analysis: { score: 88, coverage: 90, factors: { momentum: 95, liquidityQuality: 99 } } });
-  assert.match(reason, /aucun indicateur positif isolé n’est suffisamment documenté/);
+  assert.match(reason, /aucun indicateur positif isolé n’est suffisamment documenté/i);
   assert.doesNotMatch(reason, /momentum positif|bonne qualité de liquidité|score élevé/);
 });
 
@@ -91,8 +91,8 @@ test('keeps the channel selection in French and never leaks raw foreign-language
   assert.match(message, /MEMECOIN RETENUE/);
   assert.match(message, /Valorisation estimée/);
   assert.match(message, /Liquidité/);
-  assert.match(message, /Pourquoi elle ressort/);
-  assert.doesNotMatch(message, /CONTRÔLE DE SÉCURITÉ|Contrôle on-chain/);
+  assert.match(message, /💡 sur 1 h/);
+  assert.doesNotMatch(message, /CONTRÔLE DE SÉCURITÉ|Contrôle on-chain|Pourquoi elle ressort/);
   assert.doesNotMatch(message, /Low liquidity|suspicious activity|All checks passed/);
 });
 
