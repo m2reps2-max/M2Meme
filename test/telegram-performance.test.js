@@ -76,10 +76,10 @@ test('formats the original post and all requested horizons as a compact monospac
   const message = formatTelegramPerformanceMessage(row, BASE + 60 * 60 * 1000);
   assert.match(message, /MEMECOIN RETENUE/);
   assert.match(message, /<pre>PÉRIODE   VARIATION/);
-  assert.match(message, /1 h +🟢 \\+20,00 %/);
-  assert.match(message, /2 h +En attente/);
-  assert.match(message, /24 h +En attente/);
-  assert.match(message, /ACTUEL +🟢 \\+50,00 %/);
+  assert.ok(message.includes('1 h      🟢 +20,00 %'));
+  assert.ok(message.includes('2 h      En attente'));
+  assert.ok(message.includes('24 h     En attente'));
+  assert.ok(message.includes('ACTUEL   🟢 +50,00 %'));
   assert.ok(message.includes('</pre>'));
 });
 
