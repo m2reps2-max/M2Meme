@@ -50,6 +50,7 @@ test('formats a curated best-memecoin post with market details and terminal link
   });
   assert.match(message, /\$EX/);
   assert.match(message, /87\/100/);
+  assert.match(message, /TRÈS PROMETTEUSE/);
   assert.match(message, /MEMECOIN RETENUE/);
   assert.match(message, /DONNÉES DU MARCHÉ/);
   assert.match(message, /Volume \\(1 h\\)/);
