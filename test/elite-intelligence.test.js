@@ -123,13 +123,23 @@ test('missing holder evidence is unknown and never receives an invented penalty'
  assert.equal(result.level,'none');
 });
 
-test('wash trading blocks only when independent high-confidence indicators converge',()=>{
- const risky={confidence:'moderate',sampleSize:80,buyerSellerOverlapPct:75,shortRoundTripSharePct:65,repeatedAmountSharePct:40,sameBlockBuyerClusters:3};
- assert.equal(assessSevereWashTrading(risky).confirmed,true);
+test('wash trading blocks only when independent high-confidence indicators and confirmed RPC events converge',()=>{
+ const risky={confidence:'moderate',sampleSize:80,repeatedAmountSharePct:40};
+ const events=[];
+ for(let i=0;i<10;i++){
+  const wallet=String.fromCharCode(65+i)+'yaE1Vxv111111111111111111111111111111111111';
+  for(let cycle=0;cycle<4;cycle++){
+   events.push({wallet,mint,direction:'buy',at:100000+i*10000+cycle*2000,slot:cycle});
+   events.push({wallet,mint,direction:'sell',at:101000+i*10000+cycle*2000,slot:cycle});
+  }
+ }
+ const index={byMint:new Map([[mint,events]])};
+ assert.equal(assessSevereWashTrading(risky,{mint},index).confirmed,true);
  const weak={...risky,sampleSize:25};
- assert.equal(assessSevereWashTrading(weak).confirmed,false);
+ assert.equal(assessSevereWashTrading(weak,{mint},index).confirmed,false);
  const incomplete={...risky,repeatedAmountSharePct:10};
- assert.equal(assessSevereWashTrading(incomplete).confirmed,false);
+ assert.equal(assessSevereWashTrading(incomplete,{mint},index).confirmed,false);
+ assert.equal(assessSevereWashTrading(risky,{mint},{byMint:new Map()}).confirmed,false,'market samples alone must never block');
 });
 
 test('elite intelligence blocks extreme holder concentration and severe wash-trading evidence',()=>{
@@ -139,10 +149,10 @@ test('elite intelligence blocks extreme holder concentration and severe wash-tra
  for(let i=0;i<10;i++){
   const wallet=String.fromCharCode(65+i)+'yaE1Vxv111111111111111111111111111111111111';
   for(let cycle=0;cycle<4;cycle++){
-   rows.push({wallet,direction:'buy',at:100000+i*10000+cycle*2000,volumeUsd:20});
-   rows.push({wallet,direction:'sell',at:101000+i*10000+cycle*2000,volumeUsd:20});
+   rows.push({wallet,mint,direction:'buy',at:100000+i*10000+cycle*2000,slot:cycle,swapConfirmed:true,volumeUsd:20});
+   rows.push({wallet,mint,direction:'sell',at:101000+i*10000+cycle*2000,slot:cycle,swapConfirmed:true,volumeUsd:20});
   }
  }
- const wash=evaluateEliteIntelligence({mint,tradeIntel:{observedTrades:rows,tradeCount:80,sameBlockBuyerClusters:3,earlyWindow:{complete:true}}},{tokens:{[mint]:{}},walletTrades:[]});
+ const wash=evaluateEliteIntelligence({mint,tradeIntel:{observedTrades:rows,tradeCount:80,sameBlockBuyerClusters:3,earlyWindow:{complete:true}}},{tokens:{[mint]:{}},walletTrades:rows});
  assert.ok(wash.flags.some(flag=>flag.code==='ELITE_WASH_TRADING_HIGH_CONFIDENCE'&&flag.level==='critical'));
 });
