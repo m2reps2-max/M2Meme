@@ -68,7 +68,7 @@ test('formats a curated best-memecoin post with market details and terminal link
   assert.match(message, /18 achats contre 2 ventes/);
   assert.match(message, /90 % des transactions sont des achats/);
   assert.doesNotMatch(message, /CONTRÔLE DE SÉCURITÉ|Contrôle on-chain|Contrôles approfondis|Ouvrir sur|Pourquoi elle ressort/);
-  assert.match(message, /<b>📋CONTRAT<\/b>\\n<code>8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump<\/code>/);
+  assert.ok(message.includes('<b>📋CONTRAT</b>\n<code>8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump</code>'));
   assert.doesNotMatch(message, /Cette sélection repose|ne garantit aucun rendement/);
   assert.doesNotMatch(message, /Variation \\(1 h\\)|Phantom/);
 });
