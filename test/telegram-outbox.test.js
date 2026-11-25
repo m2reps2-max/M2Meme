@@ -110,4 +110,6 @@ test('persists only a validated Phantom inline button across restart normalizati
   assert.deepEqual(normalizeTelegramOutbox([entry])[0].replyMarkup,replyMarkup);
   const unsafe=createTelegramOutboxEntry({alertId:'unsafe',chatId:'chat',message:'Alert',replyMarkup:{inline_keyboard:[[{text:'Acheter',url:'https://evil.example/'+mint}]]}});
   assert.equal(unsafe.replyMarkup,null);
+  const forgedDex=createTelegramOutboxEntry({alertId:'forged',chatId:'chat',message:'Alert',replyMarkup:{inline_keyboard:[[{text:'DexScreener',url:'https://evil.example/'+mint}]]}});
+  assert.equal(forgedDex.replyMarkup,null);
 });
