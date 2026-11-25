@@ -50,20 +50,35 @@ test('formats a curated best-memecoin post with market details and terminal link
   });
   assert.match(message, /\$EX/);
   assert.match(message, /87\/100/);
-  assert.match(message, /MEMECOIN SÉLECTIONNÉE/);
+  assert.match(message, /TRÈS PROMETTEUSE/);
+  assert.match(message, /MEMECOIN RETENUE/);
   assert.match(message, /DONNÉES DU MARCHÉ/);
-  assert.match(message, /Volume 1 h/);
-  assert.match(message, /transactions/);
+  assert.match(message, /Volume \(1 h\)/);
+  assert.match(message, /Transactions/);
   assert.match(message, /\n/);
   assert.doesNotMatch(message, /\\\\n/);
-  assert.ok(message.includes('couverture <b>92%</b>'));
-  assert.match(message, /Capitalisation/);
+  assert.ok(message.includes('couverture de l’analyse <b>92%</b>'));
+  assert.match(message, /Valorisation estimée \(FDV\)/);
   assert.match(message, /Liquidité/);
   assert.match(message, /30 min/);
-  assert.match(message, /Contrôle on-chain de base OK/);
+  assert.match(message, /Contrôle on-chain de base validé/);
   assert.match(message, /<code>8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump<\/code>/);
-  assert.match(message, /n’est pas une promesse de performance/);
-  assert.doesNotMatch(message, /Volume \(1 h\)|Variation \(1 h\)|Phantom/);
+  assert.match(message, /ne garantit aucun rendement/);
+  assert.doesNotMatch(message, /Variation \\(1 h\\)|Phantom/);
+});
+
+test('keeps the channel selection in French and never leaks raw foreign-language signal text', () => {
+  const message = formatTelegramAlert({
+    name: 'Token Name', symbol: 'TN', mint: '8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump',
+    fdv: 10000, liquidityUsd: 6000, volume: { h1: 900 }, txns: { h1: { buys: 12, sells: 4 } }, ageMinutes: 8,
+    analysis: { score: 91, coverage: 88, factors: { security: 90 }, flags: [{ level: 'warning', message: 'Low liquidity and suspicious activity' }] },
+    signalReasons: ['All checks passed']
+  });
+  assert.match(message, /MEMECOIN RETENUE/);
+  assert.match(message, /Valorisation estimée/);
+  assert.match(message, /Liquidité/);
+  assert.match(message, /CONTRÔLE DE SÉCURITÉ/);
+  assert.doesNotMatch(message, /Low liquidity|suspicious activity|All checks passed/);
 });
 
 test('escapes token-controlled text and keeps risk alerts concise', () => {
@@ -75,7 +90,7 @@ test('escapes token-controlled text and keeps risk alerts concise', () => {
   assert.ok(message.startsWith('🚨 <b>RISQUE DÉTECTÉ</b>'));
   assert.match(message, /Offchain &lt;script&gt; &amp; Co/);
   assert.match(message, /RISQUE IMPORTANT/);
-  assert.match(message, /Sécurité : <b>BLOQUÉE/);
+  assert.match(message, /Sécurité : <b>Contrôle de sécurité bloquant/);
   assert.match(message, /Chute du prix &gt; 20% sur 5 minutes/);
   assert.doesNotMatch(message, /<script>/);
 });
