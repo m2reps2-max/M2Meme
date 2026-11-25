@@ -49,16 +49,20 @@ test('formats a compact Telegram alert with age, security and terminal links', (
     signalReasons: ['Liquidité correcte', 'Activité acheteurs en hausse']
   });
   assert.match(message, /\$EX/);
-  assert.match(message, /M2 87\/100/);
+  assert.match(message, /87\/100/);
+  assert.match(message, /MEMECOIN SÉLECTIONNÉE/);
+  assert.match(message, /DONNÉES DU MARCHÉ/);
+  assert.match(message, /Volume 1 h/);
+  assert.match(message, /transactions/);
   assert.match(message, /\n/);
   assert.doesNotMatch(message, /\\\\n/);
-  assert.match(message, /couverture 92%/);
-  assert.match(message, /MC\/FDV/);
-  assert.match(message, /LP/);
+  assert.match(message, /couverture <b>92%<\\/b>/);
+  assert.match(message, /Capitalisation/);
+  assert.match(message, /Liquidité/);
   assert.match(message, /30 min/);
-  assert.match(message, /Contrôle de base OK/);
+  assert.match(message, /Contrôle on-chain de base OK/);
   assert.match(message, /<code>8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump<\/code>/);
-  assert.match(message, /qualité des signaux, pas une probabilité/);
+  assert.match(message, /n’est pas une promesse de performance/);
   assert.doesNotMatch(message, /Volume \(1 h\)|Variation \(1 h\)|Phantom/);
 });
 
