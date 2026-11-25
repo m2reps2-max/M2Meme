@@ -56,8 +56,9 @@ test('records six milestone returns from the scanner current market snapshots', 
 test('does not mix prices from a different market provider into the same performance series', () => {
   const row = entry();
   const otherProvider = { [mint]: { ...token(0.002, BASE + 60 * 60 * 1000), marketObservationSource: 'geckoterminal' } };
-  assert.equal(collectTelegramPerformanceUpdates([row], otherProvider, BASE + 60 * 60 * 1000).length, 0);
+  collectTelegramPerformanceUpdates([row], otherProvider, BASE + 60 * 60 * 1000);
   assert.equal(row.horizons['1h'], undefined);
+  assert.equal(row.lastCurrentPriceUsd, 0.001, 'a different provider must not replace the publication source price');
 });
 
 test('marks a missed milestone unavailable instead of inventing a return', () => {
