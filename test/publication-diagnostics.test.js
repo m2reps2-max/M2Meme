@@ -39,6 +39,31 @@ test('diagnostics explain strict Elite rejection and stale snapshots without wea
 });
 
 
+test('diagnostics expose full scan completion and actual market refresh telemetry',()=>{
+ const instance=scanner([makeToken()],{
+  scanning:false,
+  lastScanAttemptAt:'2026-11-25T04:50:00.000Z',
+  lastScanSkipReason:null,
+  scanRetryTimer:null,
+  state:{
+   ...scanner([makeToken()]).state,
+   lastScanCompletedAt:'2026-11-25T04:51:00.000Z',
+   lastScanCompletedDurationMs:65000,
+   lastScanError:null
+  },
+  status:()=>({
+   dexscreener:{connected:true},
+   dexMarket:{ok:true,attemptedBatches:3,succeededBatches:3,pairs:40,snapshots:38,error:null},
+   runtimeMemory:{current:{ok:true,rssMiB:241.2}}
+  })
+ });
+ const result=scannerPublicationDiagnostics.call(instance);
+ assert.equal(result.scan.lastScanCompletedAt,'2026-11-25T04:51:00.000Z');
+ assert.equal(result.scan.lastScanCompletedDurationMs,65000);
+ assert.equal(result.scan.dexMarket.snapshots,38);
+ assert.equal(result.scan.runtimeMemory.current.rssMiB,241.2);
+});
+
 test('diagnostics distinguish discovery API health from actual DexScreener market refresh health',()=>{
  const instance=scanner([makeToken()]);
  instance.status=()=>({dexscreener:{connected:true},dexMarket:{ok:false,attemptedBatches:3,succeededBatches:0,pairs:0,snapshots:0,error:'HTTP 429'}});
