@@ -731,6 +731,31 @@ test('Telegram est déclaré configuré avant le premier canal et son état de c
 });
 
 
+test('security memory guard does not consume the five-minute retry window',async()=>{
+ const scanner=make();
+ scanner.state.tokens=Object.fromEntries(Array.from({length:4},(_,i)=>['security-'+i,{mint:'security-'+i,pairAddress:'pair-'+i,liquidityUsd:10000}]));
+ const original=process.memoryUsage;
+ try{
+  process.memoryUsage=()=>({heapUsed:61*1048576,external:5*1048576,rss:247*1048576});
+  await scanner.securityLeaders();
+  assert.equal(scanner.lastSecurity,0);
+ }finally{process.memoryUsage=original;}
+});
+
+test('security refresh can run below the 246 MiB RSS guard',async()=>{
+ const scanner=make();
+ scanner.state.tokens=Object.fromEntries(Array.from({length:4},(_,i)=>['security-'+i,{mint:'security-'+i,pairAddress:'pair-'+i,liquidityUsd:10000}]));
+ const original=process.memoryUsage,checked=[];
+ scanner.inspectSecurity=async token=>{checked.push(token.mint);token.security={checkedAt:new Date().toISOString(),data:{}};};
+ scanner.inspectExternalSecurity=async()=>null;
+ try{
+  process.memoryUsage=()=>({heapUsed:61*1048576,external:5*1048576,rss:241.2*1048576});
+  await scanner.securityLeaders();
+  assert.equal(checked.length,4);
+  assert.ok(scanner.lastSecurity>0);
+ }finally{process.memoryUsage=original;}
+});
+
 test('security leader rotation refreshes four tokens every five minutes',async()=>{
  const scanner=make();
  const now=Date.now();
