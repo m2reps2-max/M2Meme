@@ -176,12 +176,21 @@ test('a +207% young launch can pass when independent trade demand is verified',(
  assert.equal(result.blockPublication,false);
 });
 
-test('GeckoTerminal sampled trades alone never count as independent demand for a vertical move',()=>{
+test('a broad fresh Gecko market sample can corroborate strong short-term momentum without being labelled RPC proof',()=>{
  const sampledOnly={checkedAt:new Date().toISOString(),tradeCount:40,uniqueBuyers:15,top5BuyerSharePct:52,buyVolumeUsd:12000,sellVolumeUsd:7000,earlyWindow:{complete:true}};
  const result=evaluateMomentumRisk({priceChange:{m5:4,h1:592,h24:592},volume:{m5:5000,h1:45000},txns:{m5:{buys:18,sells:5}},tradeIntel:sampledOnly,analysis:{factors:{earlyBuyerSignal:90}}});
  assert.equal(result.metrics.tradeIntelFresh,true);
  assert.equal(result.detectors.verifiedTradeDemand,false);
  assert.equal(result.detectors.verifiedEarlyBuyerDemand,false);
+ assert.equal(result.detectors.independentDemand,false);
+ assert.equal(result.detectors.observedMarketDemand,true);
+ assert.equal(result.blockPublication,false);
+});
+
+test('a vertical move with weak or missing market sample and no independent demand remains blocked',()=>{
+ const result=evaluateMomentumRisk({priceChange:{m5:4,h1:592,h24:592},volume:{m5:5000,h1:45000},txns:{m5:{buys:18,sells:5}},tradeIntel:{checkedAt:new Date().toISOString(),tradeCount:8,uniqueBuyers:4,top5BuyerSharePct:85,buyVolumeUsd:12000,sellVolumeUsd:7000}});
+ assert.equal(result.detectors.shortTermMomentumConfirmed,true);
+ assert.equal(result.detectors.observedMarketDemand,false);
  assert.equal(result.detectors.independentDemand,false);
  assert.equal(result.blockPublication,true);
 });
