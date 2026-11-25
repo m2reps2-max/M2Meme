@@ -14,6 +14,7 @@ const {
   markTelegramPerformanceRendered,
   selectPerformanceMarketObservation
 } = require('../lib/telegram-performance');
+const { findTelegramPreviewEntry, buildTelegramPreviewMetrics } = require('../lib/telegram-preview-image');
 
 const BASE = Date.UTC(2026, 10, 25, 12, 0, 0);
 const mint = '8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump';
@@ -29,6 +30,32 @@ function entry() {
     publishedAt: BASE
   });
 }
+
+test('serves the prepared Telegram preview before sendMessage has persisted its performance entry', () => {
+  const previewId = 'Abcdefghijklmnopqrstuvwx';
+  const seed = {
+    previewId,
+    tokenName: 'Test Coin',
+    tokenSymbol: 'TEST',
+    basePriceUsd: 0.001,
+    publishedAt: BASE,
+    lastCurrentPriceUsd: 0.001,
+    lastCurrentObservedAt: BASE - 30000,
+    horizons: {},
+    previewExpiresAt: BASE + 120000
+  };
+  const pending = new Map([[previewId, seed]]);
+  assert.equal(findTelegramPreviewEntry([], pending, previewId, BASE), seed);
+  const metrics = buildTelegramPreviewMetrics(seed, BASE);
+  assert.equal(metrics.currentReturn, 0);
+  assert.equal(metrics.currentState, 'a jour');
+  const saved = { ...seed, messageId: 42 };
+  assert.equal(findTelegramPreviewEntry([saved], pending, previewId, BASE), saved,
+    'the durable performance entry must take precedence once Telegram send succeeds');
+  assert.equal(findTelegramPreviewEntry([], pending, previewId, BASE + 120001), null,
+    'an abandoned preview seed must expire');
+  assert.equal(findTelegramPreviewEntry([], pending, 'invalid id', BASE), null);
+});
 
 test('extracts the token mint from an ISO-timestamped alert id', () => {
   const alertId = '2026-11-25T18:10:30.123Z:' + mint + ':opportunity';
@@ -153,7 +180,7 @@ test('normalizes only opaque preview identifiers', () => {
 });
 
 test('renders a premium PNG and labels every unavailable milestone instead of leaving blank cells', () => {
-  const { renderTelegramPerformancePng, buildTelegramPreviewMetrics } = require('../lib/telegram-preview-image');
+  const { renderTelegramPerformancePng } = require('../lib/telegram-preview-image');
   const row = entry();
   const metrics = buildTelegramPreviewMetrics(row, BASE);
   assert.equal(metrics.currentState, 'a jour');
@@ -165,8 +192,7 @@ test('renders a premium PNG and labels every unavailable milestone instead of le
 });
 
 test('does not present an old market snapshot as a current return', () => {
-  const { buildTelegramPreviewMetrics } = require('../lib/telegram-preview-image');
-  const row = entry();
+    const row = entry();
   row.lastCurrentObservedAt = BASE - 10 * 60 * 1000;
   row.lastCurrentPriceUsd = 0.002;
   const metrics = buildTelegramPreviewMetrics(row, BASE);
