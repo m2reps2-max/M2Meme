@@ -63,7 +63,7 @@ test('formats a curated best-memecoin post with market details and terminal link
   assert.match(message, /30 min/);
   assert.match(message, /Contrôle on-chain de base validé/);
   assert.match(message, /<code>8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump<\/code>/);
-  assert.match(message, /ne garantit aucun rendement/);
+  assert.doesNotMatch(message, /Cette sélection repose|ne garantit aucun rendement/);
   assert.doesNotMatch(message, /Variation \\(1 h\\)|Phantom/);
 });
 
@@ -101,7 +101,8 @@ test('builds DexScreener, GMGN and Axiom buttons only for valid Solana mints',()
     inline_keyboard:[[
       {text:'DexScreener',url:'https://dexscreener.com/solana/'+mint},
       {text:'GMGN',url:'https://gmgn.ai/sol/token/'+mint},
-      {text:'Axiom',url:'https://axiom.trade/t/'+mint}
+      {text:'Axiom',url:'https://axiom.trade/t/'+mint},
+      {text:'👻 Phantom',url:'https://phantom.com/tokens/solana/'+mint}
     ]]
   });
   assert.equal(buildTelegramAlertKeyboard({mint:'not-a-solana-mint'}),null);
