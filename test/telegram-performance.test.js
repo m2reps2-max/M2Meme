@@ -3,6 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   HORIZONS,
+  extractMintFromAlertId,
   normalizeTelegramPerformance,
   createTelegramPerformanceEntry,
   collectTelegramPerformanceUpdates,
@@ -23,6 +24,12 @@ function entry() {
     publishedAt: BASE
   });
 }
+
+test('extracts the token mint from an ISO-timestamped alert id', () => {
+  const alertId = '2026-11-25T18:10:30.123Z:' + mint + ':opportunity';
+  assert.equal(extractMintFromAlertId(alertId), mint);
+  assert.equal(extractMintFromAlertId('invalid:alert:id'), '');
+});
 
 test('captures a lightweight publication baseline without storing a price history', () => {
   const row = entry();
