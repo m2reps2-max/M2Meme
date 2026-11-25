@@ -742,7 +742,7 @@ test('security memory guard does not consume the five-minute retry window',async
  }finally{process.memoryUsage=original;}
 });
 
-test('security refresh can run below the 246 MiB RSS guard',async()=>{
+test('security refresh can run below the 244 MiB RSS guard',async()=>{
  const scanner=make();
  scanner.state.tokens=Object.fromEntries(Array.from({length:4},(_,i)=>['security-'+i,{mint:'security-'+i,pairAddress:'pair-'+i,liquidityUsd:10000}]));
  const original=process.memoryUsage,checked=[];
