@@ -99,13 +99,13 @@ test('a vertical move with positive five-minute price, buyers and relative volum
  assert.equal(result.blockPublication,false);
 });
 test('a sustained fall since first observations blocks a high-scoring candidate',()=>{
- const now=20_000_000,history=[{at:now-8*60_000,priceUsd:1},{at:now-4*60_000,priceUsd:.82},{at:now-30_000,priceUsd:.76}];
+ const now=Date.now(),history=[{at:now-8*60_000,priceUsd:1},{at:now-4*60_000,priceUsd:.82},{at:now-30_000,priceUsd:.76}];
  const result=evaluateMomentumRisk({history});
  assert.equal(result.detectors.negativeSinceFirstObservation,true);
  assert.equal(result.blockPublication,true);
 });
 test('a sharp retracement from the recent peak blocks publication',()=>{
- const now=20_000_000,history=[{at:now-8*60_000,priceUsd:1},{at:now-4*60_000,priceUsd:1.4},{at:now-30_000,priceUsd:1.02}];
+ const now=Date.now(),history=[{at:now-8*60_000,priceUsd:1},{at:now-4*60_000,priceUsd:1.4},{at:now-30_000,priceUsd:1.02}];
  const result=evaluateMomentumRisk({history});
  assert.equal(result.detectors.severePeakDrawdown,true);
  assert.equal(result.blockPublication,true);
