@@ -27,7 +27,7 @@ const token = {
 
 test('joins a Telegram publication to its nearest alert and reports the exact current return', () => {
   const [row] = buildTelegramPublicationAudit({
-    performance: [entry], alerts: [alert], tokens: { [mint]: token },
+    performance: [entry], alerts: [alert], tokens: { [mint]: { ...token, marketObservedAt: new Date(publishedAt + 2 * 3600000).toISOString() } },
     now: publishedAt + 2 * 3600000
   });
   assert.equal(row.alert.score, 84);
