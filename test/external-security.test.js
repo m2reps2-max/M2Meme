@@ -61,3 +61,16 @@ test('a negated spam check does not become a false positive',()=>{
  const result=assessExternalSecurity({status:'ok',verdict:'LOW RISK',score:75,confidence:80,checks:[{name:'Spam activity',status:'pass',severity:'low',details:'No spam detected'}]});
  assert.equal(result.decision,'clear');
 });
+
+test('reads the actual GL1TCH explain and risks fields and blocks explicit spam',()=>{
+ const {assessExternalSecurity}=require('../lib/external-security');
+ const report=normalizeGL1TCHReport({verdict:'CLEAN',score:95,confidence:90,risks:['Spam-like trading activity detected'],checks:[{key:'trade_quality',label:'Trading activity',status:'warn',value:'bot volume',explain:'Spam-like activity detected'}]});
+ assert.equal(report.checks[0].details,'Spam-like activity detected');
+ assert.deepEqual(report.risks,['Spam-like trading activity detected']);
+ assert.equal(assessExternalSecurity({status:'ok',...report}).decision,'block');
+});
+test('does not treat a negated spam explanation as a positive risk',()=>{
+ const {assessExternalSecurity}=require('../lib/external-security');
+ const report=normalizeGL1TCHReport({verdict:'LOW RISK',score:80,confidence:80,risks:[],checks:[{label:'Trading activity',status:'pass',explain:'No spam detected'}]});
+ assert.equal(assessExternalSecurity({status:'ok',...report}).decision,'clear');
+});
