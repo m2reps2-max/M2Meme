@@ -245,7 +245,7 @@ test('GeckoTerminal does not create a fresh snapshot from missing current liquid
  const mint='11111111111111111111111111111111';
  scanner.ingestGeckoPool({tokenAddress:mint,name:'Partial Gecko',symbol:'PG',poolAddress:'BPFLoaderUpgradeab1e11111111111111111111111',liquidityUsd:12000,priceUsd:null});
  const token=scanner.state.tokens[mint];
- assert.equal(token.history.length,0);
+ assert.equal((token.history||[]).length,0);
  assert.equal(token.marketObservedAt,undefined);
 });
 
