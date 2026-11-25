@@ -61,7 +61,9 @@ test('formats a curated best-memecoin post with market details and terminal link
   assert.match(message, /Valorisation estimée \(FDV\)/);
   assert.match(message, /Liquidité/);
   assert.match(message, /30 min/);
-  assert.match(message, /Contrôle on-chain de base validé/);
+  assert.match(message, /Pourquoi elle ressort/);
+  assert.match(message, /achats dominent nettement/);
+  assert.doesNotMatch(message, /CONTRÔLE DE SÉCURITÉ|Contrôle on-chain|Contrôles approfondis/);
   assert.match(message, /<code>8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump<\/code>/);
   assert.doesNotMatch(message, /Cette sélection repose|ne garantit aucun rendement/);
   assert.doesNotMatch(message, /Variation \\(1 h\\)|Phantom/);
@@ -77,7 +79,8 @@ test('keeps the channel selection in French and never leaks raw foreign-language
   assert.match(message, /MEMECOIN RETENUE/);
   assert.match(message, /Valorisation estimée/);
   assert.match(message, /Liquidité/);
-  assert.match(message, /CONTRÔLE DE SÉCURITÉ/);
+  assert.match(message, /Pourquoi elle ressort/);
+  assert.doesNotMatch(message, /CONTRÔLE DE SÉCURITÉ|Contrôle on-chain/);
   assert.doesNotMatch(message, /Low liquidity|suspicious activity|All checks passed/);
 });
 
