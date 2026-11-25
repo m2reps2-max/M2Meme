@@ -195,6 +195,40 @@ test('qualified candidates with stale security are visible with the exact blocke
 
 test('diagnostics expose a production build fingerprint and the actual configured score threshold',()=>{
  const result=scannerPublicationDiagnostics.call(scanner([makeToken()]));
- assert.equal(result.buildFingerprint,'m2meme-diagnostics-v2-20261125');
+ assert.equal(result.buildFingerprint,'m2meme-diagnostics-v3-20261125');
  assert.equal(result.publication.configuredThreshold,80);
+});
+
+
+test('diagnostics expose token-level security inspection evidence without exposing RPC credentials', () => {
+  const token = makeToken({
+    security: {
+      checkedAt: new Date(NOW - 60_000).toISOString(),
+      provider: 'Helius RPC',
+      error: 'security object inspection error',
+      data: {
+        tokenProgram: 'unknown-program',
+        isInitialized: true,
+        isToken2022: false,
+        mintAuthorityActive: true,
+        freezeAuthorityActive: false,
+        ownerConcentrationAvailable: false
+      }
+    },
+    securityRetryAt: new Date(NOW + 60_000).toISOString(),
+    securityCheckFailureCount: 2,
+    analysis: { score: 90, coverage: 90, risk: 'partial', hardBlocked: false, flags: [] }
+  });
+  const result = scannerPublicationDiagnostics.call(scanner([token]));
+  const inspection = result.mostBlockedCandidates[0].securityInspection;
+  assert.equal(inspection.provider, 'Helius RPC');
+  assert.equal(inspection.tokenProgramRecognized, false);
+  assert.equal(inspection.isInitialized, true);
+  assert.equal(inspection.mintAuthorityKnown, true);
+  assert.equal(inspection.freezeAuthorityKnown, true);
+  assert.equal(inspection.securityFactorAvailable, false);
+  assert.equal(inspection.baseSecurityGatePassed, false);
+  assert.equal(inspection.lastError, 'security object inspection error');
+  assert.equal(inspection.failureCount, 2);
+  assert.equal(JSON.stringify(inspection).includes('apiKey'), false);
 });
