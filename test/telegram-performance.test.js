@@ -48,7 +48,7 @@ test('records six milestone returns from the scanner current market snapshots', 
 
 test('marks a missed milestone unavailable instead of inventing a return', () => {
   const row = entry();
-  collectTelegramPerformanceUpdates([row], { [mint]: token(0.002, BASE + 2 * 60 * 60 * 1000) }, BASE + 2 * 60 * 60 * 1000);
+  collectTelegramPerformanceUpdates([row], { [mint]: token(0.002, BASE + 66 * 60 * 1000) }, BASE + 66 * 60 * 1000);
   assert.deepEqual(row.horizons['1h'], { missed: true });
   assert.equal(row.horizons['2h'], undefined);
 });
