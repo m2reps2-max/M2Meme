@@ -75,10 +75,12 @@ test('formats the original post and all requested horizons as a compact monospac
   row.lastCurrentObservedAt = BASE + 60 * 60 * 1000;
   const message = formatTelegramPerformanceMessage(row, BASE + 60 * 60 * 1000);
   assert.match(message, /MEMECOIN RETENUE/);
-  assert.match(message, /1 h : <b>🟢 \+20,00 %/);
+  assert.match(message, /<pre>PÉRIODE   VARIATION/);
+  assert.match(message, /1 h +🟢 \\+20,00 %/);
   assert.match(message, /2 h +En attente/);
   assert.match(message, /24 h +En attente/);
-  assert.match(message, /Depuis la publication :<\/b> 🟢 \+50,00 %/);
+  assert.match(message, /ACTUEL +🟢 \\+50,00 %/);
+  assert.match(message, /<\\/pre>/);
 });
 
 test('persists only bounded, valid performance entries', () => {
