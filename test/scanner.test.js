@@ -202,6 +202,62 @@ test('un nouveau pool GeckoTerminal est intégré sans inventer un créateur', (
  assert.ok(token.firstSeenAt);
 });
 
+
+
+test('a scan skipped during background work schedules an automatic retry',async()=>{
+ const scanner=make();
+ scanner.running=true;
+ scanner.backgroundTaskRunning='wallets';
+ const result=await scanner.scan();
+ assert.equal(result.skipped,true);
+ assert.equal(result.reason,'background_task_busy');
+ assert.equal(result.retryScheduled,true);
+ assert.ok(scanner.scanRetryTimer);
+ scanner.stop();
+ assert.equal(scanner.scanRetryTimer,null);
+});
+
+test('releasing a background task schedules the waiting market scan',async()=>{
+ const scanner=make();
+ scanner.running=true;
+ scanner.scan=async()=>({ok:true});
+ const result=await scanner.runBackgroundTask('social',async()=>({ok:true}),252);
+ assert.deepEqual(result,{ok:true});
+ assert.ok(scanner.scanRetryTimer);
+ scanner.stop();
+});
+
+test('GeckoTerminal market observations create timestamped snapshots usable by publication freshness',()=>{
+ const scanner=make();
+ const mint='11111111111111111111111111111111';
+ scanner.ingestGeckoPool({tokenAddress:mint,name:'Fresh Gecko',symbol:'FG',poolAddress:'BPFLoaderUpgradeab1e11111111111111111111111',poolCreatedAt:new Date().toISOString(),ageHours:0,liquidityUsd:12000,priceUsd:0.01,fdv:100000,volume:{h1:3000,h24:15000},txns:{h1:{buys:20,sells:5}}});
+ const token=scanner.state.tokens[mint];
+ assert.equal(token.history.length,1);
+ assert.equal(token.history[0].source,'geckoterminal');
+ assert.equal(token.history[0].liquidityUsd,12000);
+ assert.ok(Math.abs(Date.now()-token.history[0].at)<5000);
+ const {assessAlertFreshness}=require('../lib/alert-quality');
+ assert.equal(assessAlertFreshness(token).status,'fresh');
+});
+
+test('GeckoTerminal does not create a fresh snapshot from missing current liquidity or price',()=>{
+ const scanner=make();
+ const mint='11111111111111111111111111111111';
+ scanner.ingestGeckoPool({tokenAddress:mint,name:'Partial Gecko',symbol:'PG',poolAddress:'BPFLoaderUpgradeab1e11111111111111111111111',liquidityUsd:12000,priceUsd:null});
+ const token=scanner.state.tokens[mint];
+ assert.equal((token.history||[]).length,0);
+ assert.equal(token.marketObservedAt,undefined);
+});
+
+test('DexScreener does not refresh snapshot age using a previously cached liquidity value',()=>{
+ const scanner=make();
+ const mint='11111111111111111111111111111111';
+ scanner.state.tokens[mint]={mint,name:'Cached',symbol:'C',liquidityUsd:15000,priceUsd:0.01,history:[],sources:[],smartMoney:{hits:0,wallets:[]}};
+ const created=scanner.pair({chainId:'solana',baseToken:{address:mint,name:'Cached',symbol:'C'},priceUsd:'0.02',fdv:100000});
+ assert.equal(created,false);
+ assert.equal(scanner.state.tokens[mint].history.length,0);
+});
+
 test('les wallets découverts automatiquement sont surveillés même sans wallet manuel',async()=>{
  const scanner=make();
  const address='AutoWallet11111111111111111111111111111111';

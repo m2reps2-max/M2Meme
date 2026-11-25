@@ -38,6 +38,16 @@ test('diagnostics explain strict Elite rejection and stale snapshots without wea
   assert.match(result.diagnosis, /snapshots marché/i);
 });
 
+
+test('diagnostics distinguish discovery API health from actual DexScreener market refresh health',()=>{
+ const instance=scanner([makeToken()]);
+ instance.status=()=>({dexscreener:{connected:true},dexMarket:{ok:false,attemptedBatches:3,succeededBatches:0,pairs:0,snapshots:0,error:'HTTP 429'}});
+ const result=scannerPublicationDiagnostics.call(instance);
+ assert.equal(result.discovery.sourceStatus.dexscreener.connected,true);
+ assert.equal(result.discovery.sourceStatus.dexMarket.ok,false);
+ assert.equal(result.discovery.sourceStatus.dexMarket.error,'HTTP 429');
+});
+
 test('diagnostics identify Telegram delivery configuration blockers', () => {
   const token = makeToken({
     liquidityUsd: 20000, fdv: 200000, volume: { h1: 8000 },
