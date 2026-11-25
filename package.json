@@ -19,6 +19,7 @@
     "grammy": "^1.37.0",
     "helmet": "^8.1.0",
     "ws": "^8.18.3",
-    "x-agent-sdk": "^0.2.3"
+    "x-agent-sdk": "^0.2.3",
+    "@napi-rs/canvas": "^1.2.0"
   }
 }
