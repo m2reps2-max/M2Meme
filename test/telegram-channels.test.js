@@ -41,7 +41,7 @@ test('verdicts are labels, not probability claims', () => {
   assert.equal(scoreVerdict(99, 'danger'), 'RISQUE IMPORTANT');
 });
 
-test('formats a compact Telegram alert with age, security and terminal links', () => {
+test('formats a curated best-memecoin post with market details and terminal links', () => {
   const message = formatTelegramAlert({
     name: 'Example Token', symbol: 'EX', mint: '8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump',
     liquidityUsd: 12000, fdv: 43000, ageMinutes: 30,
@@ -56,7 +56,7 @@ test('formats a compact Telegram alert with age, security and terminal links', (
   assert.match(message, /transactions/);
   assert.match(message, /\n/);
   assert.doesNotMatch(message, /\\\\n/);
-  assert.match(message, /couverture <b>92%<\\/b>/);
+  assert.ok(message.includes('couverture <b>92%</b>'));
   assert.match(message, /Capitalisation/);
   assert.match(message, /Liquidité/);
   assert.match(message, /30 min/);
@@ -72,7 +72,7 @@ test('escapes token-controlled text and keeps risk alerts concise', () => {
     liquidityUsd: 1650, fdv: 2056, ageMinutes: 10,
     analysis: { score: 71, coverage: 75, hardBlocked: true, flags: [{ level: 'critical', message: 'Chute du prix > 20% sur 5 minutes' }] }
   }, 'danger');
-  assert.ok(message.startsWith('🚨 <b>ALERTE RISQUE</b>'));
+  assert.ok(message.startsWith('🚨 <b>RISQUE DÉTECTÉ</b>'));
   assert.match(message, /Offchain &lt;script&gt; &amp; Co/);
   assert.match(message, /RISQUE IMPORTANT/);
   assert.match(message, /Sécurité : <b>BLOQUÉE/);
