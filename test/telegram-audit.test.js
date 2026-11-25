@@ -20,7 +20,7 @@ const alert = {
 };
 const token = {
   priceUsd: 0.0005,
-  marketObservedAt: new Date(publishedAt + 2 * 3600000).toISOString(),
+  marketObservedAt: new Date(publishedAt + 10 * 60000).toISOString(),
   marketObservationSource: 'dexscreener',
   history: []
 };
