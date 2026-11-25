@@ -132,3 +132,18 @@ test('best shortlist accepts fresh DEX transactions when GeckoTerminal pool samp
  assert.equal(result.best.length,1);
  assert.equal(result.best[0].freshness.transactionAgeMinutes,1);
 });
+
+test('best shortlist requires a clear external security verdict when the strict gate is enabled',()=>{
+ const safe=token(90,{externalSecurity:{status:'ok',verdict:'LOW RISK',score:82,confidence:85,checks:[]}});
+ const caution=token(91,{externalSecurity:{status:'ok',verdict:'CAUTION',score:72,confidence:90,checks:[]}});
+ const missing=token(92);
+ const settings={requireExternalSecurity:true};
+ assert.deepEqual(buildSelection([safe],NOW,{settings}).best.map(x=>x.mint),['mint-90']);
+ assert.equal(buildSelection([caution],NOW,{settings}).best.length,0);
+ assert.equal(buildSelection([missing],NOW,{settings}).best.length,0);
+});
+test('best shortlist blocks a confirmed external spam flag',()=>{
+ const spam=token(93,{externalSecurity:{status:'ok',verdict:'CLEAN',score:95,confidence:90,checks:[{name:'Spam activity',status:'flagged',severity:'high',details:'Coordinated spam trading detected'}]}});
+ const result=buildSelection([spam],NOW,{settings:{requireExternalSecurity:true}});
+ assert.equal(result.best.length,0);
+});
