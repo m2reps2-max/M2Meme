@@ -154,3 +154,17 @@ test('transaction fallback cannot use stale market snapshots or missing security
  const noSecurity={history:[{at:now-30_000}],txns:{h1:{buys:12,sells:4}}};
  assert.equal(assessOpportunityEvidence(noSecurity,now).eligible,false);
 });
+
+test('required external security rejects missing, unavailable, caution and unknown reports',()=>{
+ const base=eliteCandidate();
+ for(const externalSecurity of [undefined,{status:'unavailable'},{status:'ok',verdict:'CAUTION',score:70,confidence:90},{status:'ok',verdict:'UNKNOWN',score:90,confidence:90}]){
+  const result=qualifyOpportunity({...base,externalSecurity},{requireExternalSecurity:true});
+  assert.equal(result.eligible,false);
+ }
+});
+test('required external security accepts only a sufficiently confident clean or low-risk report',()=>{
+ for(const verdict of ['CLEAN','LOW RISK']){
+  const candidate=eliteCandidate({externalSecurity:{status:'ok',verdict,score:85,confidence:80,checks:[]}});
+  assert.equal(qualifyOpportunity(candidate,{requireExternalSecurity:true}).eligible,true,verdict);
+ }
+});
