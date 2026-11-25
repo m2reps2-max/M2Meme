@@ -63,7 +63,7 @@ test('formats the original post, all requested horizons and the live return', ()
   assert.match(message, /1 h : <b>🟢 \+20,00 %/);
   assert.match(message, /2 h : <b>En attente/);
   assert.match(message, /24 h : <b>En attente/);
-  assert.match(message, /Depuis la publication:<\/b> 🟢 \+50,00 %/);
+  assert.match(message, /Depuis la publication :<\/b> 🟢 \+50,00 %/);
 });
 
 test('persists only bounded, valid performance entries', () => {
