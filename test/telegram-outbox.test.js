@@ -6,6 +6,7 @@ const {
   retryDelay, claimDueTelegramOutbox, markTelegramOutboxSent,
   markTelegramOutboxFailed
 } = require('../lib/telegram-outbox');
+const { buildTelegramAlertKeyboard } = require('../lib/telegram-channels');
 
 test('creates one stable outbox entry per alert and Telegram destination', () => {
   const input = { alertId: '2026-11-23T12:00:00.000Z:Mint:opportunity', chatId: '-1001234567890', message: 'Hello', now: '2026-11-23T12:00:00.000Z' };
@@ -94,6 +95,14 @@ test('normalizes malformed and duplicate persisted rows safely', () => {
   assert.equal(rows[0].attempts, 0);
 });
 
+test('keeps the generated Phantom buy button through the real outbox normalization path', () => {
+  const mint = '8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump';
+  const replyMarkup = buildTelegramAlertKeyboard({ mint });
+  assert.equal(replyMarkup.inline_keyboard[0][3].text, '👻 Acheter sur Phantom');
+  const entry = createTelegramOutboxEntry({ alertId: 'alert', chatId: 'channel', message: 'Alert', replyMarkup });
+  assert.deepEqual(normalizeTelegramOutbox([entry])[0].replyMarkup, replyMarkup);
+});
+
 test('persists only a validated Phantom inline button across restart normalization',()=>{
   const mint='8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump';
   const replyMarkup={inline_keyboard:[[{text:'👻 Acheter sur Phantom',url:'https://phantom.com/tokens/solana/'+mint}]]};
@@ -101,4 +110,6 @@ test('persists only a validated Phantom inline button across restart normalizati
   assert.deepEqual(normalizeTelegramOutbox([entry])[0].replyMarkup,replyMarkup);
   const unsafe=createTelegramOutboxEntry({alertId:'unsafe',chatId:'chat',message:'Alert',replyMarkup:{inline_keyboard:[[{text:'Acheter',url:'https://evil.example/'+mint}]]}});
   assert.equal(unsafe.replyMarkup,null);
+  const forgedDex=createTelegramOutboxEntry({alertId:'forged',chatId:'chat',message:'Alert',replyMarkup:{inline_keyboard:[[{text:'DexScreener',url:'https://evil.example/'+mint}]]}});
+  assert.equal(forgedDex.replyMarkup,null);
 });
