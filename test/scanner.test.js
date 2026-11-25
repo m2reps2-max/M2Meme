@@ -240,6 +240,29 @@ test('GeckoTerminal market observations create timestamped snapshots usable by p
  assert.equal(assessAlertFreshness(token).status,'fresh');
 });
 
+test('GeckoTerminal partial refreshes never erase previously observed market metrics',()=>{
+ const scanner=make();
+ const mint='11111111111111111111111111111111';
+ scanner.ingestGeckoPool({
+  tokenAddress:mint,name:'Stable Gecko',symbol:'SG',poolAddress:'BPFLoaderUpgradeab1e11111111111111111111111',
+  liquidityUsd:12000,priceUsd:0.01,fdv:100000,marketCap:90000,
+  volume:{h1:3000,h24:15000},txns:{h1:{buys:20,sells:5}},priceChange:{h1:42.5}
+ });
+ const token=scanner.state.tokens[mint];
+ scanner.ingestGeckoPool({
+  tokenAddress:mint,name:'Stable Gecko',symbol:'SG',poolAddress:'BPFLoaderUpgradeab1e11111111111111111111111',
+  liquidityUsd:12500,priceUsd:0.011,fdv:null,marketCap:undefined,
+  volume:{h1:null,h24:undefined},txns:{h1:{buys:22,sells:null}},priceChange:{h1:null,h24:undefined}
+ });
+ assert.equal(token.fdv,100000);
+ assert.equal(token.marketCap,90000);
+ assert.deepEqual(token.volume,{h1:3000,h24:15000});
+ assert.deepEqual(token.txns.h1,{buys:22,sells:5});
+ assert.deepEqual(token.priceChange,{h1:42.5});
+ assert.equal(token.liquidityUsd,12500);
+ assert.equal(token.priceUsd,0.011);
+});
+
 test('GeckoTerminal does not create a fresh snapshot from missing current liquidity or price',()=>{
  const scanner=make();
  const mint='11111111111111111111111111111111';
