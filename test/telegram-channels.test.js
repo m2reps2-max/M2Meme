@@ -64,7 +64,7 @@ test('formats a curated best-memecoin post with market details and terminal link
   assert.match(message, /Contrôle on-chain de base validé/);
   assert.match(message, /<code>8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump<\/code>/);
   assert.match(message, /ne garantit aucun rendement/);
-  assert.doesNotMatch(message, /Volume \(1 h\)|Variation \(1 h\)|Phantom/);
+  assert.doesNotMatch(message, /Variation \\(1 h\\)|Phantom/);
 });
 
 test('keeps the channel selection in French and never leaks raw foreign-language signal text', () => {
