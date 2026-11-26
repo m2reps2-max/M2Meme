@@ -58,7 +58,7 @@ test('wallet reputation page exposes point-in-time backtest and outcomes against
 
 test('Radar shortlist is capped at five best and five watch candidates with strict data gates',()=>{
  assert.match(selection,/\.slice\(0,5\)/);
- assert.ok(selection.includes('qualifyOpportunity(t,qualificationSettings).eligible'));
+ assert.ok(selection.includes('qualifyOpportunity(t,{...qualificationSettings,now}).eligible'));
   assert.ok(selection.includes('hasVerifiedDemand(t,now)'));
   assert.ok(selection.includes("factorSet(t,['activity','momentum','market','liquidityQuality','executionQuality','security','demandQuality'])"));
  assert.match(selection,/risk!=='high'/);
@@ -75,7 +75,7 @@ test('scanner view no longer exposes the full token catalogue or coverage sort f
 });
 
 test('top candidates require base security evidence and fresh market, security and trade checks',()=>{
- assert.match(selection,/qualifyOpportunity\(t,qualificationSettings\)\.eligible/);
+ assert.match(selection,/qualifyOpportunity\(t,\{\.\.\.qualificationSettings,now\}\)\.eligible/);
  assert.match(selection,/age\.staticSecurityAgeMinutes!==null&&age\.staticSecurityAgeMinutes<=MAX_STATIC_SECURITY_EVIDENCE_AGE_MINUTES/);
  assert.match(selection,/age\.dynamicSecurityAgeMinutes!==null&&age\.dynamicSecurityAgeMinutes<=MAX_SECURITY_EVIDENCE_AGE_MINUTES/);
  assert.match(selection,/age\.transactionAgeMinutes!==null&&age\.transactionAgeMinutes<=MAX_TRADE_EVIDENCE_AGE_MINUTES/);
