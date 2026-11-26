@@ -104,14 +104,33 @@ function publicationDiagnosticsSnapshot(selection=scanner.selection()){
  const channels=Array.isArray(scanner.state.telegramChannels)?scanner.state.telegramChannels:[];
  const outbox=Array.isArray(scanner.state.telegramOutbox)?scanner.state.telegramOutbox:[];
  const source=scanner.state.sources?.jupiterSellability||null;
+ const priceSource=scanner.state.sources?.jupiterPrice||null;
+ const now=Date.now();
+ const ageMinutes=value=>{const at=Date.parse(value||'');return Number.isFinite(at)&&at<=now?Number(((now-at)/60000).toFixed(1)):null;};
+ const candidates=[...(selection.best||[]),...(selection.observe||[])].slice(0,5).map(row=>{
+  const token=scanner.state.tokens[row.mint]||{};
+  const trade=token.tradeIntel||{};
+  const security=token.security?.data||{};
+  const factors=row.analysis?.factors||{};
+  return {
+   mint:row.mint,score:row.analysis?.score??null,coverage:row.analysis?.coverage??null,risk:row.analysis?.risk||null,
+   securityPublicationReady:row.analysis?.securityPublicationReady===true,securityComprehensive:row.analysis?.securityComprehensive===true,
+   factors:{momentum:factors.momentum??null,security:factors.security??null,demandQuality:factors.demandQuality??null,executionQuality:factors.executionQuality??null},
+   freshness:row.freshness||null,
+   trade:{ageMinutes:ageMinutes(trade.checkedAt),lastTradeAgeMinutes:ageMinutes(trade.lastTradeAt),tradeCount:trade.tradeCount??null,uniqueBuyers:trade.uniqueBuyers??null,buyVolumeUsd:trade.buyVolumeUsd??null,sellVolumeUsd:trade.sellVolumeUsd??null},
+   sellability:{status:token.sellability?.status||null,ageMinutes:ageMinutes(token.sellability?.checkedAt),routeAvailable:token.sellability?.routeAvailable??null,requestedUsd:token.sellability?.requestedUsd??null,inputAmountUsd:token.sellability?.inputAmountUsd??null,reason:token.sellability?.reason||null},
+   priceUsd:token.jupiterPrice?.priceUsd??token.priceUsd??null,priceSource:token.jupiterPrice?.priceUsd>0?'Jupiter':token.priceUsd>0?'DexScreener':null,
+   tokenDecimals:security.decimals??null,holderSample:{accounts:security.holderSampleAccounts??null,coveragePct:security.holderSampleCoveragePct??null,unknownOwnerAccounts:security.unknownOwnerAccounts??null}
+  };
+ });
  return {
-  at:new Date().toISOString(),
-  scanner:{running:scanner.scanning===true,lastScanAt:scanner.state.lastScanAt||null,lastScanCompletedAt:scanner.state.lastScanCompletedAt||null,lastScanFailed:Boolean(scanner.state.lastScanError)},
+  at:new Date(now).toISOString(),
+  scanner:{running:scanner.scanning===true,lastScanAt:scanner.state.lastScanAt||null,lastScanAttemptAt:scanner.lastScanAttemptAt||null,lastScanCompletedAt:scanner.state.lastScanCompletedAt||null,lastScanFailed:Boolean(scanner.state.lastScanError),lastScanSkipReason:scanner.lastScanSkipReason||null},
   selection:{considered:selection.considered||0,linked:selection.eligible||0,best:selection.best?.length||0,observe:selection.observe?.length||0,early:selection.early?.length||0},
-  diagnostics:selection.diagnostics||{},
-  qualityGate:selection.qualityGate||{},
+  candidates,diagnostics:selection.diagnostics||{},qualityGate:selection.qualityGate||{},
   telegram:{botConfigured:Boolean(bot),channelsConfigured:scanner.state.telegramChannelsConfigured===true,channelCount:channels.length,enabledChannels:channels.filter(row=>row.enabled!==false).length,outboxQueued:outbox.filter(row=>row.status==='queued').length,outboxFailed:outbox.filter(row=>row.status==='failed').length},
-  jupiterSellability:source?{ok:source.ok===true,at:source.at||null,checked:Number(source.checked)||0,status:source.status||null,reason:source.reason||null,priceUsd:source.priceUsd??null,decimals:source.decimals??null,error:source.error||null,mode:source.mode||null}:null
+  jupiterSellability:source?{ok:source.ok===true,at:source.at||null,checked:Number(source.checked)||0,status:source.status||null,reason:source.reason||null,priceUsd:source.priceUsd??null,decimals:source.decimals??null,error:source.error||null,mode:source.mode||null}:null,
+  jupiterPrice:priceSource?{ok:priceSource.ok===true,at:priceSource.at||null,checked:Number(priceSource.checked)||0,priced:Number(priceSource.priced)||0,error:priceSource.error||null,mode:priceSource.mode||null}:null
  };
 }
 app.get('/health/selection',(_q,r)=>r.json({ok:true,...publicationDiagnosticsSnapshot()}));
