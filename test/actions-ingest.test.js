@@ -51,8 +51,8 @@ test('archive learning ingest validates a real adaptive model and rejects unsafe
   for(let i=0;i<300;i++){
     const x=i%100,mint='archive-'+String(i).padStart(4,'0');
     tokens[mint]={mint,forecasts:[{
-      at:Date.UTC(2026,0,1)+i*60000,score:100-x,liquidityUsd:100000,
-      features:{activity:x,momentum:x*.8+(i%7),market:x*.7+(i%5),liquidityQuality:x*.6+(i%11),security:x*.5+(i%13)},
+      at:Date.UTC(2026,0,1)+i*60000,criteriaVersion:3,legacyScore:100-x,launchPhase:['launch_discovery','early','momentum','established','mature'][i%5],score:100-x,liquidityUsd:100000,
+      features:{activity:x,momentum:x*.8+(i%7),market:x*.7+(i%5),liquidityQuality:x*.6+(i%11),security:x*.5+(i%13),demandQuality:x*.9+(i%3),executionQuality:x*.4+(i%9)},
       outcomes:{'15m':{returnPct:(x-50)*.8,exitLiquidityUsd:100000},'1h':{returnPct:(x-50)*1.5,exitLiquidityUsd:100000},'6h':{returnPct:(x-50)*1.2,exitLiquidityUsd:100000},'24h':{returnPct:(x-50)*.7,exitLiquidityUsd:100000},'7d':{returnPct:(x-50)*.4,exitLiquidityUsd:100000}}
     }]};
   }
