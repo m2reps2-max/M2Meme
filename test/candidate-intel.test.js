@@ -154,3 +154,19 @@ test('promotional Telegram counters cannot inflate community counts',()=>{
   assert.equal(merged.mentions24h,1);
   assert.equal(merged.evidence.promotionalPosts24h,1);
 });
+
+test('trade intelligence refresh rotates only through the highest-scoring 12-token cohort',async()=>{
+ const scanner=Object.create(MemeScanner.prototype);
+ const now=Date.now();
+ const tokens={};
+ for(let i=0;i<13;i++){
+  const mint='trade-priority-'+i;
+  tokens[mint]={mint,geckoPoolAddress:'pool-'+i,liquidityUsd:10000+i,analysis:{score:i===12?10:99-i},tradeIntel:{checkedAt:new Date(now-(i===12?24*60*60*1000:6*60*1000)).toISOString()}};
+ }
+ scanner.state={tokens};
+ scanner.lastAutoCreatorFundingAt=now;
+ let inspected=null;
+ scanner.inspectTradeIntel=async token=>{inspected=token.mint;};
+ await scanner.refreshCandidateIntelligence();
+ assert.equal(inspected,'trade-priority-0');
+});

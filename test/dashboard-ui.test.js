@@ -241,7 +241,9 @@ test('scanner view shows the real publication diagnosis and configured Elite def
  const start=js.indexOf('function renderScanner(){');
  const end=js.indexOf('\nfunction refreshTable',start);
  const source=js.slice(start,end);
- assert.match(server,/publicationDiagnostics:scanner\.scannerPublicationDiagnostics\(\)/);
+ assert.match(server,/publicationDiagnostics:publicationDiagnosticsSnapshot\(selection\)/);
+ assert.match(server,/app\.get\('\/health\/selection'/);
+ assert.match(server,/function publicationDiagnosticsSnapshot/);
  assert.match(source,/p\.publicationDiagnostics/);
  assert.match(source,/blocages/i);
  assert.match(source,/g\.bestMinScore\?\?80/);
