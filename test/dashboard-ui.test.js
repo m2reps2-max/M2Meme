@@ -253,6 +253,7 @@ test('scanner view shows the real publication diagnosis and configured Elite def
 
 
 test('publication diagnostics expose score, quality, freshness, missing factors, bot and outbox status',()=>{
+ const server=fs.readFileSync(path.join(root,'index.js'),'utf8');
  assert.match(js,/publicationDiscovery\.scorePass/);
  assert.match(js,/publicationDiscovery\.qualityPass/);
  assert.match(js,/publicationDiscovery\.qualifiedButStaleMarket/);
