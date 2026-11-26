@@ -103,6 +103,22 @@ test('trade analysis returns auditable bundle-like and five-second buyer cluster
   assert.ok(result.flags.some(x=>x.code==='BUNDLE_LIKE_BURST'));
 });
 
+test('first 70 buyer cohort is only scored when the launch sample is complete',()=>{
+ const created=Date.parse('2026-11-22T10:00:00.000Z');
+ const rows=[];
+ for(let i=0;i<70;i++)rows.push({id:'b'+i,attributes:{tx_from_address:'wallet'+i,kind:'buy',block_timestamp:new Date(created+1000+i*4000).toISOString(),volume_in_usd:'100',block_number:1000+i}});
+ for(let i=0;i<30;i++)rows.push({id:'s'+i,attributes:{tx_from_address:'wallet'+i,kind:'sell',block_timestamp:new Date(created+360000+i*1000).toISOString(),volume_in_usd:'100',block_number:2000+i}});
+ const result=analyzePoolTrades({data:rows},new Date(created).toISOString(),created+600000);
+ assert.equal(result.first70BuyerCohort.observedBuyers,70);
+ assert.equal(result.first70BuyerCohort.complete,true);
+ assert.equal(result.first70BuyerCohort.mostlyExitedInSample,30);
+ assert.equal(result.first70BuyerCohort.retentionPct,57.1);
+ assert.equal(result.first70BuyerCohort.wallets.length,10);
+ const incomplete=analyzePoolTrades({data:rows.slice(0,20)},new Date(created).toISOString(),created+600000);
+ assert.equal(incomplete.first70BuyerCohort.complete,false);
+ assert.equal(incomplete.first70BuyerCohort.retentionPct,null);
+});
+
 test('pool trade samples are persisted idempotently for wallet graph analysis',()=>{
  const target=[];
  const observed=[

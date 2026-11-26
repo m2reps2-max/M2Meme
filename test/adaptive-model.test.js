@@ -7,10 +7,10 @@ function fixture(count=300){
  const tokens={};
  for(let i=0;i<count;i++){
   const x=i%100;
-  const features={activity:x,momentum:x*.8+(i%7),market:x*.7+(i%5),liquidityQuality:x*.6+(i%11),security:x*.5+(i%13)};
+  const features={activity:x,momentum:x*.8+(i%7),market:x*.7+(i%5),liquidityQuality:x*.6+(i%11),security:x*.5+(i%13),demandQuality:x*.9+(i%3),executionQuality:x*.4+(i%9)};
   const mint='mint-'+String(i).padStart(4,'0');
   tokens[mint]={mint,liquidityUsd:100000,forecasts:[{
-   at:Date.UTC(2026,0,1)+i*60000,score:100-x,liquidityUsd:100000,features,
+   at:Date.UTC(2026,0,1)+i*60000,criteriaVersion:3,legacyScore:100-x,launchPhase:['launch_discovery','early','momentum','established','mature'][i%5],launchAgeHours:i%24,score:100-x,liquidityUsd:100000,features,
    outcomes:{
     '15m':{returnPct:(x-50)*0.8,exitLiquidityUsd:100000},
     '1h':{returnPct:(x-50)*1.5,exitLiquidityUsd:100000},
@@ -35,6 +35,9 @@ test('adaptive model activates only after chronological holdout beats equal-size
  assert.equal(model.holdout.top.tokens,model.holdout.selectedTokens);
  assert.ok(model.holdout.upliftVsStaticPctPoints>=5);
  assert.ok(model.holdout.upliftVsRandomPctPoints>=5);
+ assert.ok(model.holdout.upliftVsLegacyPctPoints>=5);
+ assert.ok(model.holdout.legacyComparisonSampleSize>=15);
+ assert.ok(Object.keys(model.holdout.phaseSegments).length>=5);
  assert.ok(model.holdout.top.averageReturnPct<model.holdout.top.grossAverageReturnPct);
  assert.equal(model.evaluation.returnBasis,'net_simulated');
  assert.ok(model.features.length>=4);
@@ -95,7 +98,7 @@ test('adaptive extraction includes a preserved first forecast outside the rollin
  const tokens={};
  for(let i=0;i<12;i++){
   const mint='first-only-'+i;
-  tokens[mint]={mint,firstForecast:{at:1000+i,score:80,liquidityUsd:100000,features:{activity:70,momentum:60,market:80,liquidityQuality:75,security:90},outcomes:{'1h':{returnPct:20,exitLiquidityUsd:100000}}},forecasts:[]};
+  tokens[mint]={mint,firstForecast:{at:1000+i,criteriaVersion:3,legacyScore:75,launchPhase:'early',score:80,liquidityUsd:100000,features:{activity:70,momentum:60,market:80,liquidityQuality:75,security:90},outcomes:{'1h':{returnPct:20,exitLiquidityUsd:100000}}},forecasts:[]};
  }
  const model=buildAdaptiveModel(tokens);
  assert.equal(model.observations,12);

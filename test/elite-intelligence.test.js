@@ -40,6 +40,37 @@ test('wallet network identifies repeated wallets across tokens without asserting
  assert.match(result.limitations,/ne démontre/);
 });
 
+test('creator identity and direct funder links are indexed only from confirmed fresh evidence',()=>{
+ const now=new Date().toISOString();
+ const creatorMint='vca3tbFf111111111111111111111111111111111111';
+ const state={tokens:{
+  [mint]:{mint,creator:w1,creatorObservedAtLaunch:true,creatorFunding:{status:'found',funder:w4,checkedAt:now}},
+  [other]:{mint:other,creator:w1,creatorObservedAtLaunch:true,creatorFunding:{status:'found',funder:w4,checkedAt:now}},
+  [creatorMint]:{mint:creatorMint,creator:w2,creatorObservedAtLaunch:true,creatorFunding:{status:'not_found',funder:w4,checkedAt:now}}
+ },walletTrades:[]};
+ const index=buildEliteIntelligenceIndex(state);
+ const result=analyzeWalletNetwork(state.tokens[mint],index);
+ assert.equal(result.sharedCreatorFunder,true);
+ assert.equal(result.funderLaunchCount,2);
+ assert.equal(result.creatorLaunchCount,2);
+ assert.ok(result.reasons.some(reason=>reason.includes('financeur direct')));
+ const unverified=buildEliteIntelligenceIndex({tokens:{[mint]:{mint,creatorObservedAtLaunch:true,creatorFunding:{funder:w4,checkedAt:now}}},walletTrades:[]});
+ assert.equal(unverified.funderMints.size,0);
+});
+
+test('poor creator history adds a bounded advisory penalty only after three evaluated launches',()=>{
+ const tokens={};
+ for(let i=0;i<3;i++){
+  const tokenMint='creator-history-'+i;
+  tokens[tokenMint]={mint:tokenMint,creator:w1,creatorObservedAtLaunch:true,forecasts:[{at:new Date(Date.now()-3600000).toISOString(),outcomes:{'1h':{returnPct:-35,maxAdversePct:-50}}}]};
+ }
+ const current={mint,creator:w1,creatorObservedAtLaunch:true,tradeIntel:{observedTrades:[]}};
+ const result=evaluateEliteIntelligence(current,{tokens:{...tokens,[mint]:current},walletTrades:[]});
+ assert.equal(result.phases.creatorReputation.evaluatedLaunches,3);
+ assert.ok(result.adjustment<=-3);
+ assert.ok(result.flags.some(flag=>flag.code==='CREATOR_HISTORY_RISK'&&flag.level==='warning'));
+});
+
 test('holder review remains partial when owner evidence or Token-2022 extensions are missing',()=>{
  const partial=analyzeHolderAndTokenSecurity({security:{checkedAt:new Date().toISOString(),data:{isToken2022:true,ownerConcentrationAvailable:false,holderSampleAccounts:20}}});
  assert.equal(partial.complete,false);

@@ -75,7 +75,8 @@ test('scanner view no longer exposes the full token catalogue or coverage sort f
 
 test('top candidates require base security evidence and fresh market, security and trade checks',()=>{
  assert.match(selection,/qualifyOpportunity\(t,qualificationSettings\)\.eligible/);
- assert.match(selection,/age\.securityAgeMinutes!==null&&age\.securityAgeMinutes<=MAX_SECURITY_EVIDENCE_AGE_MINUTES/);
+ assert.match(selection,/age\.staticSecurityAgeMinutes!==null&&age\.staticSecurityAgeMinutes<=MAX_STATIC_SECURITY_EVIDENCE_AGE_MINUTES/);
+ assert.match(selection,/age\.dynamicSecurityAgeMinutes!==null&&age\.dynamicSecurityAgeMinutes<=MAX_SECURITY_EVIDENCE_AGE_MINUTES/);
  assert.match(selection,/age\.transactionAgeMinutes!==null&&age\.transactionAgeMinutes<=MAX_TRADE_EVIDENCE_AGE_MINUTES/);
  assert.match(selection,/typeof value==='number'/);
  assert.match(selection,/risk!=='unknown'/);
@@ -193,7 +194,7 @@ test('simple settings page exposes scanner thresholds and publication switches',
  assert.match(js,/field\('Score minimum','minScore'/);
  assert.match(js,/field\('Liquidité minimale \(\$\)','minLiquidityUsd'/);
  assert.match(js,/field\('Volume minimum 1 h \(\$\)','minVolume1hUsd'/);
- assert.match(js,/field\('Couverture minimale \(%\)','minCoverage'/);
+ assert.match(js,/field\('Couverture minimale de veille \(%\)','minCoverage'/);
  assert.match(js,/field\('Transactions minimum 1 h','minTransactions1h'/);
  assert.match(js,/field\('Ratio acheteurs minimum \(%\)','minBuyRatioPct'/);
  assert.match(js,/field\('FDV \/ liquidité maximum','maxFdvLiquidityRatio'/);
@@ -231,7 +232,7 @@ test('selection cohort dashboard labels the displayed performance as net return'
 
 
 test('dashboard fallback mirrors the actual elite scanner preset',()=>{
- assert.ok(js.includes("preset:'elite',minScore:80,minLiquidityUsd:5000,minVolume1hUsd:750,minCoverage:70,minTransactions1h:8,minBuyRatioPct:50,maxFdvLiquidityRatio:35,requireComprehensiveSecurity:false"));
+ assert.ok(js.includes("preset:'elite',minScore:80,minLiquidityUsd:5000,minVolume1hUsd:750,minCoverage:70,minTransactions1h:8,minBuyRatioPct:50,maxFdvLiquidityRatio:35,requireComprehensiveSecurity:true"));
 });
 
 

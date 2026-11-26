@@ -1,7 +1,7 @@
 'use strict';
 const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const os=require('node:os');const path=require('node:path');const {MemeScanner}=require('../lib/scanner');
 function make(){const dir=fs.mkdtempSync(path.join(os.tmpdir(),'meme-radar-test-'));return new MemeScanner({dataFile:path.join(dir,'store.json')});}
-test('score ne compte que les facteurs réellement disponibles',()=>{const s=make();const a=s.score({txns:{h1:{buys:70,sells:30}},volume:{h1:25000,h24:120000},liquidityUsd:45000,ageHours:3});assert.equal(a.coverage,40);assert.ok(a.score>=0&&a.score<=100);assert.equal(a.confidence,'low');});
+test('score ne compte que les facteurs réellement disponibles',()=>{const s=make();const a=s.score({txns:{h1:{buys:70,sells:30}},volume:{h1:25000,h24:120000},liquidityUsd:45000,ageHours:3});assert.equal(a.coverage,22);assert.ok(a.score>=0&&a.score<=100);assert.equal(a.confidence,'low');});
 test('une freeze authority active bloque le token',()=>{const s=make();const a=s.score({txns:{h1:{buys:20,sells:10}},volume:{h1:5000,h24:20000},liquidityUsd:10000,ageHours:2,security:{checkedAt:new Date().toISOString(),data:{freezeAuthorityActive:true,mintAuthorityActive:false,top10HolderPercent:30}}});assert.equal(a.hardBlocked,true);assert.equal(a.risk,'high');});
 test('les preuves sociales multi-auteurs sont un facteur pondéré et augmentent la couverture sans double bonus',()=>{
  const s=make();
@@ -25,7 +25,7 @@ test('les données sociales et wallet inconnues ne sont pas inventées',()=>{con
 test('watchlist valide et déduplique les adresses',()=>{const s=make(),mint='So11111111111111111111111111111111111111112';assert.equal(s.addWatch(mint).length,1);assert.equal(s.addWatch(mint).length,1);assert.throws(()=>s.addWatch('invalid'),/invalide/);assert.equal(s.removeWatch(mint).length,0);});
 test('wallets sont ajoutés et retirés proprement',()=>{const s=make(),wallet='So11111111111111111111111111111111111111112';assert.equal(s.addWallet(wallet,'Référence')[0].label,'Référence');assert.equal(s.removeWallet(wallet).length,0);});
 
-test('le score expose les signaux de momentum et la qualité de liquidité',()=>{const s=make();const t={txns:{h1:{buys:80,sells:20}},volume:{h1:12000,h24:90000},liquidityUsd:30000,fdv:300000,ageHours:1,history:[{at:1,liquidityUsd:25000,priceUsd:0.00001,buys1h:30,sells1h:20},{at:2,liquidityUsd:30000,priceUsd:0.000012,buys1h:80,sells1h:20}]};const a=s.score(t);assert.ok(a.factors.activity>=0);assert.ok(a.factors.momentum>=0);assert.ok(a.factors.liquidityQuality>=0);assert.equal(a.factors.buyRatio,80);assert.equal(t.metrics.fdvToLiquidity,10);});
+test('le score expose les signaux de momentum et la qualité de liquidité',()=>{const s=make();const t={txns:{h1:{buys:80,sells:20}},volume:{m5:5000,h1:12000,h24:90000},priceChange:{m5:8},liquidityUsd:30000,fdv:300000,ageHours:1,history:[{at:1,liquidityUsd:25000,priceUsd:0.00001,buys1h:30,sells1h:20},{at:2,liquidityUsd:30000,priceUsd:0.000012,buys1h:80,sells1h:20}]};const a=s.score(t);assert.ok(a.factors.activity>=0);assert.ok(a.factors.momentum>=0);assert.ok(a.factors.liquidityQuality>=0);assert.equal(a.factors.buyRatio,80);assert.equal(t.metrics.fdvToLiquidity,10);});
 test('une forte baisse de liquidité est signalée',()=>{const s=make();const t={txns:{h1:{buys:20,sells:10}},volume:{h1:5000,h24:20000},liquidityUsd:7000,fdv:50000,ageHours:2,history:[{at:1,liquidityUsd:10000,priceUsd:1,buys1h:10,sells1h:5},{at:2,liquidityUsd:7000,priceUsd:.8,buys1h:20,sells1h:10}]};const a=s.score(t);assert.ok(a.flags.some(x=>x.code==='LIQUIDITY_DROP'));assert.equal(a.hardBlocked,true);});
 
 test('une concentration extrême de wallets reste un avertissement tant que les comptes de pool ne sont pas exclus',()=>{
@@ -76,7 +76,7 @@ test('un lancement LaunchLab/Meteora est intégré au scanner et reste idempoten
 test('le scanner vérifie une seule route de vente en lecture seule et respecte son cache',async()=>{
  const scanner=make();
  const mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
- const token={mint,name:'Sell Route Test',symbol:'SRT',pairAddress:'PairAddress',liquidityUsd:25000,priceUsd:0.0001,jupiterPrice:{priceUsd:0.0001,decimals:9,checkedAt:new Date().toISOString()},security:{data:{supply:'1000000000'}},analysis:{score:78,hardBlocked:false}};
+ const token={mint,name:'Sell Route Test',symbol:'SRT',pairAddress:'PairAddress',liquidityUsd:25000,priceUsd:0.0001,jupiterPrice:{priceUsd:0.0001,decimals:9,checkedAt:new Date().toISOString()},security:{data:{supply:'1000000000'}},analysis:{score:78,securityComprehensive:true,hardBlocked:false}};
  scanner.state.tokens[mint]=token;
  const originalFetch=global.fetch;
  let calls=0,requestUrl=null;
@@ -121,7 +121,7 @@ test('trade intelligence rotates through the oldest unchecked pools instead of s
 test('une absence de route Jupiter est un avertissement, jamais un blocage honeypot automatique',async()=>{
  const scanner=make();
  const mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
- const token={mint,pairAddress:'PairAddress',liquidityUsd:20000,priceUsd:0.001,jupiterPrice:{priceUsd:0.001,decimals:9},analysis:{score:72,hardBlocked:false}};
+ const token={mint,pairAddress:'PairAddress',liquidityUsd:20000,priceUsd:0.001,jupiterPrice:{priceUsd:0.001,decimals:9},analysis:{score:72,securityComprehensive:true,hardBlocked:false}};
  scanner.state.tokens[mint]=token;
  const originalFetch=global.fetch;
  global.fetch=async()=>({ok:false,status:400,headers:{get:()=>null},text:async()=>JSON.stringify({error:'No routes found',errorCode:'NO_ROUTES_FOUND'})});
@@ -432,8 +432,9 @@ test('alerts require fresh market data and the complete elite quality profile',a
   mint,symbol:mint.toUpperCase(),pairAddress:'pair-'+mint,liquidityUsd:20000,fdv:300000,
   volume:{h1:8000},txns:{h1:{buys:16,sells:4}},
   history:[{at}],security:{checkedAt:new Date(now-5*60_000).toISOString()},
+  sellability:{status:'route_available',routeAvailable:true,requestedUsd:100,priceImpactPct:1,checkedAt:new Date(now-5*60_000).toISOString()},
   tradeIntel:{checkedAt:new Date(now-5*60_000).toISOString()},
-  analysis:{score:92,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,factors:{activity:90,momentum:82,market:90,liquidityQuality:90,security:95},flags:[]},
+  analysis:{score:92,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,exitCapacityUsd:100,factors:{activity:90,momentum:82,market:90,liquidityQuality:90,security:95},flags:[]},
   ...overrides
  });
  s.state.tokens={
@@ -586,7 +587,7 @@ test('background tasks do not overlap scans or each other',async()=>{
 test('un lancement sans pool est explicitement en attente de marché et ne ressemble pas à une panne',()=>{
  const scanner=make();
  const a=scanner.score({mint:'NewLaunch11111111111111111111111111111111',launchSource:'Pump.fun',launchAgeHours:0.02,pumpCreatedAt:new Date().toISOString()});
- assert.equal(a.coverage,5);
+ assert.equal(a.coverage,0,'l’ancien bonus d’ancienneté ne constitue pas une preuve');
  assert.equal(a.readiness,'awaiting_market');
  assert.equal(a.readinessLabel,'Pré-marché · pool absent');
  assert.equal(a.marketLinked,false);
@@ -654,9 +655,9 @@ test('une couverture élevée sans facteur sécurité ne peut pas produire un ca
  const s=make();
  const token={pairAddress:'market-pool',txns:{h1:{buys:100,sells:10}},volume:{h1:10000,h24:50000},liquidityUsd:20000,fdv:100000,ageHours:1,history:[{at:1,liquidityUsd:15000,priceUsd:.01,buys1h:10,sells1h:10},{at:2,liquidityUsd:20000,priceUsd:.012,buys1h:100,sells1h:10}]};
  const a=s.score(token);
- assert.ok(a.coverage>=70);
+ assert.ok(a.coverage<70,'les facteurs disponibles ne doivent plus gonfler artificiellement la couverture');
  assert.equal(a.readiness,'partial');
- assert.equal(a.confidence,'medium');
+ assert.equal(a.confidence,'low');
  assert.notEqual(a.classification,'strong_candidate');
 });
 
@@ -704,13 +705,13 @@ test('les données absentes d’une paire DexScreener ne remplacent pas les mét
  assert.equal(token.history.length,0,'a stale retained price must not be timestamped as a fresh market observation');
 });
 
-test('un token pré-marché explique explicitement sa couverture de 5 pour cent',()=>{
+test('un token pré-marché n’obtient aucun point de couverture lié à son âge',()=>{
  const s=make();
  const a=s.score({mint:'NewLaunch11111111111111111111111111111111',launchSource:'Pump.fun',pumpCreatedAt:new Date().toISOString(),launchAgeHours:0.02});
- assert.equal(a.coverage,5);
+ assert.equal(a.coverage,0,'l’ancien bonus d’ancienneté ne constitue pas une preuve');
  assert.equal(a.readiness,'awaiting_market');
  assert.equal(a.readinessLabel,'Pré-marché · pool absent');
- assert.ok(a.readinessReason.includes('uniquement au timing'));
+ assert.ok(a.readinessReason.includes('ne contribue ni au score ni à la couverture'));
  assert.ok(a.missingFactorReasons.some(x=>x.key==='market'&&x.reason==='aucun pool DEX relié'));
 });
 

@@ -10,9 +10,10 @@ function token(i,overrides={}){
   volume:{h1:6000},txns:{h1:{buys:15,sells:5}},
   history:[{at:NOW-60_000,priceUsd:1}],
   security:{checkedAt:new Date(NOW-5*60_000).toISOString()},
+  sellability:{status:'route_available',routeAvailable:true,requestedUsd:100,priceImpactPct:1,checkedAt:new Date(NOW-5*60_000).toISOString()},
   tradeIntel:{checkedAt:new Date(NOW-5*60_000).toISOString()},
   analysis:{
-   score:90,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,
+   score:90,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,exitCapacityUsd:100,
    factors:{activity:80,momentum:75,market:82,liquidityQuality:78,security:95}
   },
   ...overrides
@@ -27,6 +28,15 @@ test('selection ranks the full input and returns no more than five best candidat
  assert.equal(result.best.length,5);
  assert.deepEqual(result.best.map(x=>x.mint),['mint-8','mint-7','mint-6','mint-5','mint-4']);
  assert.equal(result.best[0].freshness.marketAgeMinutes,1);
+});
+
+test('best shortlist requires a fresh Jupiter quote and at least 50 USD of executable capacity',()=>{
+ const missing=token(89,{sellability:null,analysis:{...token(89).analysis,exitCapacityUsd:null}});
+ const stale=token(90,{sellability:{status:'route_available',routeAvailable:true,requestedUsd:100,priceImpactPct:1,checkedAt:new Date(NOW-20*60_000).toISOString()}});
+ const insufficient=token(91,{analysis:{...token(91).analysis,exitCapacityUsd:40}});
+ const unknownImpact=token(92,{sellability:{status:'route_available',routeAvailable:true,requestedUsd:100,priceImpactPct:null,checkedAt:new Date(NOW-5*60_000).toISOString()},analysis:{...token(92).analysis,exitCapacityUsd:null}});
+ for(const candidate of [missing,stale,insufficient,unknownImpact])assert.equal(buildSelection([candidate],NOW).best.length,0);
+ assert.equal(buildSelection([missing],NOW).diagnostics.bestRejectedMissingExitQuote,1);
 });
 
 test('confirmed early-buyer exits keep a candidate in watch rather than best',()=>{
@@ -53,7 +63,7 @@ test('watch candidates are separate, capped at five and clearly retain partial r
 test('pre-market, unknown-risk and blocked tokens are excluded while partial evidence remains watch-only',()=>{
  const items=[
   token(1,{pairAddress:null,geckoPoolAddress:null}),
-  token(2,{analysis:{...token(2).analysis,coverage:5,score:100}}),
+  token(2,{analysis:{...token(2).analysis,coverage:5,score:100,factors:{...token(2).analysis.factors,security:null}}}),
   token(3,{analysis:{...token(3).analysis,risk:'unknown'}}),
   token(4,{analysis:{...token(4).analysis,hardBlocked:true}}),
   token(5,{analysis:{...token(5).analysis,coverage:60,securityComprehensive:false,risk:'partial'}}),
@@ -85,11 +95,12 @@ test('best picks require fresh security and either recent Gecko trades or a fres
  assert.equal(result.diagnostics.bestRejectedStaleMarket,0);
 });
 
-test('security freshness window matches the hourly background refresh cadence',()=>{
- const tokenWith45mSecurityAge=token(9,{security:{checkedAt:new Date(NOW-45*60_000).toISOString()}});
- const result=buildSelection([tokenWith45mSecurityAge],NOW);
+test('dynamic holder evidence uses a short freshness window while static mint facts can remain cached',()=>{
+ const tokenWith10mSecurityAge=token(9,{security:{checkedAt:new Date(NOW-10*60_000).toISOString()}});
+ const result=buildSelection([tokenWith10mSecurityAge],NOW);
  assert.equal(result.best.length,1);
- assert.equal(result.qualityGate.bestSecurityMaxAgeMinutes,95);
+ assert.equal(result.qualityGate.bestDynamicSecurityMaxAgeMinutes,15);
+ assert.equal(result.qualityGate.bestStaticSecurityMaxAgeMinutes,1440);
 });
 
 test('watchlist tolerates partial security but not stale market or very stale security',()=>{
@@ -136,7 +147,7 @@ test('best shortlist requires a measured momentum factor instead of allowing a h
 });
 
 test('best shortlist keeps candidates when all five independent core factors are measured',()=>{
- const candidate=token(89,{analysis:{...token(89).analysis,coverage:75,factors:{activity:85,momentum:72,market:80,liquidityQuality:78,security:90}}});
+ const candidate=token(89,{analysis:{...token(89).analysis,coverage:0,factors:{activity:85,momentum:72,market:80,liquidityQuality:78,security:90}}});
  const result=buildSelection([candidate],NOW);
  assert.equal(result.best.length,1);
  assert.equal(result.best[0].mint,'mint-89');
@@ -150,17 +161,13 @@ test('best shortlist accepts fresh DEX transactions when GeckoTerminal pool samp
  assert.equal(result.best[0].freshness.transactionAgeMinutes,1);
 });
 
-test('best shortlist requires a clear external security verdict when the strict gate is enabled',()=>{
- const safe=token(90,{externalSecurity:{status:'ok',verdict:'LOW RISK',score:82,confidence:85,checks:[]}});
- const caution=token(91,{externalSecurity:{status:'ok',verdict:'CAUTION',score:72,confidence:90,checks:[]}});
- const missing=token(92);
- const settings={requireExternalSecurity:true};
- assert.deepEqual(buildSelection([safe],NOW,{settings}).best.map(x=>x.mint),['mint-90']);
- assert.equal(buildSelection([caution],NOW,{settings}).best.length,0);
- assert.equal(buildSelection([missing],NOW,{settings}).best.length,0);
-});
-test('best shortlist blocks a confirmed external spam flag',()=>{
- const spam=token(93,{externalSecurity:{status:'ok',verdict:'CLEAN',score:95,confidence:90,checks:[{name:'Spam activity',status:'flagged',severity:'high',details:'Coordinated spam trading detected'}]}});
- const result=buildSelection([spam],NOW,{settings:{requireExternalSecurity:true}});
- assert.equal(result.best.length,0);
+test('GL1TCH verdicts remain advisory and cannot veto independently qualified opportunities',()=>{
+ const variants=[
+  token(90,{externalSecurity:{status:'ok',verdict:'LOW RISK',score:82,confidence:85,checks:[]}}),
+  token(91,{externalSecurity:{status:'ok',verdict:'CAUTION',score:72,confidence:90,checks:[]}}),
+  token(92),
+  token(93,{externalSecurity:{status:'ok',verdict:'CLEAN',score:95,confidence:90,checks:[{name:'Spam activity',status:'flagged',severity:'high',details:'Provider-only spam verdict'}]}})
+ ];
+ const result=buildSelection(variants,NOW,{settings:{requireExternalSecurity:true}});
+ assert.equal(result.best.length,4);
 });

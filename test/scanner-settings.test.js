@@ -14,8 +14,8 @@ test('defaults to the elite profile with multiple independent quality thresholds
   assert.equal(settings.minTransactions1h, 8);
   assert.equal(settings.minBuyRatioPct, 50);
   assert.equal(settings.maxFdvLiquidityRatio, 35);
-  assert.equal(settings.requireComprehensiveSecurity, false);
-  assert.equal(settings.requireExternalSecurity, true);
+  assert.equal(settings.requireComprehensiveSecurity, true);
+  assert.equal(settings.requireExternalSecurity, false);
 });
 
 test('migrates the old untouched balanced default to elite without breaking custom thresholds', () => {
@@ -63,6 +63,13 @@ test('manual thresholds switch the selected preset to custom', () => {
   assert.equal(settings.preset, 'custom');
 });
 
+test('complete holder security cannot be disabled for the best shortlist',()=>{
+ const fromOld=normalizeScannerSettings({version:3,requireComprehensiveSecurity:false});
+ assert.equal(fromOld.requireComprehensiveSecurity,true);
+ const patched=applyScannerSettingsPatch(defaultScannerSettings({}),{requireComprehensiveSecurity:false});
+ assert.equal(patched.requireComprehensiveSecurity,true);
+});
+
 test('publication toggles are independently configurable', () => {
   const settings = applyScannerSettingsPatch(defaultScannerSettings({}), { publishOpportunities: false, publishRisks: true });
   assert.equal(settings.publishOpportunities, false);
@@ -88,7 +95,7 @@ test('scanner settings survive the existing state normalization and persistence 
   assert.equal(restored.scannerSettings.publishRisks, false);
 });
 
-test('external safety verification stays mandatory after loading old saved settings',()=>{
- assert.equal(normalizeScannerSettings({version:3,minScore:80}).requireExternalSecurity,true);
- assert.equal(normalizeState({...freshState(),scannerSettings:{version:3,minScore:80}}).scannerSettings.requireExternalSecurity,true);
+test('external provider verification remains optional after loading old saved settings',()=>{
+ assert.equal(normalizeScannerSettings({version:3,minScore:80}).requireExternalSecurity,false);
+ assert.equal(normalizeState({...freshState(),scannerSettings:{version:3,minScore:80}}).scannerSettings.requireExternalSecurity,false);
 });

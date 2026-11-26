@@ -93,9 +93,18 @@ test('weak buyer ratio and insufficient transaction count block opportunity publ
 });
 
 
+test('fresh Gecko samples require distinct buyers and avoid strong net-sell flow',()=>{
+ const weak=eliteCandidate({tradeIntel:{checkedAt:new Date().toISOString(),tradeCount:30,uniqueBuyers:3,buyVolumeUsd:1000,sellVolumeUsd:1500}});
+ const weakResult=qualifyOpportunity(weak,{});
+ assert.ok(weakResult.reasons.includes('Moins de cinq acheteurs distincts dans l’échantillon récent'));
+ assert.ok(weakResult.reasons.includes('Flux vendeur dominant dans l’échantillon récent'));
+ const broad=eliteCandidate({tradeIntel:{checkedAt:new Date().toISOString(),tradeCount:30,uniqueBuyers:12,buyVolumeUsd:1500,sellVolumeUsd:1000}});
+ assert.equal(qualifyOpportunity(broad,{}).eligible,true);
+});
+
 test('fresh DexScreener 1h transactions are a valid fallback without a GeckoTerminal pool ID',()=>{
  const now=10_000_000;
- const token={history:[{at:now-60_000}],txns:{h1:{buys:12,sells:4}},security:{checkedAt:new Date(now-30*60_000).toISOString()}};
+ const token={history:[{at:now-60_000}],txns:{h1:{buys:12,sells:4}},security:{checkedAt:new Date(now-10*60_000).toISOString()}};
  const {assessOpportunityEvidence}=require('../lib/alert-quality');
  const result=assessOpportunityEvidence(token,now);
  assert.equal(result.eligible,true);
@@ -146,6 +155,24 @@ test('critical severity always blocks even when the warning code is normally con
  assert.equal(qualifyOpportunity(candidate,{}).eligible,false);
 });
 
+test('a failed 250 USD quote limits capacity but a valid 100 USD exit remains eligible',()=>{
+ const checkedAt=new Date().toISOString();
+ const candidate=eliteCandidate({sellabilityChecks:[
+  {requestedUsd:100,status:'route_available',routeAvailable:true,priceImpactPct:1,checkedAt},
+  {requestedUsd:250,status:'no_route',routeAvailable:false,checkedAt}
+ ],sellability:{requestedUsd:250,status:'no_route',routeAvailable:false,checkedAt}});
+ assert.equal(qualifyOpportunity(candidate,{}).eligible,true);
+});
+
+test('high price impact at a small exit size blocks even when a larger quote is available',()=>{
+ const checkedAt=new Date().toISOString();
+ const candidate=eliteCandidate({sellabilityChecks:[
+  {requestedUsd:50,status:'high_impact',routeAvailable:true,priceImpactPct:8,checkedAt},
+  {requestedUsd:250,status:'route_available',routeAvailable:true,priceImpactPct:2,checkedAt}
+ ]});
+ assert.equal(qualifyOpportunity(candidate,{}).eligible,false);
+});
+
 test('transaction fallback cannot use stale market snapshots or missing security evidence',()=>{
  const now=10_000_000;
  const {assessOpportunityEvidence}=require('../lib/alert-quality');
@@ -155,15 +182,31 @@ test('transaction fallback cannot use stale market snapshots or missing security
  assert.equal(assessOpportunityEvidence(noSecurity,now).eligible,false);
 });
 
-test('required external security rejects missing, unavailable, caution and unknown reports',()=>{
+test('GL1TCH is advisory: missing, unavailable and provider verdicts never replace on-chain gates',()=>{
  const base=eliteCandidate();
- for(const externalSecurity of [undefined,{status:'unavailable'},{status:'ok',verdict:'CAUTION',score:70,confidence:90},{status:'ok',verdict:'UNKNOWN',score:90,confidence:90}]){
-  const result=qualifyOpportunity({...base,externalSecurity},{requireExternalSecurity:true});assert.equal(result.eligible,false);
+ for(const externalSecurity of [undefined,{status:'unavailable'},{status:'ok',verdict:'CAUTION',score:70,confidence:90},{status:'ok',verdict:'UNKNOWN',score:90,confidence:90},{status:'ok',verdict:'HIGH RISK',score:95,confidence:95}]){
+  assert.equal(qualifyOpportunity({...base,externalSecurity},{requireExternalSecurity:true}).eligible,true);
  }
 });
-test('required external security accepts only a sufficiently confident clean or low-risk report',()=>{
- for(const verdict of ['CLEAN','LOW RISK']){
-  const candidate=eliteCandidate({externalSecurity:{status:'ok',verdict,score:85,confidence:80,checks:[]}});
-  assert.equal(qualifyOpportunity(candidate,{requireExternalSecurity:true}).eligible,true,verdict);
- }
+
+test('static mint evidence and dynamic holder evidence use separate freshness windows',()=>{
+ const now=Date.now();
+ const {assessOpportunityEvidence}=require('../lib/alert-quality');
+ const fresh={history:[{at:now-30000}],txns:{h1:{buys:12,sells:4}},security:{staticCheckedAt:new Date(now-23*60*60*1000).toISOString(),holderCheckedAt:new Date(now-10*60*1000).toISOString()}};
+ const result=assessOpportunityEvidence(fresh,now);
+ assert.equal(result.staticSecurityFresh,true);
+ assert.equal(result.dynamicSecurityFresh,true);
+ assert.equal(result.eligible,true);
+ const staleHolders={...fresh,security:{...fresh.security,holderCheckedAt:new Date(now-20*60*1000).toISOString()}};
+ assert.equal(assessOpportunityEvidence(staleHolders,now).eligible,false);
+ const staleMint={...fresh,security:{...fresh.security,staticCheckedAt:new Date(now-25*60*60*1000).toISOString()}};
+ assert.equal(assessOpportunityEvidence(staleMint,now).eligible,false);
+});
+
+test('a fresh known Jupiter no-route quote blocks selection but stale quotes do not',()=>{
+ const now=new Date().toISOString();
+ const noRoute=eliteCandidate({sellability:{status:'no_route',checkedAt:now}});
+ assert.equal(qualifyOpportunity(noRoute,{}).eligible,false);
+ const stale=eliteCandidate({sellability:{status:'no_route',checkedAt:new Date(Date.now()-20*60*1000).toISOString()}});
+ assert.equal(qualifyOpportunity(stale,{}).eligible,true);
 });

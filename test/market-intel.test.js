@@ -10,6 +10,14 @@ test('microstructure detects a sharp five-minute sell imbalance',()=>{
  assert.equal(result.metrics.buyRatio5mPct,16.7);
 });
 
+test('momentum score does not change when only the five-minute buy/sell count changes',()=>{
+ const base={volume:{m5:12000,h1:50000},liquidityUsd:25000,priceChange:{m5:8}};
+ const buyHeavy=analyzeMicrostructure({...base,txns:{m5:{buys:20,sells:2}}});
+ const sellHeavy=analyzeMicrostructure({...base,txns:{m5:{buys:2,sells:20}}});
+ assert.equal(buyHeavy.score,sellHeavy.score);
+ assert.notEqual(buyHeavy.metrics.buyRatio5mPct,sellHeavy.metrics.buyRatio5mPct);
+});
+
 test('microstructure flags a sudden price crash',()=>{
  const result=analyzeMicrostructure({txns:{m5:{buys:20,sells:4}},volume:{m5:10000,h1:50000},liquidityUsd:30000,priceChange:{m5:-24}});
  assert.ok(result.flags.some(x=>x.code==='MICRO_CRASH'&&x.level==='critical'));

@@ -62,8 +62,9 @@ test('selection keeps an otherwise qualified +200% candidate in the best shortli
   txns:{m5:{buys:30,sells:8},h1:{buys:80,sells:20}},
   priceChange:{m5:4,h1:85,h24:210},
   history:[{at:now-30_000}],
-  security:{checkedAt:new Date(now-30*60_000).toISOString()},
-  analysis:{score:92,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,flags:[],factors:{activity:90,momentum:82,market:90,liquidityQuality:90,security:95}}
+  security:{checkedAt:new Date(now-5*60_000).toISOString()},
+  sellability:{status:'route_available',routeAvailable:true,requestedUsd:100,priceImpactPct:1,checkedAt:new Date(now-5*60_000).toISOString()},
+  analysis:{score:92,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,exitCapacityUsd:100,flags:[],factors:{activity:90,momentum:82,market:90,liquidityQuality:90,security:95}}
  };
  const result=buildSelection([token],now,{minScore:80,settings:{minScore:80,minCoverage:70,minLiquidityUsd:5000,minVolume1hUsd:750,minTransactions1h:8,minBuyRatioPct:50,maxFdvLiquidityRatio:35}});
  assert.equal(result.best.length,1);
