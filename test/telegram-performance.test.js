@@ -208,12 +208,12 @@ test('renders a premium PNG and labels every unavailable milestone instead of le
 
 test('keeps the last real total return visible when its market snapshot becomes stale', () => {
   const row = entry();
-  row.lastCurrentObservedAt = BASE - 10 * 60 * 1000;
+  row.lastCurrentObservedAt = BASE + 10 * 60 * 1000;
   row.lastCurrentPriceUsd = 0.002;
-  const metrics = buildTelegramPreviewMetrics(row, BASE);
+  const metrics = buildTelegramPreviewMetrics(row, BASE + 20 * 60 * 1000);
   assert.equal(metrics.currentReturn, 100);
   assert.equal(metrics.currentState, 'donnee ancienne');
-  assert.equal(metrics.observedAt, BASE - 10 * 60 * 1000);
+  assert.equal(metrics.observedAt, BASE + 10 * 60 * 1000);
 });
 
 test('falls back to the latest measured milestone when no current market snapshot exists', () => {
