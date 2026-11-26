@@ -7,8 +7,8 @@ const NOW=1_800_000_000_000;
 function token(i,overrides={}){
  return {
   mint:'mint-'+i,name:'Token '+i,symbol:'T'+i,pairAddress:'pair-'+i,liquidityUsd:20000,fdv:200000,
-  volume:{h1:6000},txns:{h1:{buys:15,sells:5}},
-  marketObservedAt:new Date(NOW-60_000).toISOString(),marketFieldsObservedAt:{volume:new Date(NOW-60_000).toISOString(),volumeH1:new Date(NOW-60_000).toISOString(),volumeH24:new Date(NOW-60_000).toISOString(),txns:new Date(NOW-60_000).toISOString(),txnsH1:new Date(NOW-60_000).toISOString(),txnsH24:new Date(NOW-60_000).toISOString()},
+  volume:{m5:1000,h1:6000,h24:90000},txns:{m5:{buys:8,sells:2},h1:{buys:15,sells:5}},priceChange:{m5:4},
+  marketObservedAt:new Date(NOW-60_000).toISOString(),marketFieldsObservedAt:{volume:new Date(NOW-60_000).toISOString(),volumeM5:new Date(NOW-60_000).toISOString(),priceChangeM5:new Date(NOW-60_000).toISOString(),volumeH1:new Date(NOW-60_000).toISOString(),volumeH24:new Date(NOW-60_000).toISOString(),txns:new Date(NOW-60_000).toISOString(),txnsH1:new Date(NOW-60_000).toISOString(),txnsH24:new Date(NOW-60_000).toISOString()},
   history:[{at:NOW-60_000,priceUsd:1}],
   security:{checkedAt:new Date(NOW-5*60_000).toISOString()},
   sellability:{status:'route_available',routeAvailable:true,requestedUsd:100,priceImpactPct:1,checkedAt:new Date(NOW-5*60_000).toISOString()},
