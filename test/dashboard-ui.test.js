@@ -264,6 +264,8 @@ test('publication diagnostics expose score, quality, freshness, missing factors,
  assert.match(server,/securityPublicationReady/);
  assert.match(server,/tradeCount:trade\.tradeCount/);
  assert.match(server,/lastTradeAgeMinutes/);
+ assert.match(server,/topScoredTokens/);
+ assert.match(server,/holderSampleAccounts/);
 });
 
 
