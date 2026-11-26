@@ -14,7 +14,7 @@ test('data quality distinguishes missing data from strong signals',()=>{
 test('fresh market and on-chain observations increase completeness and freshness',()=>{
  const now=2_000_000;
  const at=new Date(now-30000).toISOString();
- const token={mint:'m',priceUsd:1,liquidityUsd:10000,volume:{h1:100,h24:1000},marketObservedAt:at,marketFieldsObservedAt:{volume:at,volumeH1:at,volumeH24:at,txns:at,txnsH1:at,txnsH24:at},history:[{at:now-30000,priceUsd:1}],security:{checkedAt:at,data:{uniqueOwnerCount:10,freezeAuthorityActive:false,mintAuthorityActive:false,ownerConcentrationAvailable:true,top10HolderPercent:35}},tradeIntel:{checkedAt:at,rpcConfirmedCheckedAt:at,rpcConfirmedTradeCount:6,rpcConfirmedLastTradeAt:at,tradeCount:40},socialIntel:{available:true,checkedAt:at},launchSource:'pumpportal_new_token'};
+ const token={mint:'m',priceUsd:1,liquidityUsd:10000,volume:{m5:50,h1:100,h24:1000},priceChange:{m5:2},marketObservedAt:at,marketFieldsObservedAt:{volume:at,volumeM5:at,priceChangeM5:at,volumeH1:at,volumeH24:at,txns:at,txnsH1:at,txnsH24:at},history:[{at:now-30000,priceUsd:1}],security:{checkedAt:at,data:{uniqueOwnerCount:10,freezeAuthorityActive:false,mintAuthorityActive:false,ownerConcentrationAvailable:true,top10HolderPercent:35}},tradeIntel:{checkedAt:at,rpcConfirmedCheckedAt:at,rpcConfirmedTradeCount:6,rpcConfirmedLastTradeAt:at,tradeCount:40},socialIntel:{available:true,checkedAt:at},launchSource:'pumpportal_new_token'};
  const result=tokenDataQuality(token,now);
  assert.equal(result.completenessPct,100,JSON.stringify(result.checks.map(x=>({key:x.key,available:x.available,weight:x.weight}))));
  assert.equal(result.freshnessPct,100);
