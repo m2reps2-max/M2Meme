@@ -40,6 +40,12 @@ test('best shortlist requires a fresh Jupiter quote and at least 50 USD of execu
  assert.equal(buildSelection([missing],NOW).diagnostics.bestRejectedMissingExitQuote,1);
 });
 
+test('Best selection rejects preserved volume and transaction values when their field timestamps are stale',()=>{
+ const stale=token(898,{marketFieldsObservedAt:{volume:new Date(NOW-20*60_000).toISOString(),txns:new Date(NOW-20*60_000).toISOString()}});
+ const result=buildSelection([stale],NOW);
+ assert.equal(result.best.length,0);
+ assert.equal(result.diagnostics.bestRejectedStaleMarketMetrics,1);
+});
 test('a Gecko sample without verified RPC pool swaps cannot pass the Best demand gate',()=>{
  const base=token(899);
  const unverified={...base,tradeIntel:{...base.tradeIntel,rpcConfirmedTradeCount:0,rpcConfirmedUniqueBuyers:0,rpcConfirmedVolumeCoverage:0}};
