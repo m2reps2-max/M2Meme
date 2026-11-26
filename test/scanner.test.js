@@ -118,6 +118,35 @@ test('trade intelligence rotates through the oldest unchecked pools instead of s
  assert.deepEqual(checked,['oldest','second-oldest']);
 });
 
+test('Jupiter refresh queue follows the configured score floor without changing publication thresholds',()=>{
+ const scanner=make();
+ scanner.state.scannerSettings={minScore:75};
+ const token={mint:'near-threshold-token',pairAddress:'pool',liquidityUsd:18000,
+  analysis:{score:67,securityPublicationReady:true,securityComprehensive:true,hardBlocked:false,risk:'observations_only'}};
+ scanner.state.tokens={token};
+ assert.deepEqual(scanner.jupiterRefreshCandidates().map(row=>row.mint),['near-threshold-token']);
+ scanner.state.scannerSettings.minScore=90;
+ assert.deepEqual(scanner.jupiterRefreshCandidates(),[]);
+});
+test('Jupiter retries a route whose price impact is unknown before the normal ten-minute cache expires',async()=>{
+ const scanner=make(),mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
+ scanner.state.scannerSettings={minScore:75};
+ const token={mint,pairAddress:'PoolAddress',liquidityUsd:22000,priceUsd:0.001,
+  jupiterPrice:{priceUsd:0.001,decimals:9,checkedAt:new Date().toISOString()},
+  security:{data:{supply:'1000000000',decimals:9}},
+  sellability:{status:'route_available',routeAvailable:true,requestedUsd:50,inputAmountUsd:50,priceImpactPct:null,checkedAt:new Date(Date.now()-2*60_000).toISOString()},
+  analysis:{score:67,securityPublicationReady:true,securityComprehensive:true,hardBlocked:false,risk:'observations_only'}};
+ scanner.state.tokens[mint]=token;
+ const originalFetch=global.fetch;let calls=0;
+ global.fetch=async()=>{calls++;return {ok:true,status:200,headers:{get:()=>null},text:async()=>JSON.stringify({router:'metis',outAmount:'49500000',priceImpactPct:'0.01',routePlan:[{swapInfo:{label:'Raydium'}}]})};};
+ try{
+  const result=await scanner.refreshSellabilityQuotes([token]);
+  assert.equal(result.checked,1);
+  assert.equal(calls,1);
+  assert.equal(token.sellability.status,'route_available');
+  assert.equal(token.sellability.priceImpactPct,1);
+ }finally{global.fetch=originalFetch;}
+});
 test('Jupiter refreshes high-quality live tokens even when strict Best/Observe selection excludes them',()=>{
  const scanner=make(),now=Date.now();
  const eligible={mint:'eligible-jupiter-token',pairAddress:'pool',liquidityUsd:24000,
