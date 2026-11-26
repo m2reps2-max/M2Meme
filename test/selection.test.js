@@ -8,6 +8,7 @@ function token(i,overrides={}){
  return {
   mint:'mint-'+i,name:'Token '+i,symbol:'T'+i,pairAddress:'pair-'+i,liquidityUsd:20000,fdv:200000,
   volume:{h1:6000},txns:{h1:{buys:15,sells:5}},
+  marketObservedAt:new Date(NOW-60_000).toISOString(),marketFieldsObservedAt:{volume:new Date(NOW-60_000).toISOString(),txns:new Date(NOW-60_000).toISOString()},
   history:[{at:NOW-60_000,priceUsd:1}],
   security:{checkedAt:new Date(NOW-5*60_000).toISOString()},
   sellability:{status:'route_available',routeAvailable:true,requestedUsd:100,priceImpactPct:1,checkedAt:new Date(NOW-5*60_000).toISOString()},
