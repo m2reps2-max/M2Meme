@@ -72,8 +72,8 @@ test('makes the preview and its initial percentage available during the Telegram
         );
         assert.ok(seed, 'Telegram must be able to fetch the preview before sendMessage resolves');
         const metrics = buildTelegramPreviewMetrics(seed);
-        assert.equal(metrics.currentReturn, 0);
-        assert.equal(metrics.currentState, 'a jour');
+        assert.equal(metrics.currentReturn, null);
+        assert.equal(metrics.currentState, 'en attente');
         return { message_id: 44 };
       }
     }
