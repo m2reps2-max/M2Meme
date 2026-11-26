@@ -146,6 +146,24 @@ test('critical severity always blocks even when the warning code is normally con
  assert.equal(qualifyOpportunity(candidate,{}).eligible,false);
 });
 
+test('a failed 250 USD quote limits capacity but a valid 100 USD exit remains eligible',()=>{
+ const checkedAt=new Date().toISOString();
+ const candidate=eliteCandidate({sellabilityChecks:[
+  {requestedUsd:100,status:'route_available',routeAvailable:true,priceImpactPct:1,checkedAt},
+  {requestedUsd:250,status:'no_route',routeAvailable:false,checkedAt}
+ ],sellability:{requestedUsd:250,status:'no_route',routeAvailable:false,checkedAt}});
+ assert.equal(qualifyOpportunity(candidate,{}).eligible,true);
+});
+
+test('high price impact at a small exit size blocks even when a larger quote is available',()=>{
+ const checkedAt=new Date().toISOString();
+ const candidate=eliteCandidate({sellabilityChecks:[
+  {requestedUsd:50,status:'high_impact',routeAvailable:true,priceImpactPct:8,checkedAt},
+  {requestedUsd:250,status:'route_available',routeAvailable:true,priceImpactPct:2,checkedAt}
+ ]});
+ assert.equal(qualifyOpportunity(candidate,{}).eligible,false);
+});
+
 test('transaction fallback cannot use stale market snapshots or missing security evidence',()=>{
  const now=10_000_000;
  const {assessOpportunityEvidence}=require('../lib/alert-quality');
