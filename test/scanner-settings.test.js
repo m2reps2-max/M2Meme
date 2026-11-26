@@ -14,7 +14,7 @@ test('defaults to the elite profile with multiple independent quality thresholds
   assert.equal(settings.minTransactions1h, 8);
   assert.equal(settings.minBuyRatioPct, 50);
   assert.equal(settings.maxFdvLiquidityRatio, 35);
-  assert.equal(settings.requireComprehensiveSecurity, false);
+  assert.equal(settings.requireComprehensiveSecurity, true);
   assert.equal(settings.requireExternalSecurity, false);
 });
 
