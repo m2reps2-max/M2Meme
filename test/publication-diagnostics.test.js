@@ -96,7 +96,7 @@ test('diagnostics identify Telegram delivery configuration blockers', () => {
     history: [{ at: new Date(NOW - 30_000).toISOString() }],
     security: { checkedAt: new Date(NOW - 60_000).toISOString() },
     sellability:{status:'route_available',routeAvailable:true,requestedUsd:100,priceImpactPct:1,checkedAt:new Date(NOW-60_000).toISOString()},
-    tradeIntel: { checkedAt: new Date(NOW - 60_000).toISOString(), tradeCount: 30, uniqueBuyers: 12, uniqueSellers: 8, buyVolumeUsd: 1200, sellVolumeUsd: 700 },
+    tradeIntel: { checkedAt: new Date(NOW - 60_000).toISOString(), lastTradeAt: new Date(NOW - 60_000).toISOString(), tradeCount: 30, uniqueBuyers: 12, uniqueSellers: 8, buyVolumeUsd: 1200, sellVolumeUsd: 700 },
     analysis: { score: 90, coverage: 90, risk: 'observations_only', securityComprehensive: true, hardBlocked: false, exitCapacityUsd:100, flags: [], factors: { activity: 80, momentum: 80, market: 80, liquidityQuality: 80, executionQuality: 85, security: 90, demandQuality: 78 } }
   });
   const instance = scanner([token]);
