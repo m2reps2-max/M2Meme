@@ -11,7 +11,7 @@ function token(i,overrides={}){
   history:[{at:NOW-60_000,priceUsd:1}],
   security:{checkedAt:new Date(NOW-5*60_000).toISOString()},
   sellability:{status:'route_available',routeAvailable:true,requestedUsd:100,priceImpactPct:1,checkedAt:new Date(NOW-5*60_000).toISOString()},
-  tradeIntel:{checkedAt:new Date(NOW-5*60_000).toISOString(),tradeCount:30,uniqueBuyers:12,uniqueSellers:8,buyVolumeUsd:1200,sellVolumeUsd:700},
+  tradeIntel:{checkedAt:new Date(NOW-5*60_000).toISOString(),lastTradeAt:new Date(NOW-5*60_000).toISOString(),tradeCount:30,uniqueBuyers:12,uniqueSellers:8,buyVolumeUsd:1200,sellVolumeUsd:700},
   analysis:{
    score:90,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,exitCapacityUsd:100,
    factors:{activity:80,momentum:75,market:82,liquidityQuality:78,executionQuality:85,security:95,demandQuality:78}
@@ -49,6 +49,7 @@ test('best shortlist requires fresh verified net demand and distinct buyers',()=
   token(806,{tradeIntel:{...base.tradeIntel,buyVolumeUsd:500,sellVolumeUsd:900}}),
   token(810,{tradeIntel:{...base.tradeIntel,buyVolumeUsd:800,sellVolumeUsd:1000}}),
   token(807,{tradeIntel:{...base.tradeIntel,checkedAt:new Date(NOW-20*60_000).toISOString()}}),
+  token(811,{tradeIntel:{...base.tradeIntel,lastTradeAt:new Date(NOW-20*60_000).toISOString()}}),
   token(808,{analysis:{...base.analysis,factors:{...base.analysis.factors,demandQuality:null}}}),
   token(809,{analysis:{...base.analysis,factors:{...base.analysis.factors,executionQuality:null}}})
  ];
