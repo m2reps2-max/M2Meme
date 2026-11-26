@@ -35,7 +35,7 @@ test('pool RPC diagnostics expose freshness, per-pool buyers and bounded pending
  assert.equal(result.inspectedPools,2);
  assert.equal(result.freshChecks10m,1);
  assert.equal(result.poolsWithRecentSwaps,1);
- assert.equal(result.confirmedSwapsRecentWindow,4);
+ assert.equal(result.confirmedSwapsByPoolSum,4);
  assert.equal(result.uniqueBuyersByPool,3);
  assert.equal(result.pendingTransactions,1);
  assert.equal(result.failedTransactionsLastBatch,1);
