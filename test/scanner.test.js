@@ -12,6 +12,17 @@ function make(){
  };
  return scanner;
 }
+test('social background task yields before starting network work when its time budget is exhausted',async()=>{
+ const scanner=make();let xCalls=0,telegramCalls=0,scored=0,saved=0;
+ scanner.xRadar.search=async()=>{xCalls++;return {available:false,posts:[]};};
+ scanner.telegramRadar.discoverPublicChannels=async()=>{telegramCalls++;return null;};
+ scanner.scoreAll=()=>{scored++;};scanner.save=()=>{saved++;};
+ const result=await scanner.refreshSocialRadar({deadlineAt:Date.now()-1});
+ assert.equal(xCalls,0);assert.equal(telegramCalls,0);
+ assert.equal(result.partial,true);assert.equal(result.reason,'scanner_priority_time_budget');
+ assert.equal(scored,1);assert.equal(saved,1);
+});
+
 test('per-token scoring initializes the shared intelligence index only once before a full refresh',()=>{
  const scanner=make();
  scanner.score({mint:'score-context-a',liquidityUsd:1000,analysis:{score:60}});
