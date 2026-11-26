@@ -43,6 +43,35 @@ test('an h24-only market update never refreshes stale h1 metrics or snapshots',(
  assert.equal(token.marketFieldsObservedAt.volumeH1,oldAt);assert.equal(token.marketFieldsObservedAt.txnsH1,oldAt);
  assert.ok(token.marketFieldsObservedAt.volumeH24);assert.ok(token.marketFieldsObservedAt.txnsH24);
 });
+test('Helius pool RPC paginates behind a missing cursor instead of dropping the signature gap',async()=>{
+ const scanner=make(),mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH',pool='Bcdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
+ const token={mint,geckoPoolAddress:pool,pairAddress:pool,liquidityUsd:12000,priceUsd:.01,analysis:{score:70},
+  poolRpcTradeState:{cursorSignature:'old-cursor',pending:[],processedSignatures:[]}};
+ scanner.state.tokens[mint]=token;
+ const newest=Array.from({length:50},(_,i)=>({signature:`new-${i}`,slot:500-i,blockTime:Math.floor(Date.now()/1000)}));
+ const older=Array.from({length:49},(_,i)=>({signature:`older-${i}`,slot:450-i,blockTime:Math.floor(Date.now()/1000)})).concat([{signature:'old-cursor',slot:401,blockTime:Math.floor(Date.now()/1000)}]);
+ const signatureCalls=[];
+ scanner.rpc=async(method,params)=>{
+  if(method==='getSignaturesForAddress'){
+   signatureCalls.push(params[1]);
+   return params[1].before?older:newest;
+  }
+  if(method==='getTransaction')return {slot:1,blockTime:Math.floor(Date.now()/1000),transaction:{message:{accountKeys:[]}},meta:{err:null,preTokenBalances:[],postTokenBalances:[],innerInstructions:[],logMessages:[]}};
+  return null;
+ };
+ await scanner.inspectPoolRpcTradeIntel(token,{maxTransactions:8});
+ assert.equal(token.poolRpcTradeState.catchupBeforeSignature,'new-49');
+ assert.equal(token.poolRpcTradeState.pending.length,42,'the complete first page is retained while the bounded batch is processed');
+ for(let i=0;i<3;i++){
+  token.poolRpcTradeState.lastAttemptAt=new Date(Date.now()-60000).toISOString();
+  await scanner.inspectPoolRpcTradeIntel(token,{maxTransactions:8});
+ }
+ assert.equal(signatureCalls.length,2,'the collector waits for its pending queue to drain before fetching another page');
+ assert.equal(signatureCalls[1].before,'new-49','the next request paginates backward from the oldest signature already fetched');
+ assert.equal(token.poolRpcTradeState.catchupBeforeSignature,null,'the old cursor is found and catch-up completes');
+ assert.equal(token.poolRpcTradeState.cursorSignature,'new-0','the head cursor advances only after the gap is fully traversed');
+ assert.ok(token.poolRpcTradeState.pending.some(row=>row.signature==='older-0'));
+});
 test('pool RPC trade inspection processes the full bounded eight-transaction batch',async()=>{
  const scanner=make(),mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH',pool='Bcdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
  scanner.state.tokens[mint]={mint,geckoPoolAddress:pool,pairAddress:pool,liquidityUsd:12000,priceUsd:.01,analysis:{score:70}};
