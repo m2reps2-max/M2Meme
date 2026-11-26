@@ -27,3 +27,11 @@ test('bounded reader supports lightweight response test doubles',async()=>{
  const response={headers:{get:()=>null},text:async()=>'{"x":1}'};
  assert.deepEqual(await readJsonLimited(response,32),{x:1});
 });
+
+test('streaming JSON reader preserves UTF-8 characters split across chunks',async()=>{
+ const encoder=new TextEncoder(),bytes=encoder.encode('{"name":"é猫"}');
+ const split=bytes.findIndex((byte,index)=>byte===0xC3&&bytes[index+1]===0xA9);
+ const body=new ReadableStream({start(controller){controller.enqueue(bytes.slice(0,split+1));controller.enqueue(bytes.slice(split+1));controller.close();}});
+ const response={headers:{get:()=>null},body};
+ assert.deepEqual(await readJsonLimited(response,64),{name:'é猫'});
+});

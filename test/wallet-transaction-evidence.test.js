@@ -60,3 +60,11 @@ test('recognizes an unparsed known Jupiter swap only when transaction logs confi
     meta: { innerInstructions: [], logMessages: ['Program log: Instruction: CreateOpenOrders'] }
   }), false);
 });
+
+test('recognizes known compiled swap instructions through programIdIndex in compact json encoding',()=>{
+ const programId='JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4';
+ assert.equal(hasVerifiedSwapInstruction({
+  transaction:{message:{accountKeys:['wallet',programId],instructions:[{programIdIndex:1}]}},
+  meta:{innerInstructions:[],logMessages:['Program log: Instruction: Route']}
+ }),true);
+});

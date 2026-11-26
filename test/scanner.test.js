@@ -12,6 +12,17 @@ function make(){
  };
  return scanner;
 }
+test('per-token scoring initializes the shared intelligence index only once before a full refresh',()=>{
+ const scanner=make();
+ scanner.score({mint:'score-context-a',liquidityUsd:1000,analysis:{score:60}});
+ const context=scanner.scoreContext;
+ assert.ok(context?.eliteIndex);
+ scanner.score({mint:'score-context-b',liquidityUsd:2000,analysis:{score:61}});
+ assert.strictEqual(scanner.scoreContext,context,'individual score updates reuse the existing shared index');
+ scanner.scoreAll();
+ assert.notStrictEqual(scanner.scoreContext,context,'a full score pass rebuilds the index from current state');
+});
+
 test('score ignores preserved market values when their own field observations are stale',()=>{
  const scanner=make(),oldAt=new Date(Date.now()-20*60_000).toISOString();
  const token={liquidityUsd:20000,fdv:100000,ageHours:2,volume:{m5:10000,h1:90000,h24:500000},txns:{m5:{buys:80,sells:5},h1:{buys:500,sells:20}},priceChange:{m5:40,h1:120,h24:300},
@@ -60,6 +71,37 @@ test('pool RPC trade inspection processes the full bounded eight-transaction bat
  assert.equal(processed.length,8,'the internal processing cap must allow all eight requested transactions');
  assert.equal(result.processedLastBatch,8);
  assert.equal(scanner.state.tokens[mint].poolRpcTradeState.pending.length,0);
+});
+
+test('Helius pool signature gaps are backfilled in bounded batches instead of discarding all but ten signatures',async()=>{
+ const scanner=make(),mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH',pool='Bcdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
+ const token={mint,geckoPoolAddress:pool,pairAddress:pool,liquidityUsd:12000,analysis:{score:70},
+  poolRpcTradeState:{cursorSignature:'older-cursor-not-in-page',pending:[],processedSignatures:[],gapDetected:false}};
+ scanner.state.tokens[mint]=token;
+ const signatures=Array.from({length:400},(_,i)=>({signature:'gap-signature-'+i,slot:400-i,blockTime:Math.floor(Date.now()/1000)}));
+ const requests=[];let processed=0;
+ scanner.rpc=async(method,params)=>{
+  requests.push({method,params});
+  if(method==='getSignaturesForAddress')return signatures;
+  if(method==='getTransaction'){
+   processed++;
+   return {slot:1,blockTime:Math.floor(Date.now()/1000),transaction:{message:{accountKeys:[],instructions:[]}},meta:{err:null,preTokenBalances:[],postTokenBalances:[],innerInstructions:[],logMessages:[]}};
+  }
+  return null;
+ };
+ await scanner.inspectPoolRpcTradeIntel(token,{maxTransactions:12});
+ assert.equal(requests[0].params[1].limit,1000);
+ assert.equal(requests[1].params[1].encoding,'json');
+ assert.equal(processed,12);
+ assert.equal(token.poolRpcTradeState.gapDetected,true);
+ assert.equal(token.poolRpcTradeState.pending.length,288);
+ assert.equal(token.poolRpcTradeState.cursorSignature,'gap-signature-100');
+ const previousCursor=token.poolRpcTradeState.cursorSignature;
+ token.poolRpcTradeState.lastAttemptAt=new Date(Date.now()-60000).toISOString();
+ await scanner.inspectPoolRpcTradeIntel(token,{maxTransactions:12});
+ assert.equal(processed,24);
+ assert.notEqual(token.poolRpcTradeState.cursorSignature,previousCursor,'the bounded backfill cursor must advance on later scans');
+ assert.equal(token.poolRpcTradeState.pending.length,288,'the queue stays bounded while older signatures are processed and new ones are added');
 });
 
 test('pool RPC trade inspection records only confirmed signer-owned token swaps and deduplicates signatures',async()=>{
@@ -200,7 +242,7 @@ test('trade intelligence rotates through the oldest unchecked pools instead of s
  assert.deepEqual(checked,['oldest','second-oldest']);
 });
 
-test('Helius pool sampling refreshes six ranked pools per scan with a bounded eight-transaction batch',async()=>{
+test('Helius pool sampling refreshes eight ranked pools per scan with a bounded twelve-transaction batch',async()=>{
  const scanner=make();
  scanner.lastAutoCreatorFundingAt=Date.now();
  scanner.state.scannerSettings={minScore:80};
@@ -216,9 +258,9 @@ test('Helius pool sampling refreshes six ranked pools per scan with a bounded ei
   return null;
  };
  await scanner.refreshCandidateIntelligence();
- assert.equal(inspected.length,6);
- assert.deepEqual(inspected.map(row=>row.mint),['rpc-pool-0','rpc-pool-1','rpc-pool-2','rpc-pool-3','rpc-pool-4','rpc-pool-5']);
- assert.ok(inspected.every(row=>row.options.persist===false&&row.options.maxTransactions===8));
+ assert.equal(inspected.length,8);
+ assert.deepEqual(inspected.map(row=>row.mint),['rpc-pool-0','rpc-pool-1','rpc-pool-2','rpc-pool-3','rpc-pool-4','rpc-pool-5','rpc-pool-6','rpc-pool-7']);
+ assert.ok(inspected.every(row=>row.options.persist===false&&row.options.maxTransactions===12));
 });
 
 test('Jupiter refresh prioritizes stale checked tokens over newly discovered unquoted tokens',()=>{
@@ -251,7 +293,7 @@ test('Helius pool refresh does not let never-inspected new tokens starve stale c
  scanner.inspectPoolRpcTradeIntel=async token=>{inspected.push(token.mint);return null;};
  await scanner.refreshCandidateIntelligence();
  assert.equal(inspected[0],'stale-rpc');
- assert.equal(inspected.length,6);
+ assert.equal(inspected.length,8);
 });
 
 test('Jupiter refresh queue follows the configured score floor without changing publication thresholds',()=>{
@@ -980,19 +1022,19 @@ test('security refresh can run below the 700 MiB RSS guard',async()=>{
  }finally{process.memoryUsage=original;}
 });
 
-test('security leader rotation refreshes up to five tokens every minute without parallelizing RPC work',async()=>{
+test('security leader rotation refreshes up to eight tokens every minute without parallelizing RPC work',async()=>{
  const scanner=make();
  const now=Date.now();
- scanner.state.tokens=Object.fromEntries(Array.from({length:5},(_,i)=>['security-'+i,{mint:'security-'+i,pairAddress:'pair-'+i,liquidityUsd:10000}]));
+ scanner.state.tokens=Object.fromEntries(Array.from({length:8},(_,i)=>['security-'+i,{mint:'security-'+i,pairAddress:'pair-'+i,liquidityUsd:10000}]));
  const checked=[];
  scanner.inspectSecurity=async token=>{checked.push(token.mint);token.security={checkedAt:new Date().toISOString(),data:{}};};
  scanner.inspectExternalSecurity=async()=>null;
  scanner.lastSecurity=now-60_000-1;
  await scanner.securityLeaders();
- assert.equal(checked.length,5);
+ assert.equal(checked.length,8);
  scanner.lastSecurity=Date.now()-60_000-1;
  await scanner.securityLeaders();
- assert.equal(checked.length,5);
+ assert.equal(checked.length,8);
 });
 
 
