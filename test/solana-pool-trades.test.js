@@ -18,4 +18,6 @@ test('confirmed swap summary counts unique wallets once and leaves unknown USD v
  const rows=[{wallet:'a',direction:'buy',signature:'1',at:new Date(base).toISOString(),volumeUsd:null},{wallet:'a',direction:'buy',signature:'2',at:new Date(base+1000).toISOString(),volumeUsd:null},{wallet:'b',direction:'sell',signature:'3',at:new Date(base+2000).toISOString(),volumeUsd:null}];
  const summary=summarizePoolSwapEvents(rows);
  assert.equal(summary.tradeCount,3);assert.equal(summary.uniqueBuyers,1);assert.equal(summary.uniqueSellers,1);assert.equal(summary.buyVolumeUsd,null);assert.equal(summary.volumeCoverage,0);
+ const stale=summarizePoolSwapEvents([{wallet:'old',direction:'buy',at:new Date(Date.now()-16*60_000).toISOString(),volumeUsd:10}]);
+ assert.equal(stale.tradeCount,0,'old RPC swaps must not keep demand fresh');
 });
