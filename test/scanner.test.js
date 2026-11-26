@@ -181,6 +181,27 @@ test('trade intelligence rotates through the oldest unchecked pools instead of s
  assert.deepEqual(checked,['oldest','second-oldest']);
 });
 
+test('Helius pool sampling refreshes five ranked pools per scan with a bounded six-transaction batch',async()=>{
+ const scanner=make();
+ scanner.lastAutoCreatorFundingAt=Date.now();
+ scanner.state.scannerSettings={minScore:80};
+ scanner.state.tokens={};
+ for(let i=0;i<8;i++){
+  const mint='rpc-pool-'+i;
+  scanner.state.tokens[mint]={mint,pairAddress:'pool-'+i,liquidityUsd:10000-i*100,
+   analysis:{score:75-i,hardBlocked:false,risk:'medium'}};
+ }
+ const inspected=[];
+ scanner.inspectPoolRpcTradeIntel=async(token,options)=>{
+  inspected.push({mint:token.mint,options});
+  return null;
+ };
+ await scanner.refreshCandidateIntelligence();
+ assert.equal(inspected.length,5);
+ assert.deepEqual(inspected.map(row=>row.mint),['rpc-pool-0','rpc-pool-1','rpc-pool-2','rpc-pool-3','rpc-pool-4']);
+ assert.ok(inspected.every(row=>row.options.persist===false&&row.options.maxTransactions===6));
+});
+
 test('Jupiter refresh queue follows the configured score floor without changing publication thresholds',()=>{
  const scanner=make();
  scanner.state.scannerSettings={minScore:75};
