@@ -13,7 +13,7 @@ test('security queue prioritizes strong candidates while preserving an age-based
     { mint: 'launch', pairAddress: 'p4', launchSource: 'pumpfun', analysis: { score: 85 } }
   ];
   const selected = rankSecurityCandidates(tokens, now, 3);
-  assert.deepEqual(selected.map(token => token.mint), ['launch', 'low-score-old', 'high-score']);
+  assert.deepEqual(selected.map(token => token.mint), ['launch', 'high-score', 'low-score-old']);
 });
 
 test('security queue is deterministic, bounded and excludes fresh or unlinked tokens', () => {
@@ -39,4 +39,12 @@ test('security queue skips candidates in retry cooldown so one failing mint cann
  const blocked={mint:'rpc-failing',pairAddress:'pool-a',analysis:{score:99},securityRetryAt:new Date(now+120000).toISOString()};
  const next={mint:'next-candidate',pairAddress:'pool-b',analysis:{score:85}};
  assert.deepEqual(rankSecurityCandidates([blocked,next],now,2).map(x=>x.mint),['next-candidate']);
+});
+
+test('security refresh becomes eligible before the 15-minute publication evidence expires',()=>{
+ const now=120_000_000;
+ const twelveMinutesOld={mint:'twelve-minutes',pairAddress:'pool-a',analysis:{score:90},security:{checkedAt:new Date(now-12*60_000).toISOString()}};
+ const nineMinutesOld={mint:'nine-minutes',pairAddress:'pool-b',analysis:{score:99},security:{checkedAt:new Date(now-9*60_000).toISOString()}};
+ assert.equal(MIN_SECURITY_REFRESH_AGE_MS,10*60_000);
+ assert.deepEqual(rankSecurityCandidates([nineMinutesOld,twelveMinutesOld],now,5).map(x=>x.mint),['twelve-minutes']);
 });
