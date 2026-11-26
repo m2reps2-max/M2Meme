@@ -45,7 +45,8 @@ test('social intelligence remains unavailable when no public observations exist'
 test('candidate intelligence changes ranking only modestly and does not fake data coverage',()=>{
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),'meme-radar-intel-'));
   const scanner=new MemeScanner({dataFile:path.join(dir,'store.json')});
-  const token={txns:{h1:{buys:70,sells:30}},volume:{h1:25000,h24:120000},liquidityUsd:45000,ageHours:3,tradeIntel:{tradeCount:40,buyVolumeUsd:8000,sellVolumeUsd:2000,uniqueBuyers:18,top5BuyerSharePct:35,sameBlockBuyerClusters:0,earlyWindow:{complete:true,uniqueBuyers:8},buys:30,sells:10},socialIntel:{available:true,mentions1h:4,mentions24h:8,uniqueAuthors24h:6,sentimentScore:70}};
+  const at=new Date().toISOString();
+  const token={txns:{h1:{buys:70,sells:30}},volume:{h1:25000,h24:120000},marketFieldsObservedAt:{volumeH1:at,volumeH24:at,txnsH1:at},liquidityUsd:45000,ageHours:3,tradeIntel:{tradeCount:40,buyVolumeUsd:8000,sellVolumeUsd:2000,uniqueBuyers:18,top5BuyerSharePct:35,sameBlockBuyerClusters:0,earlyWindow:{complete:true,uniqueBuyers:8},buys:30,sells:10},socialIntel:{available:true,mentions1h:4,mentions24h:8,uniqueAuthors24h:6,sentimentScore:70}};
   const result=scanner.score(token);
   assert.equal(result.coverage,36);
   assert.ok(Math.abs(result.score-result.baseScore)<=6);
