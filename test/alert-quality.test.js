@@ -93,6 +93,15 @@ test('weak buyer ratio and insufficient transaction count block opportunity publ
 });
 
 
+test('fresh Gecko samples require distinct buyers and avoid strong net-sell flow',()=>{
+ const weak=eliteCandidate({tradeIntel:{checkedAt:new Date().toISOString(),tradeCount:30,uniqueBuyers:3,buyVolumeUsd:1000,sellVolumeUsd:1200}});
+ const weakResult=qualifyOpportunity(weak,{});
+ assert.ok(weakResult.reasons.includes('Moins de cinq acheteurs distincts dans l’échantillon récent'));
+ assert.ok(weakResult.reasons.includes('Flux vendeur dominant dans l’échantillon récent'));
+ const broad=eliteCandidate({tradeIntel:{checkedAt:new Date().toISOString(),tradeCount:30,uniqueBuyers:12,buyVolumeUsd:1500,sellVolumeUsd:1000}});
+ assert.equal(qualifyOpportunity(broad,{}).eligible,true);
+});
+
 test('fresh DexScreener 1h transactions are a valid fallback without a GeckoTerminal pool ID',()=>{
  const now=10_000_000;
  const token={history:[{at:now-60_000}],txns:{h1:{buys:12,sells:4}},security:{checkedAt:new Date(now-10*60_000).toISOString()}};
