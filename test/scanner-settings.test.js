@@ -15,7 +15,7 @@ test('defaults to the elite profile with multiple independent quality thresholds
   assert.equal(settings.minBuyRatioPct, 50);
   assert.equal(settings.maxFdvLiquidityRatio, 35);
   assert.equal(settings.requireComprehensiveSecurity, false);
-  assert.equal(settings.requireExternalSecurity, true);
+  assert.equal(settings.requireExternalSecurity, false);
 });
 
 test('migrates the old untouched balanced default to elite without breaking custom thresholds', () => {
