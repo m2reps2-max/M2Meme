@@ -53,7 +53,7 @@ test('watch candidates are separate, capped at five and clearly retain partial r
 test('pre-market, unknown-risk and blocked tokens are excluded while partial evidence remains watch-only',()=>{
  const items=[
   token(1,{pairAddress:null,geckoPoolAddress:null}),
-  token(2,{analysis:{...token(2).analysis,coverage:5,score:100}}),
+  token(2,{analysis:{...token(2).analysis,coverage:5,score:100,factors:{...token(2).analysis.factors,security:null}}}),
   token(3,{analysis:{...token(3).analysis,risk:'unknown'}}),
   token(4,{analysis:{...token(4).analysis,hardBlocked:true}}),
   token(5,{analysis:{...token(5).analysis,coverage:60,securityComprehensive:false,risk:'partial'}}),
@@ -85,11 +85,12 @@ test('best picks require fresh security and either recent Gecko trades or a fres
  assert.equal(result.diagnostics.bestRejectedStaleMarket,0);
 });
 
-test('security freshness window matches the hourly background refresh cadence',()=>{
- const tokenWith45mSecurityAge=token(9,{security:{checkedAt:new Date(NOW-45*60_000).toISOString()}});
- const result=buildSelection([tokenWith45mSecurityAge],NOW);
+test('dynamic holder evidence uses a short freshness window while static mint facts can remain cached',()=>{
+ const tokenWith10mSecurityAge=token(9,{security:{checkedAt:new Date(NOW-10*60_000).toISOString()}});
+ const result=buildSelection([tokenWith10mSecurityAge],NOW);
  assert.equal(result.best.length,1);
- assert.equal(result.qualityGate.bestSecurityMaxAgeMinutes,95);
+ assert.equal(result.qualityGate.bestDynamicSecurityMaxAgeMinutes,15);
+ assert.equal(result.qualityGate.bestStaticSecurityMaxAgeMinutes,1440);
 });
 
 test('watchlist tolerates partial security but not stale market or very stale security',()=>{
@@ -150,17 +151,13 @@ test('best shortlist accepts fresh DEX transactions when GeckoTerminal pool samp
  assert.equal(result.best[0].freshness.transactionAgeMinutes,1);
 });
 
-test('best shortlist requires a clear external security verdict when the strict gate is enabled',()=>{
- const safe=token(90,{externalSecurity:{status:'ok',verdict:'LOW RISK',score:82,confidence:85,checks:[]}});
- const caution=token(91,{externalSecurity:{status:'ok',verdict:'CAUTION',score:72,confidence:90,checks:[]}});
- const missing=token(92);
- const settings={requireExternalSecurity:true};
- assert.deepEqual(buildSelection([safe],NOW,{settings}).best.map(x=>x.mint),['mint-90']);
- assert.equal(buildSelection([caution],NOW,{settings}).best.length,0);
- assert.equal(buildSelection([missing],NOW,{settings}).best.length,0);
-});
-test('best shortlist blocks a confirmed external spam flag',()=>{
- const spam=token(93,{externalSecurity:{status:'ok',verdict:'CLEAN',score:95,confidence:90,checks:[{name:'Spam activity',status:'flagged',severity:'high',details:'Coordinated spam trading detected'}]}});
- const result=buildSelection([spam],NOW,{settings:{requireExternalSecurity:true}});
- assert.equal(result.best.length,0);
+test('GL1TCH verdicts remain advisory and cannot veto independently qualified opportunities',()=>{
+ const variants=[
+  token(90,{externalSecurity:{status:'ok',verdict:'LOW RISK',score:82,confidence:85,checks:[]}}),
+  token(91,{externalSecurity:{status:'ok',verdict:'CAUTION',score:72,confidence:90,checks:[]}}),
+  token(92),
+  token(93,{externalSecurity:{status:'ok',verdict:'CLEAN',score:95,confidence:90,checks:[{name:'Spam activity',status:'flagged',severity:'high',details:'Provider-only spam verdict'}]}})
+ ];
+ const result=buildSelection(variants,NOW,{settings:{requireExternalSecurity:true}});
+ assert.equal(result.best.length,4);
 });
