@@ -13,7 +13,8 @@ test('data quality distinguishes missing data from strong signals',()=>{
 
 test('fresh market and on-chain observations increase completeness and freshness',()=>{
  const now=2_000_000;
- const token={mint:'m',priceUsd:1,liquidityUsd:10000,volume:{h1:100,h24:1000},history:[{at:now-30000,priceUsd:1}],security:{checkedAt:new Date(now-30000).toISOString(),data:{uniqueOwnerCount:10,freezeAuthorityActive:false,mintAuthorityActive:false,ownerConcentrationAvailable:true,top10HolderPercent:35}},tradeIntel:{checkedAt:new Date(now-30000).toISOString(),tradeCount:40},socialIntel:{available:true,checkedAt:new Date(now-30000).toISOString()},launchSource:'pumpportal_new_token'};
+ const at=new Date(now-30000).toISOString();
+ const token={mint:'m',priceUsd:1,liquidityUsd:10000,volume:{m5:50,h1:100,h24:1000},priceChange:{m5:2},marketObservedAt:at,marketFieldsObservedAt:{volume:at,volumeM5:at,priceChangeM5:at,volumeH1:at,volumeH24:at,txns:at,txnsH1:at,txnsH24:at},history:[{at:now-30000,priceUsd:1}],security:{checkedAt:at,data:{uniqueOwnerCount:10,freezeAuthorityActive:false,mintAuthorityActive:false,ownerConcentrationAvailable:true,top10HolderPercent:35}},tradeIntel:{checkedAt:at,rpcConfirmedCheckedAt:at,rpcConfirmedTradeCount:6,rpcConfirmedLastTradeAt:at,tradeCount:40},socialIntel:{available:true,checkedAt:at},launchSource:'pumpportal_new_token'};
  const result=tokenDataQuality(token,now);
  assert.equal(result.completenessPct,100,JSON.stringify(result.checks.map(x=>({key:x.key,available:x.available,weight:x.weight}))));
  assert.equal(result.freshnessPct,100);
@@ -32,7 +33,7 @@ test('summary reports tracked tokens and bounded quality categories',()=>{
 
 test('missing or future timestamps do not dilute average freshness or appear fresh',()=>{
  const now=5_000_000;
- const measured={mint:'measured',priceUsd:1,liquidityUsd:100,volume:{h1:1},history:[{at:now-60000}],security:{checkedAt:new Date(now-60000).toISOString(),data:{freezeAuthorityActive:false,mintAuthorityActive:false,ownerConcentrationAvailable:true,top10HolderPercent:20}},launchSource:'pumpportal'};
+ const measured={mint:'measured',priceUsd:1,liquidityUsd:100,volume:{h1:1},marketObservedAt:now-60000,history:[{at:now-60000}],security:{checkedAt:new Date(now-60000).toISOString(),data:{freezeAuthorityActive:false,mintAuthorityActive:false,ownerConcentrationAvailable:true,top10HolderPercent:20}},launchSource:'pumpportal'};
  const unknown={mint:'unknown',history:[{priceUsd:1}],security:{data:{freezeAuthorityActive:false,mintAuthorityActive:false,ownerConcentrationAvailable:false,top10HolderPercent:null}}};
  const future={mint:'future',priceUsd:1,liquidityUsd:100,volume:{h1:1},history:[{at:now+3600000}],security:{checkedAt:new Date(now+3600000).toISOString(),data:{}}};
  const summary=dataQualitySummary.call({state:{tokens:{measured,unknown,future}}},now);

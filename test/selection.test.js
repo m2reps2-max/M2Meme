@@ -7,11 +7,12 @@ const NOW=1_800_000_000_000;
 function token(i,overrides={}){
  return {
   mint:'mint-'+i,name:'Token '+i,symbol:'T'+i,pairAddress:'pair-'+i,liquidityUsd:20000,fdv:200000,
-  volume:{h1:6000},txns:{h1:{buys:15,sells:5}},
+  volume:{m5:1000,h1:6000,h24:90000},txns:{m5:{buys:8,sells:2},h1:{buys:15,sells:5}},priceChange:{m5:4},
+  marketObservedAt:new Date(NOW-60_000).toISOString(),marketFieldsObservedAt:{volume:new Date(NOW-60_000).toISOString(),volumeM5:new Date(NOW-60_000).toISOString(),priceChangeM5:new Date(NOW-60_000).toISOString(),volumeH1:new Date(NOW-60_000).toISOString(),volumeH24:new Date(NOW-60_000).toISOString(),txns:new Date(NOW-60_000).toISOString(),txnsH1:new Date(NOW-60_000).toISOString(),txnsH24:new Date(NOW-60_000).toISOString()},
   history:[{at:NOW-60_000,priceUsd:1}],
   security:{checkedAt:new Date(NOW-5*60_000).toISOString()},
   sellability:{status:'route_available',routeAvailable:true,requestedUsd:100,priceImpactPct:1,checkedAt:new Date(NOW-5*60_000).toISOString()},
-  tradeIntel:{checkedAt:new Date(NOW-5*60_000).toISOString(),lastTradeAt:new Date(NOW-5*60_000).toISOString(),tradeCount:30,uniqueBuyers:12,uniqueSellers:8,buyVolumeUsd:1200,sellVolumeUsd:700},
+  tradeIntel:{checkedAt:new Date(NOW-5*60_000).toISOString(),lastTradeAt:new Date(NOW-5*60_000).toISOString(),tradeCount:30,uniqueBuyers:12,uniqueSellers:8,buyVolumeUsd:1200,sellVolumeUsd:700,rpcConfirmedTradeCount:8,rpcConfirmedUniqueBuyers:12,rpcConfirmedUniqueSellers:8,rpcConfirmedBuyVolumeUsd:1200,rpcConfirmedSellVolumeUsd:700,rpcConfirmedVolumeCoverage:100,rpcConfirmedCheckedAt:new Date(NOW-5*60_000).toISOString(),rpcConfirmedLastTradeAt:new Date(NOW-5*60_000).toISOString()},
   analysis:{
    score:90,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,exitCapacityUsd:100,
    factors:{activity:80,momentum:75,market:82,liquidityQuality:78,executionQuality:85,security:95,demandQuality:78}
@@ -39,17 +40,36 @@ test('best shortlist requires a fresh Jupiter quote and at least 50 USD of execu
  assert.equal(buildSelection([missing],NOW).diagnostics.bestRejectedMissingExitQuote,1);
 });
 
+test('Best selection rejects preserved volume and transaction values when their field timestamps are stale',()=>{
+ const stale=token(898,{marketFieldsObservedAt:{volume:new Date(NOW-20*60_000).toISOString(),txns:new Date(NOW-20*60_000).toISOString()}});
+ const result=buildSelection([stale],NOW);
+ assert.equal(result.best.length,0);
+ assert.equal(result.diagnostics.bestRejectedStaleMarketMetrics,1);
+});
+test('fresh h24 fields cannot make stale h1 volume or transactions eligible',()=>{
+ const base=token(897),old=new Date(NOW-20*60_000).toISOString(),fresh=new Date(NOW-30_000).toISOString();
+ const partial={...base,marketFieldsObservedAt:{...base.marketFieldsObservedAt,volumeH1:old,txnsH1:old,volumeH24:fresh,txnsH24:fresh}};
+ const result=buildSelection([partial],NOW);
+ assert.equal(result.best.length,0);assert.equal(result.diagnostics.bestRejectedStaleMarketMetrics,1);
+});
+test('a Gecko sample without verified RPC pool swaps cannot pass the Best demand gate',()=>{
+ const base=token(899);
+ const unverified={...base,tradeIntel:{...base.tradeIntel,rpcConfirmedTradeCount:0,rpcConfirmedUniqueBuyers:0,rpcConfirmedVolumeCoverage:0}};
+ assert.equal(buildSelection([unverified],NOW).best.length,0);
+ const partial={...base,tradeIntel:{...base.tradeIntel,rpcConfirmedTradeCount:8,rpcConfirmedUniqueBuyers:8,rpcConfirmedVolumeCoverage:50}};
+ assert.equal(buildSelection([partial],NOW).best.length,0);
+});
 test('best shortlist requires fresh verified net demand and distinct buyers',()=>{
  const base=token(801);
  const cases=[
   token(802,{tradeIntel:null}),
   token(803,{tradeIntel:{...base.tradeIntel,tradeCount:19}}),
-  token(804,{tradeIntel:{...base.tradeIntel,uniqueBuyers:4}}),
-  token(805,{tradeIntel:{...base.tradeIntel,buyVolumeUsd:null}}),
-  token(806,{tradeIntel:{...base.tradeIntel,buyVolumeUsd:500,sellVolumeUsd:900}}),
-  token(810,{tradeIntel:{...base.tradeIntel,buyVolumeUsd:800,sellVolumeUsd:1000}}),
-  token(807,{tradeIntel:{...base.tradeIntel,checkedAt:new Date(NOW-20*60_000).toISOString()}}),
-  token(811,{tradeIntel:{...base.tradeIntel,lastTradeAt:new Date(NOW-20*60_000).toISOString()}}),
+  token(804,{tradeIntel:{...base.tradeIntel,rpcConfirmedUniqueBuyers:4}}),
+  token(805,{tradeIntel:{...base.tradeIntel,rpcConfirmedBuyVolumeUsd:null}}),
+  token(806,{tradeIntel:{...base.tradeIntel,rpcConfirmedBuyVolumeUsd:500,rpcConfirmedSellVolumeUsd:900}}),
+  token(810,{tradeIntel:{...base.tradeIntel,rpcConfirmedBuyVolumeUsd:800,rpcConfirmedSellVolumeUsd:1000}}),
+  token(807,{tradeIntel:{...base.tradeIntel,rpcConfirmedCheckedAt:new Date(NOW-20*60_000).toISOString()}}),
+  token(811,{tradeIntel:{...base.tradeIntel,rpcConfirmedLastTradeAt:new Date(NOW-20*60_000).toISOString()}}),
   token(808,{analysis:{...base.analysis,factors:{...base.analysis.factors,demandQuality:null}}}),
   token(809,{analysis:{...base.analysis,factors:{...base.analysis.factors,executionQuality:null}}})
  ];
@@ -97,8 +117,8 @@ test('pre-market, unknown-risk and blocked tokens are excluded while partial evi
 });
 
 test('stale market data cannot enter either shortlist even with a perfect score',()=>{
- const stale=token(1,{history:[{at:NOW-20*60_000,priceUsd:1}],analysis:{...token(1).analysis,score:99}});
- const missing=token(2,{history:[],analysis:{...token(2).analysis,score:99}});
+ const stale=token(1,{marketObservedAt:new Date(NOW-20*60_000).toISOString(),marketFieldsObservedAt:{volume:new Date(NOW-20*60_000).toISOString(),txns:new Date(NOW-20*60_000).toISOString()},history:[{at:NOW-20*60_000,priceUsd:1}],analysis:{...token(1).analysis,score:99}});
+ const missing=token(2,{marketObservedAt:null,marketFieldsObservedAt:{},history:[],analysis:{...token(2).analysis,score:99}});
  const result=buildSelection([stale,missing],NOW);
  assert.equal(result.best.length,0);
  assert.equal(result.observe.length,0);

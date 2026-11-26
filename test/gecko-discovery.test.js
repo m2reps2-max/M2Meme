@@ -137,6 +137,12 @@ test('pool trade samples are persisted idempotently for wallet graph analysis',(
  assert.equal(otherMint.added,2);
  assert.equal(otherMint.rows.length,4);
 });
+test('trade sample retains signature USD observations even when Gecko omits the wallet field',()=>{
+ const now=Date.parse('2026-11-22T10:00:02Z');
+ const result=analyzePoolTrades({data:[{id:'sig-no-wallet',attributes:{kind:'buy',block_timestamp:'2026-11-22T10:00:01Z',volume_in_usd:'25',tx_hash:'sig-no-wallet'}}]},null,now);
+ assert.equal(result.observedTrades.length,1);assert.equal(result.observedTrades[0].wallet,null);assert.equal(result.observedTrades[0].volumeUsd,25);
+ const merged=mergeObservedTrades([],'mintA',result.observedTrades,100);assert.equal(merged.added,0);
+});
 test('pool trade persistence enforces a bounded rolling history',()=>{
  const existing=Array.from({length:4},(_,i)=>({wallet:'old'+i,mint:'old',signature:'old'+i,source:'gecko_pool_sample'}));
  const result=mergeObservedTrades(existing,'new',[{wallet:'new',direction:'buy',volumeUsd:1,at:'2026-11-22T10:00:00Z',signature:'new'}],3);

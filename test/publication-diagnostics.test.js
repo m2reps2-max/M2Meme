@@ -5,11 +5,13 @@ const { scannerPublicationDiagnostics } = require('../lib/publication-diagnostic
 
 const NOW = Date.now();
 function makeToken(overrides = {}) {
+  const snapshotAt=overrides.history?.[0]?.at||new Date(NOW-8*60_000).toISOString();
   return {
     mint: 'mint-1', symbol: 'BAD',
     pairAddress: 'pool-1', liquidityUsd: 1200, fdv: 100000,
-    volume: { h1: 200 }, txns: { h1: { buys: 2, sells: 8 } },
-    history: [{ at: new Date(NOW - 8 * 60_000).toISOString() }],
+    volume: { m5: 100, h1: 200, h24: 5000 }, txns: { m5: { buys: 1, sells: 2 }, h1: { buys: 2, sells: 8 } }, priceChange:{m5:2},
+    marketObservedAt:snapshotAt,marketFieldsObservedAt:{volume:snapshotAt,volumeM5:snapshotAt,priceChangeM5:snapshotAt,volumeH1:snapshotAt,volumeH24:snapshotAt,txns:snapshotAt,txnsH1:snapshotAt,txnsH24:snapshotAt},
+    history: [{ at: snapshotAt }],
     analysis: { score: 84, coverage: 70, risk: 'partial', hardBlocked: false, flags: [] },
     ...overrides
   };
@@ -96,7 +98,7 @@ test('diagnostics identify Telegram delivery configuration blockers', () => {
     history: [{ at: new Date(NOW - 30_000).toISOString() }],
     security: { checkedAt: new Date(NOW - 60_000).toISOString() },
     sellability:{status:'route_available',routeAvailable:true,requestedUsd:100,priceImpactPct:1,checkedAt:new Date(NOW-60_000).toISOString()},
-    tradeIntel: { checkedAt: new Date(NOW - 60_000).toISOString(), lastTradeAt: new Date(NOW - 60_000).toISOString(), tradeCount: 30, uniqueBuyers: 12, uniqueSellers: 8, buyVolumeUsd: 1200, sellVolumeUsd: 700 },
+    tradeIntel: { checkedAt: new Date(NOW - 60_000).toISOString(), lastTradeAt: new Date(NOW - 60_000).toISOString(), tradeCount: 30, uniqueBuyers: 12, uniqueSellers: 8, buyVolumeUsd: 1200, sellVolumeUsd: 700, rpcConfirmedTradeCount:8, rpcConfirmedUniqueBuyers:12, rpcConfirmedUniqueSellers:8, rpcConfirmedBuyVolumeUsd:1200, rpcConfirmedSellVolumeUsd:700, rpcConfirmedVolumeCoverage:100, rpcConfirmedCheckedAt:new Date(NOW-60_000).toISOString(), rpcConfirmedLastTradeAt:new Date(NOW-60_000).toISOString() },
     analysis: { score: 90, coverage: 90, risk: 'observations_only', securityComprehensive: true, hardBlocked: false, exitCapacityUsd:100, flags: [], factors: { activity: 80, momentum: 80, market: 80, liquidityQuality: 80, executionQuality: 85, security: 90, demandQuality: 78 } }
   });
   const instance = scanner([token]);
@@ -107,7 +109,7 @@ test('diagnostics identify Telegram delivery configuration blockers', () => {
 });
 
 
-test('diagnostics count DexScreener-only candidates as publication eligible without Gecko trade IDs',()=>{
+test('DexScreener-only transaction snapshots do not replace verified RPC buyer evidence',()=>{
  const token=makeToken({
   liquidityUsd:20000,fdv:200000,volume:{h1:8000},txns:{h1:{buys:16,sells:4}},
   history:[{at:new Date(NOW-30_000).toISOString()}],

@@ -61,8 +61,9 @@ test('selection keeps an otherwise qualified +200% candidate in the best shortli
   volume:{m5:10000,h1:90000},
   txns:{m5:{buys:30,sells:8},h1:{buys:80,sells:20}},
   priceChange:{m5:4,h1:85,h24:210},
+  marketObservedAt:new Date(now-30_000).toISOString(),marketFieldsObservedAt:{volume:new Date(now-30_000).toISOString(),volumeM5:new Date(now-30_000).toISOString(),priceChangeM5:new Date(now-30_000).toISOString(),priceChangeH1:new Date(now-30_000).toISOString(),priceChangeH24:new Date(now-30_000).toISOString(),volumeH1:new Date(now-30_000).toISOString(),volumeH24:new Date(now-30_000).toISOString(),txns:new Date(now-30_000).toISOString(),txnsH1:new Date(now-30_000).toISOString(),txnsH24:new Date(now-30_000).toISOString()},
   history:[{at:now-30_000}],
-  tradeIntel:{checkedAt:new Date(now-5*60_000).toISOString(),lastTradeAt:new Date(now-5*60_000).toISOString(),tradeCount:30,uniqueBuyers:12,uniqueSellers:8,buyVolumeUsd:1200,sellVolumeUsd:700},
+  tradeIntel:{checkedAt:new Date(now-5*60_000).toISOString(),lastTradeAt:new Date(now-5*60_000).toISOString(),tradeCount:30,uniqueBuyers:12,uniqueSellers:8,buyVolumeUsd:1200,sellVolumeUsd:700,rpcConfirmedTradeCount:8,rpcConfirmedUniqueBuyers:12,rpcConfirmedUniqueSellers:8,rpcConfirmedBuyVolumeUsd:1200,rpcConfirmedSellVolumeUsd:700,rpcConfirmedVolumeCoverage:100,rpcConfirmedCheckedAt:new Date(now-5*60_000).toISOString(),rpcConfirmedLastTradeAt:new Date(now-5*60_000).toISOString()},
   security:{checkedAt:new Date(now-5*60_000).toISOString()},
   sellability:{status:'route_available',routeAvailable:true,requestedUsd:100,priceImpactPct:1,checkedAt:new Date(now-5*60_000).toISOString()},
   analysis:{score:92,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,exitCapacityUsd:100,flags:[],factors:{activity:90,momentum:82,market:90,liquidityQuality:90,executionQuality:85,security:95,demandQuality:78}}
@@ -75,13 +76,15 @@ test('selection keeps an otherwise qualified +200% candidate in the best shortli
 
 test('selection excludes a candidate only when a severe selloff is confirmed by price and transaction flow',()=>{
  const {buildSelection}=require('../lib/selection');
- const now=20_000_000;
+ const now=Date.now(),observedAt=new Date(now-30_000).toISOString();
  const token={
   mint:'confirmed-selloff',pairAddress:'pool-2',liquidityUsd:25000,fdv:300000,
   volume:{m5:18000,h1:60000},
   txns:{m5:{buys:5,sells:18},h1:{buys:80,sells:20}},
   priceChange:{m5:-22,h1:45,h24:90},
-  history:[{at:now-30_000}],
+  marketObservedAt:observedAt,
+  marketFieldsObservedAt:{volumeM5:observedAt,volumeH1:observedAt,volumeH24:observedAt,txnsM5:observedAt,txnsH1:observedAt,txnsH24:observedAt,priceChangeM5:observedAt,priceChangeH1:observedAt,priceChangeH24:observedAt},
+  history:[{at:now-30_000,priceUsd:1}],
   security:{checkedAt:new Date(now-30*60_000).toISOString()},
   analysis:{score:92,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,flags:[],factors:{activity:90,market:90,liquidityQuality:90,security:95}}
  };

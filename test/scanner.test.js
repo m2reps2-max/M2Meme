@@ -1,6 +1,69 @@
 'use strict';
 const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const os=require('node:os');const path=require('node:path');const {MemeScanner}=require('../lib/scanner');
-function make(){const dir=fs.mkdtempSync(path.join(os.tmpdir(),'meme-radar-test-'));return new MemeScanner({dataFile:path.join(dir,'store.json')});}
+function make(){
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'meme-radar-test-')),scanner=new MemeScanner({dataFile:path.join(dir,'store.json')});
+ const originalScore=scanner.score.bind(scanner);
+ scanner.score=token=>{
+  if(token&&typeof token==='object'&&!token.marketFieldsObservedAt){
+   const at=new Date().toISOString();
+   token.marketFieldsObservedAt={volumeM5:at,volumeH1:at,volumeH24:at,priceChangeM5:at,priceChangeH1:at,priceChangeH24:at,txnsM5:at,txnsH1:at,txnsH24:at};
+  }
+  return originalScore(token);
+ };
+ return scanner;
+}
+test('score ignores preserved market values when their own field observations are stale',()=>{
+ const scanner=make(),oldAt=new Date(Date.now()-20*60_000).toISOString();
+ const token={liquidityUsd:20000,fdv:100000,ageHours:2,volume:{m5:10000,h1:90000,h24:500000},txns:{m5:{buys:80,sells:5},h1:{buys:500,sells:20}},priceChange:{m5:40,h1:120,h24:300},
+  marketFieldsObservedAt:{volumeM5:oldAt,volumeH1:oldAt,volumeH24:oldAt,txnsM5:oldAt,txnsH1:oldAt,priceChangeM5:oldAt,priceChangeH1:oldAt,priceChangeH24:oldAt}};
+ const analysis=scanner.score(token);
+ assert.equal(analysis.factors.activity,undefined);assert.equal(analysis.factors.market,undefined);assert.equal(analysis.factors.momentum,undefined);
+ assert.ok(analysis.missingFactors.includes('activity'));assert.ok(analysis.missingFactors.includes('market'));assert.ok(analysis.missingFactors.includes('momentum'));
+});
+test('market snapshots never timestamp stale merged volume or transaction counts as fresh',()=>{
+ const scanner=make(),mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
+ const oldAt=new Date(Date.now()-60*60_000).toISOString();
+ scanner.state.tokens[mint]={mint,volume:{h1:9000,h24:50000},txns:{h1:{buys:80,sells:20}},marketFieldsObservedAt:{volume:oldAt,volumeM5:oldAt,priceChangeM5:oldAt,volumeH1:oldAt,volumeH24:oldAt,txns:oldAt,txnsM5:oldAt,txnsH1:oldAt,txnsH24:oldAt}};
+ scanner.pair({chainId:'solana',baseToken:{address:mint,name:'Snapshot test',symbol:'SNAP'},pairAddress:'PoolSnapshot111111111111111111111111111111',priceUsd:'0.01',liquidity:{usd:12000},volume:{},txns:{}});
+ const token=scanner.state.tokens[mint],snapshot=token.history.at(-1);
+ assert.equal(token.volume.h1,9000);assert.equal(token.txns.h1.buys,80);
+ assert.equal(snapshot.volume1h,null);assert.equal(snapshot.buys1h,null);
+ assert.equal(snapshot.fieldObservedAt.volume,null);assert.equal(snapshot.fieldObservedAt.volumeM5,null);assert.equal(snapshot.fieldObservedAt.priceChangeM5,null);assert.equal(snapshot.fieldObservedAt.volumeH1,null);assert.equal(snapshot.fieldObservedAt.txns,null);assert.equal(snapshot.fieldObservedAt.txnsM5,null);assert.equal(snapshot.fieldObservedAt.txnsH1,null);
+ assert.equal(token.marketFieldsObservedAt.volume,oldAt);assert.equal(token.marketFieldsObservedAt.volumeM5,oldAt);assert.equal(token.marketFieldsObservedAt.priceChangeM5,oldAt);assert.equal(token.marketFieldsObservedAt.volumeH1,oldAt);assert.equal(token.marketFieldsObservedAt.txns,oldAt);assert.equal(token.marketFieldsObservedAt.txnsM5,oldAt);assert.equal(token.marketFieldsObservedAt.txnsH1,oldAt);
+ assert.ok(token.marketFieldsObservedAt.priceUsd);
+});
+test('an h24-only market update never refreshes stale h1 metrics or snapshots',()=>{
+ const scanner=make(),mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH',oldAt=new Date(Date.now()-20*60_000).toISOString();
+ scanner.state.tokens[mint]={mint,volume:{h1:9000,h24:50000},txns:{h1:{buys:80,sells:20},h24:{buys:200,sells:50}},marketFieldsObservedAt:{volume:oldAt,volumeH1:oldAt,volumeH24:oldAt,txns:oldAt,txnsH1:oldAt,txnsH24:oldAt}};
+ scanner.pair({chainId:'solana',baseToken:{address:mint,name:'Partial update',symbol:'PART'},pairAddress:'PoolSnapshot111111111111111111111111111111',priceUsd:'0.01',liquidity:{usd:12000},volume:{h24:110000},txns:{h24:{buys:300,sells:100}}});
+ const token=scanner.state.tokens[mint],snapshot=token.history.at(-1);
+ assert.equal(token.volume.h1,9000);assert.equal(token.txns.h1.buys,80);
+ assert.equal(snapshot.volume1h,null);assert.equal(snapshot.volume24h,110000);assert.equal(snapshot.buys1h,null);
+ assert.equal(snapshot.fieldObservedAt.volumeH1,null);assert.equal(snapshot.fieldObservedAt.txnsH1,null);assert.equal(snapshot.fieldObservedAt.volumeM5,null);assert.equal(snapshot.fieldObservedAt.priceChangeM5,null);
+ assert.equal(token.marketFieldsObservedAt.volumeH1,oldAt);assert.equal(token.marketFieldsObservedAt.txnsH1,oldAt);
+ assert.ok(token.marketFieldsObservedAt.volumeH24);assert.ok(token.marketFieldsObservedAt.txnsH24);
+});
+test('pool RPC trade inspection records only confirmed signer-owned token swaps and deduplicates signatures',async()=>{
+ const scanner=make(),mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH',pool='Bcdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
+ const wallet='Ccdefghijkmnopqrstuvwxyz123456789ABCDEFGH',signature='rpc-pool-swap-1';
+ scanner.state.tokens[mint]={mint,geckoPoolAddress:pool,pairAddress:pool,liquidityUsd:12000,priceUsd:.01,analysis:{score:70}};
+ const tx={slot:123,blockTime:Math.floor(Date.now()/1000),transaction:{message:{accountKeys:[{pubkey:wallet,signer:true}],instructions:[{program:'jupiter',parsed:{type:'route'}}]}},meta:{err:null,preTokenBalances:[],postTokenBalances:[{mint,owner:wallet,uiTokenAmount:{uiAmountString:'250',amount:'250000000',decimals:6}}],innerInstructions:[],logMessages:[]}};
+ scanner.rpc=async(method)=>method==='getSignaturesForAddress'?[{signature,slot:123,blockTime:tx.blockTime}]:method==='getTransaction'?tx:null;
+ const first=await scanner.inspectPoolRpcTradeIntel(scanner.state.tokens[mint],{maxTransactions:4});
+ assert.equal(first.tradeCount,1);assert.equal(first.uniqueBuyers,1);assert.equal(first.buys,1);
+ assert.equal(scanner.state.tokens[mint].rpcTradeEvents[0].wallet,wallet);
+ scanner.state.tokens[mint].poolRpcTradeState.lastAttemptAt=new Date(Date.now()-60000).toISOString();
+ const second=await scanner.inspectPoolRpcTradeIntel(scanner.state.tokens[mint],{maxTransactions:4});
+ assert.equal(second.tradeCount,1);assert.equal(second.uniqueBuyers,1);
+});
+test('social evidence missing is explicit and prevents complete readiness without changing coverage',()=>{
+ const scanner=make();
+ const base={txns:{h1:{buys:80,sells:20}},volume:{h1:12000,h24:90000},liquidityUsd:30000,fdv:300000,ageHours:1,
+  history:[{at:1,liquidityUsd:25000,priceUsd:.00001},{at:2,liquidityUsd:30000,priceUsd:.000012}],
+  security:{checkedAt:new Date().toISOString(),holderEvidenceComplete:true,holderSampleReviewed:true,data:{isInitialized:true,isToken2022:false,freezeAuthorityActive:false,mintAuthorityActive:false,ownerConcentrationAvailable:true,top10HolderPercent:30,holderSampleAccounts:20,unknownOwnerAccounts:0,top10AccountPercent:30,holderSampleCoveragePct:90}}};
+ const without=scanner.score(base),withSocial=scanner.score({...base,socialIntel:{available:true,mentions1h:8,mentions24h:20,uniqueAuthors24h:10,uniqueChannels24h:4,uniqueSources24h:3,sentimentScore:75,evidence:{sampledPosts24h:12,uniqueAuthors24h:10,uniqueChannels24h:4,uniqueSources24h:3,duplicateSharePct:0,weakMatchSharePct:0}}});
+ assert.equal(without.coverage,withSocial.coverage);assert.ok(without.missingFactors.includes('social'));assert.notEqual(without.readiness,'complete');
+});
 test('score ne compte que les facteurs réellement disponibles',()=>{const s=make();const a=s.score({txns:{h1:{buys:70,sells:30}},volume:{h1:25000,h24:120000},liquidityUsd:45000,ageHours:3});assert.equal(a.coverage,22);assert.ok(a.score>=0&&a.score<=100);assert.equal(a.confidence,'low');});
 test('une freeze authority active bloque le token',()=>{const s=make();const a=s.score({txns:{h1:{buys:20,sells:10}},volume:{h1:5000,h24:20000},liquidityUsd:10000,ageHours:2,security:{checkedAt:new Date().toISOString(),data:{freezeAuthorityActive:true,mintAuthorityActive:false,top10HolderPercent:30}}});assert.equal(a.hardBlocked,true);assert.equal(a.risk,'high');});
 test('les preuves sociales multi-auteurs sont un facteur pondéré et augmentent la couverture sans double bonus',()=>{
@@ -474,10 +537,11 @@ test('alerts require fresh market data and the complete elite quality profile',a
  s.earlyBuyerExitIntel=()=>({alert:false,wallets:0,soldSharePct:0});
  const makeToken=(mint,at,overrides={})=>({
   mint,symbol:mint.toUpperCase(),pairAddress:'pair-'+mint,liquidityUsd:20000,fdv:300000,
-  volume:{h1:8000},txns:{h1:{buys:16,sells:4}},
+  volume:{m5:200,h1:8000,h24:45000},txns:{m5:{buys:4,sells:1},h1:{buys:16,sells:4}},priceChange:{m5:3},
+  marketObservedAt:new Date(at).toISOString(),marketFieldsObservedAt:{volume:new Date(at).toISOString(),volumeM5:new Date(at).toISOString(),priceChangeM5:new Date(at).toISOString(),volumeH1:new Date(at).toISOString(),volumeH24:new Date(at).toISOString(),txns:new Date(at).toISOString(),txnsH1:new Date(at).toISOString(),txnsH24:new Date(at).toISOString()},
   history:[{at}],security:{checkedAt:new Date(now-5*60_000).toISOString()},
   sellability:{status:'route_available',routeAvailable:true,requestedUsd:100,priceImpactPct:1,checkedAt:new Date(now-5*60_000).toISOString()},
-  tradeIntel:{checkedAt:new Date(now-5*60_000).toISOString(),lastTradeAt:new Date(now-5*60_000).toISOString(),tradeCount:30,uniqueBuyers:12,uniqueSellers:8,buyVolumeUsd:1200,sellVolumeUsd:700},
+  tradeIntel:{checkedAt:new Date(now-5*60_000).toISOString(),lastTradeAt:new Date(now-5*60_000).toISOString(),tradeCount:30,uniqueBuyers:12,uniqueSellers:8,buyVolumeUsd:1200,sellVolumeUsd:700,rpcConfirmedTradeCount:8,rpcConfirmedUniqueBuyers:12,rpcConfirmedUniqueSellers:8,rpcConfirmedBuyVolumeUsd:1200,rpcConfirmedSellVolumeUsd:700,rpcConfirmedVolumeCoverage:100,rpcConfirmedCheckedAt:new Date(now-5*60_000).toISOString(),rpcConfirmedLastTradeAt:new Date(now-5*60_000).toISOString()},
   analysis:{score:92,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,exitCapacityUsd:100,factors:{activity:90,momentum:82,market:90,liquidityQuality:90,executionQuality:85,security:95,demandQuality:78},flags:[]},
   ...overrides
  });

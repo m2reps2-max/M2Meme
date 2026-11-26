@@ -4,6 +4,10 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { hasVerifiedSwapInstruction, transactionInstructions } = require('../lib/wallet-transaction-evidence');
 
+test('recognizes PumpSwap and Pump.fun swaps from known program IDs and swap logs',()=>{
+ const pumpSwap='pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA',pumpFun='6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P';
+ for(const programId of [pumpSwap,pumpFun])assert.equal(hasVerifiedSwapInstruction({transaction:{message:{instructions:[{programId}]}},meta:{innerInstructions:[],logMessages:['Program log: Instruction: Buy']}}),true);
+});
 test('recognizes an explicitly parsed swap instruction', () => {
   assert.equal(hasVerifiedSwapInstruction({
     transaction: { message: { instructions: [{ program: 'jupiter', parsed: { type: 'route' } }] } },
