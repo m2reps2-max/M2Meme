@@ -38,6 +38,7 @@ test('serves the prepared Telegram preview before sendMessage has persisted its 
     tokenName: 'Test Coin',
     tokenSymbol: 'TEST',
     basePriceUsd: 0.001,
+    baselineObservedAt: BASE - 30000,
     publishedAt: BASE,
     lastCurrentPriceUsd: 0.001,
     lastCurrentObservedAt: BASE - 30000,
@@ -47,8 +48,8 @@ test('serves the prepared Telegram preview before sendMessage has persisted its 
   const pending = new Map([[previewId, seed]]);
   assert.equal(findTelegramPreviewEntry([], pending, previewId, BASE), seed);
   const metrics = buildTelegramPreviewMetrics(seed, BASE);
-  assert.equal(metrics.currentReturn, 0);
-  assert.equal(metrics.currentState, 'a jour');
+  assert.equal(metrics.currentReturn, null);
+  assert.equal(metrics.currentState, 'en attente');
   const saved = { ...seed, messageId: 42 };
   assert.equal(findTelegramPreviewEntry([saved], pending, previewId, BASE), saved,
     'the durable performance entry must take precedence once Telegram send succeeds');
@@ -196,7 +197,8 @@ test('renders a premium PNG and labels every unavailable milestone instead of le
   const { renderTelegramPerformancePng } = require('../lib/telegram-preview-image');
   const row = entry();
   const metrics = buildTelegramPreviewMetrics(row, BASE);
-  assert.equal(metrics.currentState, 'a jour');
+  assert.equal(metrics.currentState, 'en attente');
+  assert.equal(metrics.currentReturn, null);
   assert.equal(metrics.cells[0].value, 'EN ATTENTE');
   assert.equal(metrics.cells[5].value, 'EN ATTENTE');
   const png = renderTelegramPerformancePng(row, BASE);
