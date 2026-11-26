@@ -62,7 +62,7 @@ test('selection keeps an otherwise qualified +200% candidate in the best shortli
   txns:{m5:{buys:30,sells:8},h1:{buys:80,sells:20}},
   priceChange:{m5:4,h1:85,h24:210},
   history:[{at:now-30_000}],
-  tradeIntel:{checkedAt:new Date(now-5*60_000).toISOString(),tradeCount:30,uniqueBuyers:12,uniqueSellers:8,buyVolumeUsd:1200,sellVolumeUsd:700},
+  tradeIntel:{checkedAt:new Date(now-5*60_000).toISOString(),lastTradeAt:new Date(now-5*60_000).toISOString(),tradeCount:30,uniqueBuyers:12,uniqueSellers:8,buyVolumeUsd:1200,sellVolumeUsd:700},
   security:{checkedAt:new Date(now-5*60_000).toISOString()},
   sellability:{status:'route_available',routeAvailable:true,requestedUsd:100,priceImpactPct:1,checkedAt:new Date(now-5*60_000).toISOString()},
   analysis:{score:92,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,exitCapacityUsd:100,flags:[],factors:{activity:90,momentum:82,market:90,liquidityQuality:90,executionQuality:85,security:95,demandQuality:78}}
