@@ -111,7 +111,7 @@ function publicationDiagnosticsSnapshot(selection=scanner.selection()){
   diagnostics:selection.diagnostics||{},
   qualityGate:selection.qualityGate||{},
   telegram:{botConfigured:Boolean(bot),channelsConfigured:scanner.state.telegramChannelsConfigured===true,channelCount:channels.length,enabledChannels:channels.filter(row=>row.enabled!==false).length,outboxQueued:outbox.filter(row=>row.status==='queued').length,outboxFailed:outbox.filter(row=>row.status==='failed').length},
-  jupiterSellability:source?{ok:source.ok===true,at:source.at||null,checked:Number(source.checked)||0,status:source.status||null,error:source.error||null,mode:source.mode||null}:null
+  jupiterSellability:source?{ok:source.ok===true,at:source.at||null,checked:Number(source.checked)||0,status:source.status||null,reason:source.reason||null,priceUsd:source.priceUsd??null,decimals:source.decimals??null,error:source.error||null,mode:source.mode||null}:null
  };
 }
 app.get('/health/selection',(_q,r)=>r.json({ok:true,...publicationDiagnosticsSnapshot()}));
