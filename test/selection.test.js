@@ -34,7 +34,8 @@ test('best shortlist requires a fresh Jupiter quote and at least 50 USD of execu
  const missing=token(89,{sellability:null,analysis:{...token(89).analysis,exitCapacityUsd:null}});
  const stale=token(90,{sellability:{status:'route_available',routeAvailable:true,requestedUsd:100,priceImpactPct:1,checkedAt:new Date(NOW-20*60_000).toISOString()}});
  const insufficient=token(91,{analysis:{...token(91).analysis,exitCapacityUsd:40}});
- for(const candidate of [missing,stale,insufficient])assert.equal(buildSelection([candidate],NOW).best.length,0);
+ const unknownImpact=token(92,{sellability:{status:'route_available',routeAvailable:true,requestedUsd:100,priceImpactPct:null,checkedAt:new Date(NOW-5*60_000).toISOString()},analysis:{...token(92).analysis,exitCapacityUsd:null}});
+ for(const candidate of [missing,stale,insufficient,unknownImpact])assert.equal(buildSelection([candidate],NOW).best.length,0);
  assert.equal(buildSelection([missing],NOW).diagnostics.bestRejectedMissingExitQuote,1);
 });
 
