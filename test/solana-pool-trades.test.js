@@ -14,7 +14,8 @@ test('unverified transfers and non-signing token owners are not counted as pool 
  assert.deepEqual(extractPoolSwapEvents(swap,mint,{signature:'sig3'}),[]);
 });
 test('confirmed swap summary counts unique wallets once and leaves unknown USD volume null',()=>{
- const rows=[{wallet:'a',direction:'buy',signature:'1',at:'2026-11-26T00:00:00Z',volumeUsd:null},{wallet:'a',direction:'buy',signature:'2',at:'2026-11-26T00:00:01Z',volumeUsd:null},{wallet:'b',direction:'sell',signature:'3',at:'2026-11-26T00:00:02Z',volumeUsd:null}];
+ const base=Date.now()-3000;
+ const rows=[{wallet:'a',direction:'buy',signature:'1',at:new Date(base).toISOString(),volumeUsd:null},{wallet:'a',direction:'buy',signature:'2',at:new Date(base+1000).toISOString(),volumeUsd:null},{wallet:'b',direction:'sell',signature:'3',at:new Date(base+2000).toISOString(),volumeUsd:null}];
  const summary=summarizePoolSwapEvents(rows);
  assert.equal(summary.tradeCount,3);assert.equal(summary.uniqueBuyers,1);assert.equal(summary.uniqueSellers,1);assert.equal(summary.buyVolumeUsd,null);assert.equal(summary.volumeCoverage,0);
 });
