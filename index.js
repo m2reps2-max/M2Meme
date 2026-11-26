@@ -99,6 +99,23 @@ app.post('/internal/actions/archive-learning',(req,res)=>{
 app.get('/health',(_q,r)=>r.json({ok:true,service:'meme-radar',at:new Date().toISOString()}));
 app.get('/health/ready',(_q,r)=>{const health=scanner.healthSummary();const ready=health.checks.scanner.ok;r.status(ready?200:503).json({ok:ready,scannerRunning:scanner.running,at:new Date().toISOString()});});
 app.get('/api/system/health',(_q,r)=>r.json({ok:true,...scanner.healthSummary()}));
+
+function publicationDiagnosticsSnapshot(selection=scanner.selection()){
+ const channels=Array.isArray(scanner.state.telegramChannels)?scanner.state.telegramChannels:[];
+ const outbox=Array.isArray(scanner.state.telegramOutbox)?scanner.state.telegramOutbox:[];
+ const source=scanner.state.sources?.jupiterSellability||null;
+ return {
+  at:new Date().toISOString(),
+  scanner:{running:scanner.scanning===true,lastScanAt:scanner.state.lastScanAt||null,lastScanCompletedAt:scanner.state.lastScanCompletedAt||null,lastScanFailed:Boolean(scanner.state.lastScanError)},
+  selection:{considered:selection.considered||0,linked:selection.eligible||0,best:selection.best?.length||0,observe:selection.observe?.length||0,early:selection.early?.length||0},
+  diagnostics:selection.diagnostics||{},
+  qualityGate:selection.qualityGate||{},
+  telegram:{botConfigured:Boolean(bot),channelsConfigured:scanner.state.telegramChannelsConfigured===true,channelCount:channels.length,enabledChannels:channels.filter(row=>row.enabled!==false).length,outboxQueued:outbox.filter(row=>row.status==='queued').length,outboxFailed:outbox.filter(row=>row.status==='failed').length},
+  jupiterSellability:source?{ok:source.ok===true,at:source.at||null,checked:Number(source.checked)||0,status:source.status||null,error:source.error||null,mode:source.mode||null}:null
+ };
+}
+app.get('/health/selection',(_q,r)=>r.json({ok:true,...publicationDiagnosticsSnapshot()}));
+
 app.post('/api/login',loginLimit,(q,r)=>{if(!equal(q.body?.code||'',CODE)){q.bad();return r.status(401).json({error:'Code incorrect'});}q.good();r.cookie(COOKIE,session(),{httpOnly:true,secure:PROD,sameSite:'strict',path:'/',maxAge:SESSION_TTL});r.json({ok:true});});
 function escapePreviewMeta(value){
  return String(value??'').replace(/[&<>"']/g,character=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
@@ -163,8 +180,8 @@ app.patch('/api/scanner-settings',(q,r)=>{
 });
 
 app.get('/api/status',(_q,r)=>r.json(scanner.overview()));app.get('/api/overview',(_q,r)=>r.json(scanner.overview()));
-app.get('/api/selection',(_q,r)=>r.json({ok:true,...scanner.selection(),publicationDiagnostics:scanner.scannerPublicationDiagnostics()}));
-app.get('/api/publication-diagnostics',(_q,r)=>r.json({ok:true,...scanner.scannerPublicationDiagnostics()}));
+app.get('/api/selection',(_q,r)=>{const selection=scanner.selection();r.json({ok:true,...selection,publicationDiagnostics:publicationDiagnosticsSnapshot(selection)});});
+app.get('/api/publication-diagnostics',(_q,r)=>r.json({ok:true,...publicationDiagnosticsSnapshot()}));
 app.get('/api/launches',(_q,r)=>{const tokens=Object.values(scanner.state.tokens).filter(t=>t.launchSource||t.geckoPoolAddress).sort((a,b)=>Date.parse(b.launchCreatedAt||b.pumpCreatedAt||b.geckoPoolCreatedAt||b.firstSeenAt||0)-Date.parse(a.launchCreatedAt||a.pumpCreatedAt||a.geckoPoolCreatedAt||a.firstSeenAt||0)).slice(0,150);r.json({ok:true,tokens,sources:{pumpPortal:scanner.status().pumpPortal,launchpadDiscovery:scanner.status().launchpadDiscovery,geckoTerminal:scanner.status().geckoTerminal}});});
 app.get('/api/tokens',(q,r)=>{const tokens=scanner.tokens({sort:String(q.query.sort||'score'),limit:Math.min(250,Number(q.query.limit)||100),search:String(q.query.search||'').slice(0,80),includeBlocked:q.query.includeBlocked!=='false'});r.json({ok:true,tokens,count:tokens.length,lastScanAt:scanner.state.lastScanAt});});
 app.get('/api/token/:mint',async(q,r)=>{try{const token=await scanner.detail(q.params.mint);let social=null;if(q.query.social==='true')social=await scanner.social(q.params.mint).catch(e=>({configured:true,error:e.message}));r.json({ok:true,token,social});}catch(e){r.status(404).json({error:e.message});}});
