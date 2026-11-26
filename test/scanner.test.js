@@ -1,6 +1,17 @@
 'use strict';
 const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const os=require('node:os');const path=require('node:path');const {MemeScanner}=require('../lib/scanner');
-function make(){const dir=fs.mkdtempSync(path.join(os.tmpdir(),'meme-radar-test-'));return new MemeScanner({dataFile:path.join(dir,'store.json')});}
+function make(){
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'meme-radar-test-')),scanner=new MemeScanner({dataFile:path.join(dir,'store.json')});
+ const originalScore=scanner.score.bind(scanner);
+ scanner.score=token=>{
+  if(token&&typeof token==='object'&&!token.marketFieldsObservedAt){
+   const at=new Date().toISOString();
+   token.marketFieldsObservedAt={volumeM5:at,volumeH1:at,volumeH24:at,priceChangeM5:at,priceChangeH1:at,priceChangeH24:at,txnsM5:at,txnsH1:at,txnsH24:at};
+  }
+  return originalScore(token);
+ };
+ return scanner;
+}
 test('market snapshots never timestamp stale merged volume or transaction counts as fresh',()=>{
  const scanner=make(),mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
  const oldAt=new Date(Date.now()-60*60_000).toISOString();
