@@ -164,6 +164,16 @@ test('a failed 250 USD quote limits capacity but a valid 100 USD exit remains el
  assert.equal(qualifyOpportunity(candidate,{}).eligible,true);
 });
 
+test('supply-capped actual notional controls the small-exit failure gate',()=>{
+ const checkedAt=new Date().toISOString();
+ const candidate=eliteCandidate({sellabilityChecks:[
+  {requestedUsd:250,inputAmountUsd:40,status:'no_route',routeAvailable:false,checkedAt}
+ ]});
+ const result=qualifyOpportunity(candidate,{});
+ assert.equal(result.eligible,false);
+ assert.ok(result.reasons.some(reason=>/100 USD ou moins/.test(reason)));
+});
+
 test('high price impact at a small exit size blocks even when a larger quote is available',()=>{
  const checkedAt=new Date().toISOString();
  const candidate=eliteCandidate({sellabilityChecks:[
