@@ -43,6 +43,25 @@ test('an h24-only market update never refreshes stale h1 metrics or snapshots',(
  assert.equal(token.marketFieldsObservedAt.volumeH1,oldAt);assert.equal(token.marketFieldsObservedAt.txnsH1,oldAt);
  assert.ok(token.marketFieldsObservedAt.volumeH24);assert.ok(token.marketFieldsObservedAt.txnsH24);
 });
+test('pool RPC trade inspection processes the full bounded eight-transaction batch',async()=>{
+ const scanner=make(),mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH',pool='Bcdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
+ scanner.state.tokens[mint]={mint,geckoPoolAddress:pool,pairAddress:pool,liquidityUsd:12000,priceUsd:.01,analysis:{score:70}};
+ const signatures=Array.from({length:8},(_,i)=>({signature:`rpc-batch-signature-${i}`,slot:200+i,blockTime:Math.floor(Date.now()/1000)}));
+ const processed=[];
+ scanner.rpc=async(method,params)=>{
+  if(method==='getSignaturesForAddress')return signatures;
+  if(method==='getTransaction'){
+   processed.push(params[0]);
+   return {slot:200,blockTime:Math.floor(Date.now()/1000),transaction:{message:{accountKeys:[]}},meta:{err:null,preTokenBalances:[],postTokenBalances:[],innerInstructions:[],logMessages:[]}};
+  }
+  return null;
+ };
+ const result=await scanner.inspectPoolRpcTradeIntel(scanner.state.tokens[mint],{maxTransactions:8});
+ assert.equal(processed.length,8,'the internal processing cap must allow all eight requested transactions');
+ assert.equal(result.processedLastBatch,8);
+ assert.equal(scanner.state.tokens[mint].poolRpcTradeState.pending.length,0);
+});
+
 test('pool RPC trade inspection records only confirmed signer-owned token swaps and deduplicates signatures',async()=>{
  const scanner=make(),mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH',pool='Bcdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
  const wallet='Ccdefghijkmnopqrstuvwxyz123456789ABCDEFGH',signature='rpc-pool-swap-1';
