@@ -4,14 +4,25 @@ function make(){const dir=fs.mkdtempSync(path.join(os.tmpdir(),'meme-radar-test-
 test('market snapshots never timestamp stale merged volume or transaction counts as fresh',()=>{
  const scanner=make(),mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
  const oldAt=new Date(Date.now()-60*60_000).toISOString();
- scanner.state.tokens[mint]={mint,volume:{h1:9000,h24:50000},txns:{h1:{buys:80,sells:20}},marketFieldsObservedAt:{volume:oldAt,txns:oldAt}};
+ scanner.state.tokens[mint]={mint,volume:{h1:9000,h24:50000},txns:{h1:{buys:80,sells:20}},marketFieldsObservedAt:{volume:oldAt,volumeH1:oldAt,volumeH24:oldAt,txns:oldAt,txnsH1:oldAt,txnsH24:oldAt}};
  scanner.pair({chainId:'solana',baseToken:{address:mint,name:'Snapshot test',symbol:'SNAP'},pairAddress:'PoolSnapshot111111111111111111111111111111',priceUsd:'0.01',liquidity:{usd:12000},volume:{},txns:{}});
  const token=scanner.state.tokens[mint],snapshot=token.history.at(-1);
  assert.equal(token.volume.h1,9000);assert.equal(token.txns.h1.buys,80);
  assert.equal(snapshot.volume1h,null);assert.equal(snapshot.buys1h,null);
- assert.equal(snapshot.fieldObservedAt.volume,null);assert.equal(snapshot.fieldObservedAt.txns,null);
- assert.equal(token.marketFieldsObservedAt.volume,oldAt);assert.equal(token.marketFieldsObservedAt.txns,oldAt);
+ assert.equal(snapshot.fieldObservedAt.volume,null);assert.equal(snapshot.fieldObservedAt.volumeH1,null);assert.equal(snapshot.fieldObservedAt.txns,null);assert.equal(snapshot.fieldObservedAt.txnsH1,null);
+ assert.equal(token.marketFieldsObservedAt.volume,oldAt);assert.equal(token.marketFieldsObservedAt.volumeH1,oldAt);assert.equal(token.marketFieldsObservedAt.txns,oldAt);assert.equal(token.marketFieldsObservedAt.txnsH1,oldAt);
  assert.ok(token.marketFieldsObservedAt.priceUsd);
+});
+test('an h24-only market update never refreshes stale h1 metrics or snapshots',()=>{
+ const scanner=make(),mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH',oldAt=new Date(Date.now()-20*60_000).toISOString();
+ scanner.state.tokens[mint]={mint,volume:{h1:9000,h24:50000},txns:{h1:{buys:80,sells:20},h24:{buys:200,sells:50}},marketFieldsObservedAt:{volume:oldAt,volumeH1:oldAt,volumeH24:oldAt,txns:oldAt,txnsH1:oldAt,txnsH24:oldAt}};
+ scanner.pair({chainId:'solana',baseToken:{address:mint,name:'Partial update',symbol:'PART'},pairAddress:'PoolSnapshot111111111111111111111111111111',priceUsd:'0.01',liquidity:{usd:12000},volume:{h24:110000},txns:{h24:{buys:300,sells:100}}});
+ const token=scanner.state.tokens[mint],snapshot=token.history.at(-1);
+ assert.equal(token.volume.h1,9000);assert.equal(token.txns.h1.buys,80);
+ assert.equal(snapshot.volume1h,null);assert.equal(snapshot.volume24h,110000);assert.equal(snapshot.buys1h,null);
+ assert.equal(snapshot.fieldObservedAt.volumeH1,null);assert.equal(snapshot.fieldObservedAt.txnsH1,null);
+ assert.equal(token.marketFieldsObservedAt.volumeH1,oldAt);assert.equal(token.marketFieldsObservedAt.txnsH1,oldAt);
+ assert.ok(token.marketFieldsObservedAt.volumeH24);assert.ok(token.marketFieldsObservedAt.txnsH24);
 });
 test('pool RPC trade inspection records only confirmed signer-owned token swaps and deduplicates signatures',async()=>{
  const scanner=make(),mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH',pool='Bcdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
