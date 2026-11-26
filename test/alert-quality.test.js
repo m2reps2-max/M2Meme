@@ -9,6 +9,14 @@ test('fresh market snapshots preserve opportunity and danger levels',()=>{
  assert.equal(qualifyAlertLevel(token,'opportunity',85,now).level,'opportunity');
  assert.equal(qualifyAlertLevel(token,'danger',95,now).level,'danger');
 });
+test('marketObservedAt preserves freshness when the sampled history array is empty',()=>{
+ const now=10_000_000;
+ const fresh=assessAlertFreshness({history:[],marketObservedAt:new Date(now-60_000).toISOString()},now);
+ assert.equal(fresh.status,'fresh');
+ assert.equal(fresh.ageMinutes,1);
+ const stale=assessAlertFreshness({history:[],marketObservedAt:new Date(now-20*60_000).toISOString()},now);
+ assert.equal(stale.status,'stale');
+});
 test('slightly delayed market snapshots downgrade strong alerts to dashboard-only watch',()=>{
  const now=10_000_000,token={history:[{at:now-8*60_000}]};
  const result=qualifyAlertLevel(token,'danger',95,now);
