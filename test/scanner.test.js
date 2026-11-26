@@ -1122,6 +1122,17 @@ test('le statut expose la pression mémoire et le mode dégradé de l’archive'
 });
 
 
+test('runtime memory diagnostics expose the current budget and last scanner guard decision',()=>{
+ const scanner=make();
+ scanner.state.sources.scannerMemory={ok:false,at:'2026-11-26T22:00:00.000Z',reason:'Scan différé',heapMiB:430,externalMiB:10,rssMiB:450,maxHeapMiB:420,maxExternalMiB:120,maxRssMiB:720};
+ const memory=scanner.status().runtimeMemory;
+ assert.equal(memory.scannerGuard.ok,false);
+ assert.equal(memory.scannerGuard.heapMiB,430);
+ assert.equal(memory.scannerGuard.maxHeapMiB,420);
+ assert.ok(Number.isFinite(memory.current.rssMiB));
+ assert.ok(Number.isFinite(memory.current.heapMiB));
+});
+
 test('merged social intelligence carries the newest successful source timestamp',()=>{
  const s=make();
  const oldAt='2026-11-24T10:00:00.000Z';
