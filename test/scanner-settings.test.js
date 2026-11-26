@@ -88,7 +88,7 @@ test('scanner settings survive the existing state normalization and persistence 
   assert.equal(restored.scannerSettings.publishRisks, false);
 });
 
-test('external safety verification stays mandatory after loading old saved settings',()=>{
+test('external provider verification remains optional after loading old saved settings',()=>{
  assert.equal(normalizeScannerSettings({version:3,minScore:80}).requireExternalSecurity,false);
  assert.equal(normalizeState({...freshState(),scannerSettings:{version:3,minScore:80}}).scannerSettings.requireExternalSecurity,false);
 });
