@@ -113,7 +113,7 @@ test('diagnostics count DexScreener-only candidates as publication eligible with
   history:[{at:new Date(NOW-30_000).toISOString()}],
   security:{checkedAt:new Date(NOW-60_000).toISOString()},
   sellability:{status:'route_available',routeAvailable:true,requestedUsd:100,priceImpactPct:1,checkedAt:new Date(NOW-60_000).toISOString()},
-  analysis:{score:90,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,exitCapacityUsd:100,flags:[],factors:{activity:80,momentum:80,market:80,liquidityQuality:80,security:90}}
+  analysis:{score:90,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,exitCapacityUsd:100,flags:[],factors:{activity:80,momentum:80,market:80,liquidityQuality:80,executionQuality:85,security:90,demandQuality:78}}
  });
  const instance=scanner([token]);
  instance.state.scannerSettings.requireComprehensiveSecurity=false;
