@@ -25,6 +25,25 @@ test('multi-owner transaction counts once and never duplicates its USD notional'
  const summary=summarizePoolSwapEvents(rows);
  assert.equal(summary.tradeCount,1);assert.equal(summary.buys,1);assert.equal(summary.uniqueBuyers,2);assert.equal(summary.buyVolumeUsd,25);assert.equal(summary.volumeCoverage,100);
 });
+test('pool RPC diagnostics expose freshness, per-pool buyers and bounded pending state',()=>{
+ const {summarizePoolRpcCoverage}=require('../lib/solana-pool-trades');
+ const now=Date.now();
+ const result=summarizePoolRpcCoverage([
+  {mint:'mint-a',symbol:'A',analysis:{score:72},poolRpcTradeIntel:{checkedAt:new Date(now-60000).toISOString(),lastTradeAt:new Date(now-30000).toISOString(),tradeCount:4,uniqueBuyers:3,uniqueSellers:1,buyVolumeUsd:12,sellVolumeUsd:4,volumeCoverage:75,processedLastBatch:6,failedLastBatch:1},poolRpcTradeState:{pending:[{signature:'pending'}]}},
+  {mint:'mint-b',poolRpcTradeIntel:{checkedAt:new Date(now-20*60000).toISOString(),lastTradeAt:null,tradeCount:0,uniqueBuyers:0},poolRpcTradeState:{gapDetected:true}}
+ ],now);
+ assert.equal(result.inspectedPools,2);
+ assert.equal(result.freshChecks10m,1);
+ assert.equal(result.poolsWithRecentSwaps,1);
+ assert.equal(result.confirmedSwapsByPoolSum,4);
+ assert.equal(result.uniqueBuyersByPool,3);
+ assert.equal(result.pendingTransactions,1);
+ assert.equal(result.failedTransactionsLastBatch,1);
+ assert.equal(result.poolsWithGaps,1);
+ assert.equal(result.topPools[0].mint,'mint-a');
+ assert.equal(result.topPools[1].buyVolumeUsd,null,'unknown USD volume must stay null, not become zero');
+ assert.equal(result.topPools[1].confirmedSwaps,0);
+});
 test('confirmed swap summary counts unique wallets once and leaves unknown USD volume null',()=>{
  const base=Date.now()-3000;
  const rows=[{wallet:'a',direction:'buy',signature:'1',at:new Date(base).toISOString(),volumeUsd:null},{wallet:'a',direction:'buy',signature:'2',at:new Date(base+1000).toISOString(),volumeUsd:null},{wallet:'b',direction:'sell',signature:'3',at:new Date(base+2000).toISOString(),volumeUsd:null}];
