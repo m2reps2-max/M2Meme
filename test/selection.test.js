@@ -29,6 +29,15 @@ test('selection ranks the full input and returns no more than five best candidat
  assert.equal(result.best[0].freshness.marketAgeMinutes,1);
 });
 
+test('confirmed early-buyer exits keep a candidate in watch rather than best',()=>{
+ const candidate=token(91,{earlyBuyerExitSummary:{alert:true,wallets:2,soldSharePct:27.5}});
+ const result=buildSelection([candidate],NOW);
+ assert.equal(result.best.length,0);
+ assert.deepEqual(result.observe.map(x=>x.mint),['mint-91']);
+ assert.equal(result.diagnostics.bestRejectedEarlyBuyerExits,1);
+ assert.equal(result.qualityGate.bestRequiresNoConfirmedEarlyBuyerExits,true);
+});
+
 test('watch candidates are separate, capped at five and clearly retain partial risk',()=>{
  const items=Array.from({length:7},(_,i)=>token(i,{
   liquidityUsd:7000,volume:{h1:250},txns:{h1:{buys:3,sells:2}},
