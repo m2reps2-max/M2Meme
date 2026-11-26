@@ -47,6 +47,7 @@ test('best shortlist requires fresh verified net demand and distinct buyers',()=
   token(804,{tradeIntel:{...base.tradeIntel,uniqueBuyers:4}}),
   token(805,{tradeIntel:{...base.tradeIntel,buyVolumeUsd:null}}),
   token(806,{tradeIntel:{...base.tradeIntel,buyVolumeUsd:500,sellVolumeUsd:900}}),
+  token(810,{tradeIntel:{...base.tradeIntel,buyVolumeUsd:800,sellVolumeUsd:1000}}),
   token(807,{tradeIntel:{...base.tradeIntel,checkedAt:new Date(NOW-20*60_000).toISOString()}}),
   token(808,{analysis:{...base.analysis,factors:{...base.analysis.factors,demandQuality:null}}}),
   token(809,{analysis:{...base.analysis,factors:{...base.analysis.factors,executionQuality:null}}})
