@@ -282,7 +282,7 @@ test('Helius pool refresh does not let never-inspected new tokens starve stale c
  scanner.inspectPoolRpcTradeIntel=async token=>{inspected.push(token.mint);return null;};
  await scanner.refreshCandidateIntelligence();
  assert.equal(inspected[0],'stale-rpc');
- assert.equal(inspected.length,6);
+ assert.equal(inspected.length,8);
 });
 
 test('Jupiter refresh queue follows the configured score floor without changing publication thresholds',()=>{
