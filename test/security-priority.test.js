@@ -26,11 +26,18 @@ test('security queue is deterministic, bounded and excludes fresh or unlinked to
 });
 
 
-test('never-inspected linked tokens are prioritized over stale refreshes',()=>{
+test('a high-score never-inspected token outranks an old low-score token',()=>{
  const now=50_000_000;
- const neverChecked={mint:'never-checked',pairAddress:'new-pool',analysis:{score:65}};
+ const neverChecked={mint:'never-checked-high',pairAddress:'new-pool',analysis:{score:95}};
+ const staleLow={mint:'stale-low',pairAddress:'old-pool',analysis:{score:65},security:{checkedAt:new Date(now-30*3600000).toISOString()}};
+ assert.deepEqual(rankSecurityCandidates([staleLow,neverChecked],now,1).map(x=>x.mint),['never-checked-high']);
+});
+
+test('a stale high-score candidate outranks never-inspected low-score tokens',()=>{
+ const now=55_000_000;
+ const neverChecked={mint:'never-checked-low',pairAddress:'new-pool',analysis:{score:20}};
  const staleHigh={mint:'stale-high',pairAddress:'old-pool',analysis:{score:95},security:{checkedAt:new Date(now-2*3600000).toISOString()}};
- assert.deepEqual(rankSecurityCandidates([staleHigh,neverChecked],now,1).map(x=>x.mint),['never-checked']);
+ assert.deepEqual(rankSecurityCandidates([neverChecked,staleHigh],now,1).map(x=>x.mint),['stale-high']);
 });
 
 
