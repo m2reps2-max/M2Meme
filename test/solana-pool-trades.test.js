@@ -41,6 +41,8 @@ test('pool RPC diagnostics expose freshness, per-pool buyers and bounded pending
  assert.equal(result.failedTransactionsLastBatch,1);
  assert.equal(result.poolsWithGaps,1);
  assert.equal(result.topPools[0].mint,'mint-a');
+ assert.equal(result.topPools[1].buyVolumeUsd,null,'unknown USD volume must stay null, not become zero');
+ assert.equal(result.topPools[1].confirmedSwaps,0);
 });
 test('confirmed swap summary counts unique wallets once and leaves unknown USD volume null',()=>{
  const base=Date.now()-3000;
