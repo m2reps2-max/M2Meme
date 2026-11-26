@@ -260,6 +260,9 @@ test('publication diagnostics expose score, quality, freshness, missing factors,
  assert.match(js,/publicationDiscovery\.qualifiedButMissingFactors/);
  assert.match(js,/publicationStatus\.botRunning/);
  assert.match(js,/publicationStatus\.outbox\?\.failed/);
+ assert.match(server,/securityPublicationReady/);
+ assert.match(server,/tradeCount:trade\.tradeCount/);
+ assert.match(server,/lastTradeAgeMinutes/);
 });
 
 
