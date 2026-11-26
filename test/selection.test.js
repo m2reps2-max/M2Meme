@@ -11,10 +11,10 @@ function token(i,overrides={}){
   history:[{at:NOW-60_000,priceUsd:1}],
   security:{checkedAt:new Date(NOW-5*60_000).toISOString()},
   sellability:{status:'route_available',routeAvailable:true,requestedUsd:100,priceImpactPct:1,checkedAt:new Date(NOW-5*60_000).toISOString()},
-  tradeIntel:{checkedAt:new Date(NOW-5*60_000).toISOString()},
+  tradeIntel:{checkedAt:new Date(NOW-5*60_000).toISOString(),tradeCount:30,uniqueBuyers:12,uniqueSellers:8,buyVolumeUsd:1200,sellVolumeUsd:700},
   analysis:{
    score:90,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,exitCapacityUsd:100,
-   factors:{activity:80,momentum:75,market:82,liquidityQuality:78,security:95}
+   factors:{activity:80,momentum:75,market:82,liquidityQuality:78,executionQuality:85,security:95,demandQuality:78}
   },
   ...overrides
  };
@@ -37,6 +37,25 @@ test('best shortlist requires a fresh Jupiter quote and at least 50 USD of execu
  const unknownImpact=token(92,{sellability:{status:'route_available',routeAvailable:true,requestedUsd:100,priceImpactPct:null,checkedAt:new Date(NOW-5*60_000).toISOString()},analysis:{...token(92).analysis,exitCapacityUsd:null}});
  for(const candidate of [missing,stale,insufficient,unknownImpact])assert.equal(buildSelection([candidate],NOW).best.length,0);
  assert.equal(buildSelection([missing],NOW).diagnostics.bestRejectedMissingExitQuote,1);
+});
+
+test('best shortlist requires fresh verified net demand and distinct buyers',()=>{
+ const base=token(801);
+ const cases=[
+  token(802,{tradeIntel:null}),
+  token(803,{tradeIntel:{...base.tradeIntel,tradeCount:19}}),
+  token(804,{tradeIntel:{...base.tradeIntel,uniqueBuyers:4}}),
+  token(805,{tradeIntel:{...base.tradeIntel,buyVolumeUsd:null}}),
+  token(806,{tradeIntel:{...base.tradeIntel,buyVolumeUsd:500,sellVolumeUsd:900}}),
+  token(807,{tradeIntel:{...base.tradeIntel,checkedAt:new Date(NOW-20*60_000).toISOString()}}),
+  token(808,{analysis:{...base.analysis,factors:{...base.analysis.factors,demandQuality:null}}}),
+  token(809,{analysis:{...base.analysis,factors:{...base.analysis.factors,executionQuality:null}}})
+ ];
+ for(const candidate of cases) assert.equal(buildSelection([candidate],NOW).best.length,0,candidate.mint);
+ const valid=buildSelection([base],NOW);
+ assert.equal(valid.best.length,1);
+ assert.equal(valid.qualityGate.bestRequiresVerifiedDemand,true);
+ assert.equal(valid.qualityGate.bestMinimumUniqueBuyers,5);
 });
 
 test('confirmed early-buyer exits keep a candidate in watch rather than best',()=>{
