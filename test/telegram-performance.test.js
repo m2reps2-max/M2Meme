@@ -147,7 +147,20 @@ test('does not mix prices from a different market provider into the same perform
   assert.equal(row.lastCurrentPriceUsd, 0.001, 'a different provider must not replace the publication source price');
 });
 
-test('marks a missed milestone unavailable instead of inventing a return', () => {
+test('uses the historical observation inside a milestone window instead of marking it missed from a later latest price', () => {
+  const row = entry();
+  const latest = token(0.0018, BASE + 66 * 60 * 1000);
+  latest.history = [
+    { at: BASE + 62 * 60 * 1000, source: 'dexscreener', priceUsd: 0.0015 }
+  ];
+  collectTelegramPerformanceUpdates([row], { [mint]: latest }, BASE + 66 * 60 * 1000);
+  assert.equal(row.horizons['1h'].priceUsd, 0.0015);
+  assert.equal(row.horizons['1h'].returnPct, 50);
+  assert.equal(row.horizons['1h'].observedAt, BASE + 62 * 60 * 1000);
+  assert.equal(row.horizons['2h'], undefined);
+});
+
+test('marks a missed milestone unavailable only when no historical observation exists in its capture window', () => {
   const row = entry();
   collectTelegramPerformanceUpdates([row], { [mint]: token(0.002, BASE + 66 * 60 * 1000) }, BASE + 66 * 60 * 1000);
   assert.deepEqual(row.horizons['1h'], { missed: true });
