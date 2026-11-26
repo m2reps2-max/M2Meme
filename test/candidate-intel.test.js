@@ -8,7 +8,7 @@ const os=require('node:os');
 const path=require('node:path');
 
 test('verified pool RPC buyers take precedence over an incomplete Gecko wallet sample',()=>{
- const result=evaluateTradeIntel({checkedAt:new Date().toISOString(),tradeCount:1,uniqueBuyers:0,buyVolumeUsd:0,sellVolumeUsd:0,rpcConfirmedTradeCount:8,rpcConfirmedUniqueBuyers:6,rpcConfirmedUniqueSellers:2,rpcConfirmedCheckedAt:new Date().toISOString()});
+ const result=evaluateTradeIntel({checkedAt:new Date().toISOString(),tradeCount:1,uniqueBuyers:0,buyVolumeUsd:0,sellVolumeUsd:0,rpcConfirmedTradeCount:8,rpcConfirmedUniqueBuyers:6,rpcConfirmedUniqueSellers:2,rpcConfirmedCheckedAt:new Date().toISOString(),rpcConfirmedLastTradeAt:new Date().toISOString()});
  assert.ok(result.score!==null);assert.ok(result.score>50);
  assert.equal(result.confidence,'small_sample');
 });
