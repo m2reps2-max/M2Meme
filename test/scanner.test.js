@@ -197,9 +197,9 @@ test('Helius pool sampling refreshes five ranked pools per scan with a bounded s
   return null;
  };
  await scanner.refreshCandidateIntelligence();
- assert.equal(inspected.length,5);
- assert.deepEqual(inspected.map(row=>row.mint),['rpc-pool-0','rpc-pool-1','rpc-pool-2','rpc-pool-3','rpc-pool-4']);
- assert.ok(inspected.every(row=>row.options.persist===false&&row.options.maxTransactions===6));
+ assert.equal(inspected.length,6);
+ assert.deepEqual(inspected.map(row=>row.mint),['rpc-pool-0','rpc-pool-1','rpc-pool-2','rpc-pool-3','rpc-pool-4','rpc-pool-5']);
+ assert.ok(inspected.every(row=>row.options.persist===false&&row.options.maxTransactions===8));
 });
 
 test('Jupiter refresh prioritizes stale checked tokens over newly discovered unquoted tokens',()=>{
