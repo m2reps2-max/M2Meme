@@ -181,7 +181,7 @@ test('trade intelligence rotates through the oldest unchecked pools instead of s
  assert.deepEqual(checked,['oldest','second-oldest']);
 });
 
-test('Helius pool sampling refreshes five ranked pools per scan with a bounded six-transaction batch',async()=>{
+test('Helius pool sampling refreshes six ranked pools per scan with a bounded eight-transaction batch',async()=>{
  const scanner=make();
  scanner.lastAutoCreatorFundingAt=Date.now();
  scanner.state.scannerSettings={minScore:80};
@@ -232,7 +232,7 @@ test('Helius pool refresh does not let never-inspected new tokens starve stale c
  scanner.inspectPoolRpcTradeIntel=async token=>{inspected.push(token.mint);return null;};
  await scanner.refreshCandidateIntelligence();
  assert.equal(inspected[0],'stale-rpc');
- assert.equal(inspected.length,5);
+ assert.equal(inspected.length,6);
 });
 
 test('Jupiter refresh queue follows the configured score floor without changing publication thresholds',()=>{
