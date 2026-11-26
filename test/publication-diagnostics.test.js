@@ -9,7 +9,7 @@ function makeToken(overrides = {}) {
   return {
     mint: 'mint-1', symbol: 'BAD',
     pairAddress: 'pool-1', liquidityUsd: 1200, fdv: 100000,
-    volume: { h1: 200 }, txns: { h1: { buys: 2, sells: 8 } },
+    volume: { m5: 100, h1: 200, h24: 5000 }, txns: { m5: { buys: 1, sells: 2 }, h1: { buys: 2, sells: 8 } }, priceChange:{m5:2},
     marketObservedAt:snapshotAt,marketFieldsObservedAt:{volume:snapshotAt,volumeH1:snapshotAt,volumeH24:snapshotAt,txns:snapshotAt,txnsH1:snapshotAt,txnsH24:snapshotAt},
     history: [{ at: snapshotAt }],
     analysis: { score: 84, coverage: 70, risk: 'partial', hardBlocked: false, flags: [] },
