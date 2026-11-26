@@ -707,7 +707,7 @@ test('les données absentes d’une paire DexScreener ne remplacent pas les mét
 test('un token pré-marché explique explicitement sa couverture de 5 pour cent',()=>{
  const s=make();
  const a=s.score({mint:'NewLaunch11111111111111111111111111111111',launchSource:'Pump.fun',pumpCreatedAt:new Date().toISOString(),launchAgeHours:0.02});
- assert.equal(a.coverage,5);
+ assert.equal(a.coverage,0,'l’ancien bonus d’ancienneté ne constitue pas une preuve');
  assert.equal(a.readiness,'awaiting_market');
  assert.equal(a.readinessLabel,'Pré-marché · pool absent');
  assert.ok(a.readinessReason.includes('uniquement au timing'));
