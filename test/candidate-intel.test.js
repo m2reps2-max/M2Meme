@@ -7,6 +7,11 @@ const fs=require('node:fs');
 const os=require('node:os');
 const path=require('node:path');
 
+test('verified pool RPC buyers take precedence over an incomplete Gecko wallet sample',()=>{
+ const result=evaluateTradeIntel({checkedAt:new Date().toISOString(),tradeCount:1,uniqueBuyers:0,buyVolumeUsd:0,sellVolumeUsd:0,rpcConfirmedTradeCount:8,rpcConfirmedUniqueBuyers:6,rpcConfirmedUniqueSellers:2,rpcConfirmedCheckedAt:new Date().toISOString()});
+ assert.ok(result.score!==null);assert.ok(result.score>50);
+ assert.ok(result.reasons.some(reason=>reason.includes('acheteurs distincts')));
+});
 test('trade intelligence rewards broad buying but penalizes concentration and sell pressure',()=>{
   const healthy=evaluateTradeIntel({tradeCount:40,buyVolumeUsd:8000,sellVolumeUsd:2000,uniqueBuyers:18,top5BuyerSharePct:35,sameBlockBuyerClusters:0,earlyWindow:{complete:true,uniqueBuyers:8},buys:30,sells:10});
   const risky=evaluateTradeIntel({tradeCount:40,buyVolumeUsd:2000,sellVolumeUsd:8000,uniqueBuyers:3,top5BuyerSharePct:90,sameBlockBuyerClusters:2,earlyWindow:{complete:false,uniqueBuyers:0},buys:10,sells:30});
