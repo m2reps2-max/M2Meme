@@ -11,7 +11,7 @@ const {
   resolveArchiveScanBatch
 } = require('../lib/discovery-capacity');
 
-test('active token cache defaults to 2500 and remains bounded to 1200..5000', () => {
+test('active token cache defaults to 5000 and remains bounded to 1200..5000', () => {
   assert.equal(DEFAULT_HOT_TOKEN_LIMIT, 5000);
   assert.equal(resolveHotTokenLimit(undefined), 5000);
   assert.equal(resolveHotTokenLimit('3500'), 3500);
