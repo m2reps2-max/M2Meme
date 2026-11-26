@@ -63,6 +63,13 @@ test('manual thresholds switch the selected preset to custom', () => {
   assert.equal(settings.preset, 'custom');
 });
 
+test('complete holder security cannot be disabled for the best shortlist',()=>{
+ const fromOld=normalizeScannerSettings({version:3,requireComprehensiveSecurity:false});
+ assert.equal(fromOld.requireComprehensiveSecurity,true);
+ const patched=applyScannerSettingsPatch(defaultScannerSettings({}),{requireComprehensiveSecurity:false});
+ assert.equal(patched.requireComprehensiveSecurity,true);
+});
+
 test('publication toggles are independently configurable', () => {
   const settings = applyScannerSettingsPatch(defaultScannerSettings({}), { publishOpportunities: false, publishRisks: true });
   assert.equal(settings.publishOpportunities, false);
