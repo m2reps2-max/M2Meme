@@ -432,8 +432,9 @@ test('alerts require fresh market data and the complete elite quality profile',a
   mint,symbol:mint.toUpperCase(),pairAddress:'pair-'+mint,liquidityUsd:20000,fdv:300000,
   volume:{h1:8000},txns:{h1:{buys:16,sells:4}},
   history:[{at}],security:{checkedAt:new Date(now-5*60_000).toISOString()},
+  sellability:{status:'route_available',routeAvailable:true,requestedUsd:100,priceImpactPct:1,checkedAt:new Date(now-5*60_000).toISOString()},
   tradeIntel:{checkedAt:new Date(now-5*60_000).toISOString()},
-  analysis:{score:92,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,factors:{activity:90,momentum:82,market:90,liquidityQuality:90,security:95},flags:[]},
+  analysis:{score:92,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,exitCapacityUsd:100,factors:{activity:90,momentum:82,market:90,liquidityQuality:90,security:95},flags:[]},
   ...overrides
  });
  s.state.tokens={
