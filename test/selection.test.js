@@ -137,7 +137,7 @@ test('best shortlist requires a measured momentum factor instead of allowing a h
 });
 
 test('best shortlist keeps candidates when all five independent core factors are measured',()=>{
- const candidate=token(89,{analysis:{...token(89).analysis,coverage:75,factors:{activity:85,momentum:72,market:80,liquidityQuality:78,security:90}}});
+ const candidate=token(89,{analysis:{...token(89).analysis,coverage:0,factors:{activity:85,momentum:72,market:80,liquidityQuality:78,security:90}}});
  const result=buildSelection([candidate],NOW);
  assert.equal(result.best.length,1);
  assert.equal(result.best[0].mint,'mint-89');
