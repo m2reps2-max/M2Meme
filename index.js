@@ -293,7 +293,7 @@ let lastMemoryWarningAt=0;
 memoryLogTimer=setInterval(()=>{
  const m=process.memoryUsage(),rssMiB=Math.round(m.rss/1048576),heapUsedMiB=Math.round(m.heapUsed/1048576);
  console.log('[process] memory',{rssMiB,heapUsedMiB,heapTotalMiB:Math.round(m.heapTotal/1048576),externalMiB:Math.round(m.external/1048576),uptimeSeconds:Math.round(process.uptime())});
- if(rssMiB>=220&&Date.now()-lastMemoryWarningAt>=30000){lastMemoryWarningAt=Date.now();console.warn('[process] memory pressure warning: RSS reached',rssMiB,'MiB (hosting limit may be 256 MiB)');}
+ if(rssMiB>=700&&Date.now()-lastMemoryWarningAt>=30000){lastMemoryWarningAt=Date.now();console.warn('[process] memory pressure warning: RSS reached',rssMiB,'MiB (safety threshold 700 MiB; runtime memory guard starts deferring background work above its 720 MiB RSS budget)');}
 },10000);
 memoryLogTimer.unref();
 const server=app.listen(PORT,'0.0.0.0',()=>{console.log('MEME RADAR listening on '+PORT);scanner.start().catch(e=>console.error('[scanner]',e.message));if(bot){console.log('[telegram] Starting grammY long polling…');bot.start({allowed_updates:['message','my_chat_member']}).then(()=>console.log('[telegram] Polling stopped cleanly')).catch(e=>console.error('[telegram polling] Startup/runtime failure:',e.message));}else{console.warn('[telegram] Bot disabled: set TELEGRAM_BOT_TOKEN (or legacy BOT_TOKEN) in the hosting environment.');}});server.requestTimeout=20000;server.headersTimeout=25000;server.keepAliveTimeout=5000;
