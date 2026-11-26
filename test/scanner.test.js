@@ -155,7 +155,7 @@ test('Jupiter refreshes high-quality live tokens even when strict Best/Observe s
   analysis:{score:76,securityPublicationReady:true,securityComprehensive:true,hardBlocked:false,risk:'medium'}};
  const noSecurity={...eligible,mint:'no-security',analysis:{...eligible.analysis,securityPublicationReady:false,securityComprehensive:false}};
  const blocked={...eligible,mint:'blocked',analysis:{...eligible.analysis,hardBlocked:true}};
- const lowScore={...eligible,mint:'low-score',analysis:{...eligible.analysis,score:67}};
+ const lowScore={...eligible,mint:'low-score',analysis:{...eligible.analysis,score:59}};
  const noPool={...eligible,mint:'no-pool',pairAddress:null};
  scanner.state.tokens={eligible,noSecurity,blocked,lowScore,noPool};
  scanner.selection=()=>({best:[],observe:[]});
