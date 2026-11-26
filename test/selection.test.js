@@ -10,9 +10,10 @@ function token(i,overrides={}){
   volume:{h1:6000},txns:{h1:{buys:15,sells:5}},
   history:[{at:NOW-60_000,priceUsd:1}],
   security:{checkedAt:new Date(NOW-5*60_000).toISOString()},
+  sellability:{status:'route_available',routeAvailable:true,requestedUsd:100,priceImpactPct:1,checkedAt:new Date(NOW-5*60_000).toISOString()},
   tradeIntel:{checkedAt:new Date(NOW-5*60_000).toISOString()},
   analysis:{
-   score:90,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,
+   score:90,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,exitCapacityUsd:100,
    factors:{activity:80,momentum:75,market:82,liquidityQuality:78,security:95}
   },
   ...overrides
@@ -27,6 +28,14 @@ test('selection ranks the full input and returns no more than five best candidat
  assert.equal(result.best.length,5);
  assert.deepEqual(result.best.map(x=>x.mint),['mint-8','mint-7','mint-6','mint-5','mint-4']);
  assert.equal(result.best[0].freshness.marketAgeMinutes,1);
+});
+
+test('best shortlist requires a fresh Jupiter quote and at least 50 USD of executable capacity',()=>{
+ const missing=token(89,{sellability:null,analysis:{...token(89).analysis,exitCapacityUsd:null}});
+ const stale=token(90,{sellability:{status:'route_available',routeAvailable:true,requestedUsd:100,priceImpactPct:1,checkedAt:new Date(NOW-20*60_000).toISOString()}});
+ const insufficient=token(91,{analysis:{...token(91).analysis,exitCapacityUsd:40}});
+ for(const candidate of [missing,stale,insufficient])assert.equal(buildSelection([candidate],NOW).best.length,0);
+ assert.equal(buildSelection([missing],NOW).diagnostics.bestRejectedMissingExitQuote,1);
 });
 
 test('confirmed early-buyer exits keep a candidate in watch rather than best',()=>{
