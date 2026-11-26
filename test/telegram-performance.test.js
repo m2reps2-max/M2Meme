@@ -7,6 +7,7 @@ const {
   normalizeTelegramPerformance,
   createTelegramPerformanceEntry,
   resolveTelegramPublicationBaseline,
+  selectTelegramPerformanceMints,
   collectTelegramPerformanceUpdates,
   formatTelegramPerformanceMessage,
   buildTelegramPreviewUrl,
@@ -68,12 +69,12 @@ test('recovers a fresh publication baseline from the immutable alert snapshot wh
   const snapshot = {
     priceUsd: 0.0025,
     marketObservedAt: new Date(BASE - 45000).toISOString(),
-    marketObservationSource: 'geckoterminal'
+    marketObservationSource: 'dexscreener'
   };
   assert.deepEqual(resolveTelegramPublicationBaseline(null, snapshot, BASE), {
     priceUsd: 0.0025,
     observedAt: BASE - 45000,
-    source: 'geckoterminal'
+    source: 'dexscreener'
   });
 });
 
@@ -88,6 +89,25 @@ test('prefers the newest fresh observation and rejects stale fallback snapshots'
   assert.equal(resolveTelegramPublicationBaseline(null, {
     ...snapshot, marketObservedAt: new Date(BASE - 6 * 60 * 1000).toISOString()
   }, BASE), null);
+  assert.equal(resolveTelegramPublicationBaseline(null, {
+    ...snapshot, marketObservationSource: 'geckoterminal'
+  }, BASE), null, 'publication tracking must start from the canonical DexScreener price series');
+});
+
+test('recovers the latest fresh DexScreener price when the live token view was overwritten by GeckoTerminal', () => {
+  const tokenView = {
+    ...token(0.004, BASE - 10 * 60 * 1000),
+    marketObservationSource: 'geckoterminal',
+    history: [
+      { at: BASE - 90 * 1000, source: 'dexscreener', priceUsd: 0.0017 },
+      { at: BASE - 30 * 1000, source: 'geckoterminal', priceUsd: 0.004 }
+    ]
+  };
+  assert.deepEqual(resolveTelegramPublicationBaseline(tokenView, null, BASE), {
+    priceUsd: 0.0017, observedAt: BASE - 90 * 1000, source: 'dexscreener'
+  });
+  assert.equal(resolveTelegramPublicationBaseline({ ...token(0.004, BASE - 30 * 1000), marketObservationSource: 'geckoterminal' }, null, BASE), null,
+    'a fresh Gecko-only quote must not become a Telegram performance baseline');
 });
 
 test('captures a lightweight publication baseline without storing a price history', () => {
@@ -100,6 +120,21 @@ test('captures a lightweight publication baseline without storing a price histor
     mint, chatId: '-1001234567890', messageId: 43, originalMessage: 'x',
     token: token(0.001, BASE - 10 * 60 * 1000), publishedAt: BASE
   }), null, 'stale market prices must not become publication baselines');
+});
+
+test('prioritizes unique recently published mints with an imminent milestone and stale market price', () => {
+  const first = entry();
+  const second = { ...entry(), id: 'other-chat:43', mint: '9TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Hpump', publishedAt: BASE - 55 * 60 * 1000 };
+  const complete = { ...entry(), id: 'complete:44', mint: 'ATbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Hpump', publishedAt: BASE - 25 * 60 * 60 * 1000, horizons: Object.fromEntries(HORIZONS.map(h => [h.key, { missed: true }])) };
+  const tokens = {
+    [mint]: { ...token(0.001, BASE - 20 * 60 * 1000), pairAddress: 'pool-a' },
+    [second.mint]: { ...token(0.002, BASE - 5 * 60 * 1000), pairAddress: 'pool-b' },
+    [complete.mint]: { ...token(0.003, BASE - 2 * 60 * 1000), pairAddress: 'pool-c' }
+  };
+  const now = BASE + 60 * 60 * 1000;
+  const selected = selectTelegramPerformanceMints([first, second, complete], tokens, now, 10);
+  assert.deepEqual(selected, [mint, second.mint]);
+  assert.equal(new Set(selected).size, selected.length);
 });
 
 test('records six milestone returns from the scanner current market snapshots', () => {
@@ -128,7 +163,7 @@ test('continues tracking the publication provider when the token latest source s
   assert.equal(selectPerformanceMarketObservation(latestGecko, 'dexscreener', BASE + 3 * 60 * 1000).priceUsd, 0.0014);
 });
 
-test('refreshes current performance every five minutes instead of once per hour', () => {
+test('refreshes current performance every two minutes instead of once per hour', () => {
   const row = entry();
   for (const horizon of HORIZONS) row.horizons[horizon.key] = { priceUsd: 0.001, observedAt: BASE + horizon.offsetMs, returnPct: 0 };
   const firstAt = BASE + 60 * 1000;
@@ -283,12 +318,12 @@ test('refreshes the card once when its last market snapshot becomes stale', () =
   assert.equal(collectTelegramPerformanceUpdates([row], staleToken, staleAt + 60 * 1000).length, 0);
 });
 
-test('current return refresh is throttled to five-minute updates unless a milestone resolves', () => {
+test('current return refresh is throttled to two-minute updates unless a milestone resolves', () => {
   const row = entry();
   for (const horizon of HORIZONS) row.horizons[horizon.key] = { priceUsd: 0.001, observedAt: BASE + horizon.offsetMs, returnPct: 0 };
   const firstAt = BASE + 10 * 60 * 1000;
   collectTelegramPerformanceUpdates([row], { [mint]: token(0.0011, firstAt) }, firstAt);
   markTelegramPerformanceRendered(row, firstAt);
-  assert.equal(collectTelegramPerformanceUpdates([row], { [mint]: token(0.0013, BASE + 14 * 60 * 1000) }, BASE + 14 * 60 * 1000).length, 0);
-  assert.equal(collectTelegramPerformanceUpdates([row], { [mint]: token(0.0014, BASE + 16 * 60 * 1000) }, BASE + 16 * 60 * 1000).length, 1);
+  assert.equal(collectTelegramPerformanceUpdates([row], { [mint]: token(0.0013, BASE + 11 * 60 * 1000) }, BASE + 11 * 60 * 1000).length, 0);
+  assert.equal(collectTelegramPerformanceUpdates([row], { [mint]: token(0.0014, BASE + 13 * 60 * 1000) }, BASE + 13 * 60 * 1000).length, 1);
 });
