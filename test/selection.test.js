@@ -119,11 +119,19 @@ test('recent pre-market launch detections are visible separately and never score
 });
 
 
-test('best shortlist does not require historical momentum when all independent core factors are present',()=>{
+test('best shortlist requires a measured momentum factor instead of allowing a high score to bypass it',()=>{
  const candidate=token(88,{analysis:{...token(88).analysis,coverage:75,factors:{activity:85,market:80,liquidityQuality:78,security:90}}});
  const result=buildSelection([candidate],NOW);
+ assert.equal(result.best.length,0);
+ assert.equal(result.diagnostics.bestRejectedMissingMomentumFactor,1);
+});
+
+test('best shortlist keeps candidates when all five independent core factors are measured',()=>{
+ const candidate=token(89,{analysis:{...token(89).analysis,coverage:75,factors:{activity:85,momentum:72,market:80,liquidityQuality:78,security:90}}});
+ const result=buildSelection([candidate],NOW);
  assert.equal(result.best.length,1);
- assert.equal(result.best[0].mint,'mint-88');
+ assert.equal(result.best[0].mint,'mint-89');
+ assert.equal(result.best[0].analysis.factors.momentum,72);
 });
 
 test('best shortlist accepts fresh DEX transactions when GeckoTerminal pool sampling is unavailable',()=>{
