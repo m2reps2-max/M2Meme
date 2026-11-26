@@ -165,19 +165,21 @@ test('best shortlist requires a measured momentum factor instead of allowing a h
  assert.equal(result.diagnostics.bestRejectedMissingMomentumFactor,1);
 });
 
-test('best shortlist keeps candidates when all five independent core factors are measured',()=>{
- const candidate=token(89,{analysis:{...token(89).analysis,coverage:0,factors:{activity:85,momentum:72,market:80,liquidityQuality:78,security:90}}});
+test('best shortlist requires every independent core factor, including demand and execution',()=>{
+ const candidate=token(89,{analysis:{...token(89).analysis,coverage:0,factors:{activity:85,momentum:72,market:80,liquidityQuality:78,executionQuality:82,security:90,demandQuality:75}}});
  const result=buildSelection([candidate],NOW);
  assert.equal(result.best.length,1);
  assert.equal(result.best[0].mint,'mint-89');
  assert.equal(result.best[0].analysis.factors.momentum,72);
 });
 
-test('best shortlist accepts fresh DEX transactions when GeckoTerminal pool sampling is unavailable',()=>{
+test('DEX snapshots alone keep candidates in watch until distinct net demand is verified',()=>{
  const candidate=token(77,{geckoPoolAddress:null,tradeIntel:null,txns:{h1:{buys:15,sells:5}}});
  const result=buildSelection([candidate],NOW);
- assert.equal(result.best.length,1);
- assert.equal(result.best[0].freshness.transactionAgeMinutes,1);
+ assert.equal(result.best.length,0);
+ assert.equal(result.observe.length,1);
+ assert.equal(result.diagnostics.bestRejectedUnverifiedDemand,1);
+ assert.equal(result.best.length===0?result.eligible:0,1);
 });
 
 test('GL1TCH verdicts remain advisory and cannot veto independently qualified opportunities',()=>{
