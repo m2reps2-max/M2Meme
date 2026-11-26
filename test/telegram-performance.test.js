@@ -204,14 +204,35 @@ test('renders a premium PNG and labels every unavailable milestone instead of le
   assert.ok(png.length > 1000);
 });
 
-test('does not present an old market snapshot as a current return', () => {
-    const row = entry();
+test('keeps the last real total return visible when its market snapshot becomes stale', () => {
+  const row = entry();
   row.lastCurrentObservedAt = BASE - 10 * 60 * 1000;
   row.lastCurrentPriceUsd = 0.002;
   const metrics = buildTelegramPreviewMetrics(row, BASE);
-  assert.equal(metrics.currentReturn, null);
+  assert.equal(metrics.currentReturn, 100);
   assert.equal(metrics.currentState, 'donnee ancienne');
-  assert.equal(metrics.observedAt, 0);
+  assert.equal(metrics.observedAt, BASE - 10 * 60 * 1000);
+});
+
+test('falls back to the latest measured milestone when no current market snapshot exists', () => {
+  const row = entry();
+  row.lastCurrentObservedAt = 0;
+  row.lastCurrentPriceUsd = null;
+  row.horizons['1h'] = { priceUsd: 0.0014, observedAt: BASE + 60 * 60 * 1000, returnPct: 40 };
+  const metrics = buildTelegramPreviewMetrics(row, BASE + 2 * 60 * 60 * 1000);
+  assert.equal(metrics.currentReturn, 40);
+  assert.equal(metrics.currentState, 'derniere_mesure');
+  assert.equal(metrics.lastMeasuredHorizon, '1h');
+  assert.equal(metrics.observedAt, BASE + 60 * 60 * 1000);
+});
+
+test('does not invent a total return when no real market observation has ever been captured', () => {
+  const row = entry();
+  row.lastCurrentObservedAt = 0;
+  row.lastCurrentPriceUsd = null;
+  const metrics = buildTelegramPreviewMetrics(row, BASE + 2 * 60 * 60 * 1000);
+  assert.equal(metrics.currentReturn, null);
+  assert.equal(metrics.currentState, 'en attente');
 });
 
 test('labels a missed market observation explicitly after the capture window', () => {
