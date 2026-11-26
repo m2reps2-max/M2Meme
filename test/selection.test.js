@@ -46,6 +46,12 @@ test('Best selection rejects preserved volume and transaction values when their 
  assert.equal(result.best.length,0);
  assert.equal(result.diagnostics.bestRejectedStaleMarketMetrics,1);
 });
+test('fresh h24 fields cannot make stale h1 volume or transactions eligible',()=>{
+ const base=token(897),old=new Date(NOW-20*60_000).toISOString(),fresh=new Date(NOW-30_000).toISOString();
+ const partial={...base,marketFieldsObservedAt:{...base.marketFieldsObservedAt,volumeH1:old,txnsH1:old,volumeH24:fresh,txnsH24:fresh}};
+ const result=buildSelection([partial],NOW);
+ assert.equal(result.best.length,0);assert.equal(result.diagnostics.bestRejectedStaleMarketMetrics,1);
+});
 test('a Gecko sample without verified RPC pool swaps cannot pass the Best demand gate',()=>{
  const base=token(899);
  const unverified={...base,tradeIntel:{...base.tradeIntel,rpcConfirmedTradeCount:0,rpcConfirmedUniqueBuyers:0,rpcConfirmedVolumeCoverage:0}};
