@@ -220,3 +220,29 @@ test('a fresh known Jupiter no-route quote blocks selection but stale quotes do 
  const stale=eliteCandidate({sellability:{status:'no_route',checkedAt:new Date(Date.now()-20*60*1000).toISOString()}});
  assert.equal(qualifyOpportunity(stale,{}).eligible,true);
 });
+
+test('a reviewed raw holder-account sample can qualify while owner mapping remains explicitly incomplete',()=>{
+ const candidate=eliteCandidate({analysis:{
+  ...eliteCandidate().analysis,
+  risk:'medium',
+  securityComprehensive:false,
+  securityPublicationReady:true,
+  factors:{security:82}
+ }});
+ const result=qualifyOpportunity(candidate,{requireComprehensiveSecurity:true});
+ assert.equal(result.eligible,true);
+ assert.equal(candidate.analysis.securityComprehensive,false);
+ assert.equal(candidate.analysis.securityPublicationReady,true);
+});
+test('missing raw holder-account sample cannot use the publication-ready security path',()=>{
+ const candidate=eliteCandidate({analysis:{
+  ...eliteCandidate().analysis,
+  risk:'partial',
+  securityComprehensive:false,
+  securityPublicationReady:false,
+  factors:{security:82}
+ }});
+ const result=qualifyOpportunity(candidate,{requireComprehensiveSecurity:true});
+ assert.equal(result.eligible,false);
+ assert.ok(result.reasons.includes('Échantillon de détenteurs insuffisant pour valider la sécurité'));
+});
