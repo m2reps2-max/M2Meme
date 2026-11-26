@@ -12,6 +12,17 @@ function make(){
  };
  return scanner;
 }
+test('per-token scoring initializes the shared intelligence index only once before a full refresh',()=>{
+ const scanner=make();
+ scanner.score({mint:'score-context-a',liquidityUsd:1000,analysis:{score:60}});
+ const context=scanner.scoreContext;
+ assert.ok(context?.eliteIndex);
+ scanner.score({mint:'score-context-b',liquidityUsd:2000,analysis:{score:61}});
+ assert.strictEqual(scanner.scoreContext,context,'individual score updates reuse the existing shared index');
+ scanner.scoreAll();
+ assert.notStrictEqual(scanner.scoreContext,context,'a full score pass rebuilds the index from current state');
+});
+
 test('score ignores preserved market values when their own field observations are stale',()=>{
  const scanner=make(),oldAt=new Date(Date.now()-20*60_000).toISOString();
  const token={liquidityUsd:20000,fdv:100000,ageHours:2,volume:{m5:10000,h1:90000,h24:500000},txns:{m5:{buys:80,sells:5},h1:{buys:500,sells:20}},priceChange:{m5:40,h1:120,h24:300},
