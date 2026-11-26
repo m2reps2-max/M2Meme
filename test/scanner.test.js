@@ -12,6 +12,14 @@ function make(){
  };
  return scanner;
 }
+test('score ignores preserved market values when their own field observations are stale',()=>{
+ const scanner=make(),oldAt=new Date(Date.now()-20*60_000).toISOString();
+ const token={liquidityUsd:20000,fdv:100000,ageHours:2,volume:{m5:10000,h1:90000,h24:500000},txns:{m5:{buys:80,sells:5},h1:{buys:500,sells:20}},priceChange:{m5:40,h1:120,h24:300},
+  marketFieldsObservedAt:{volumeM5:oldAt,volumeH1:oldAt,volumeH24:oldAt,txnsM5:oldAt,txnsH1:oldAt,priceChangeM5:oldAt,priceChangeH1:oldAt,priceChangeH24:oldAt}};
+ const analysis=scanner.score(token);
+ assert.equal(analysis.factors.activity,undefined);assert.equal(analysis.factors.market,undefined);assert.equal(analysis.factors.momentum,undefined);
+ assert.ok(analysis.missingFactors.includes('activity'));assert.ok(analysis.missingFactors.includes('market'));assert.ok(analysis.missingFactors.includes('momentum'));
+});
 test('market snapshots never timestamp stale merged volume or transaction counts as fresh',()=>{
  const scanner=make(),mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
  const oldAt=new Date(Date.now()-60*60_000).toISOString();
