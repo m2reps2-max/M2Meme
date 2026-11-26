@@ -518,8 +518,8 @@ test('alerts require fresh market data and the complete elite quality profile',a
  s.earlyBuyerExitIntel=()=>({alert:false,wallets:0,soldSharePct:0});
  const makeToken=(mint,at,overrides={})=>({
   mint,symbol:mint.toUpperCase(),pairAddress:'pair-'+mint,liquidityUsd:20000,fdv:300000,
-  volume:{h1:8000},txns:{h1:{buys:16,sells:4}},
-  marketObservedAt:new Date(at).toISOString(),marketFieldsObservedAt:{volume:new Date(at).toISOString(),volumeH1:new Date(at).toISOString(),volumeH24:new Date(at).toISOString(),txns:new Date(at).toISOString(),txnsH1:new Date(at).toISOString(),txnsH24:new Date(at).toISOString()},
+  volume:{m5:200,h1:8000,h24:45000},txns:{m5:{buys:4,sells:1},h1:{buys:16,sells:4}},priceChange:{m5:3},
+  marketObservedAt:new Date(at).toISOString(),marketFieldsObservedAt:{volume:new Date(at).toISOString(),volumeM5:new Date(at).toISOString(),priceChangeM5:new Date(at).toISOString(),volumeH1:new Date(at).toISOString(),volumeH24:new Date(at).toISOString(),txns:new Date(at).toISOString(),txnsH1:new Date(at).toISOString(),txnsH24:new Date(at).toISOString()},
   history:[{at}],security:{checkedAt:new Date(now-5*60_000).toISOString()},
   sellability:{status:'route_available',routeAvailable:true,requestedUsd:100,priceImpactPct:1,checkedAt:new Date(now-5*60_000).toISOString()},
   tradeIntel:{checkedAt:new Date(now-5*60_000).toISOString(),lastTradeAt:new Date(now-5*60_000).toISOString(),tradeCount:30,uniqueBuyers:12,uniqueSellers:8,buyVolumeUsd:1200,sellVolumeUsd:700,rpcConfirmedTradeCount:8,rpcConfirmedUniqueBuyers:12,rpcConfirmedUniqueSellers:8,rpcConfirmedBuyVolumeUsd:1200,rpcConfirmedSellVolumeUsd:700,rpcConfirmedVolumeCoverage:100,rpcConfirmedCheckedAt:new Date(now-5*60_000).toISOString(),rpcConfirmedLastTradeAt:new Date(now-5*60_000).toISOString()},
