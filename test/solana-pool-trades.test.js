@@ -19,6 +19,12 @@ test('Gecko refresh preserves previously verified RPC evidence',()=>{
  const merged=preserveRpcTradeEvidence(gecko,previous);
  assert.equal(merged.tradeCount,300);assert.equal(merged.rpcConfirmedTradeCount,8);assert.equal(merged.rpcConfirmedUniqueBuyers,6);
 });
+test('multi-owner transaction counts once and never duplicates its USD notional',()=>{
+ const now=Date.now(),at=new Date(now-1000).toISOString();
+ const rows=[{wallet:'a',direction:'buy',signature:'shared-sig',at,volumeUsd:25},{wallet:'b',direction:'buy',signature:'shared-sig',at,volumeUsd:null}];
+ const summary=summarizePoolSwapEvents(rows);
+ assert.equal(summary.tradeCount,1);assert.equal(summary.buys,1);assert.equal(summary.uniqueBuyers,2);assert.equal(summary.buyVolumeUsd,25);assert.equal(summary.volumeCoverage,100);
+});
 test('confirmed swap summary counts unique wallets once and leaves unknown USD volume null',()=>{
  const base=Date.now()-3000;
  const rows=[{wallet:'a',direction:'buy',signature:'1',at:new Date(base).toISOString(),volumeUsd:null},{wallet:'a',direction:'buy',signature:'2',at:new Date(base+1000).toISOString(),volumeUsd:null},{wallet:'b',direction:'sell',signature:'3',at:new Date(base+2000).toISOString(),volumeUsd:null}];
