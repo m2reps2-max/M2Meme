@@ -241,6 +241,40 @@ test('trade intelligence rotates through the oldest unchecked pools instead of s
  assert.deepEqual(checked,['oldest','second-oldest']);
 });
 
+test('Helius pool scheduler prioritizes queued RPC backlogs ahead of idle higher-scoring pools',async()=>{
+ const scanner=make(),now=Date.now();
+ scanner.lastAutoCreatorFundingAt=now;
+ scanner.state.scannerSettings={minScore:80};
+ const makePool=(mint,score,pending,lastAttempt)=>({mint,pairAddress:'pool-'+mint,liquidityUsd:20000,
+  firstSeenAt:new Date(now-60_000).toISOString(),
+  poolRpcTradeState:{pending:Array.from({length:pending},(_,i)=>({signature:mint+'-pending-'+i})),lastAttemptAt:new Date(lastAttempt).toISOString()},
+  analysis:{score,hardBlocked:false,risk:'medium'}});
+ const rows=[
+  makePool('idle-high',90,0,now-60_000),
+  makePool('backlog-small',75,40,now-30_000),
+  makePool('backlog-large',74,180,now-10_000),
+  makePool('idle-old',73,0,now-60*60_000),
+  ...Array.from({length:7},(_,i)=>makePool('idle-'+i,72-i,0,now-60_000))
+ ];
+ scanner.state.tokens=Object.fromEntries(rows.map(token=>[token.mint,token]));
+ const inspected=[];
+ scanner.inspectPoolRpcTradeIntel=async token=>{inspected.push(token.mint);return null;};
+ await scanner.refreshCandidateIntelligence();
+ assert.equal(inspected.length,8);
+ assert.equal(inspected[0],'backlog-large');
+ assert.equal(inspected[1],'backlog-small');
+});
+
+test('Jupiter exit capacity uses measured all-in execution loss when priceImpactPct is omitted',()=>{
+ const scanner=make(),checkedAt=new Date().toISOString();
+ const makeToken=(mint,effectiveLossPct)=>({mint,pairAddress:'pool-'+mint,liquidityUsd:12000,priceUsd:0.01,
+  sellabilityChecks:[{status:'route_available',routeAvailable:true,requestedUsd:50,inputAmountUsd:50,priceImpactPct:null,effectiveLossPct,checkedAt}]});
+ const acceptable=scanner.score(makeToken('acceptable-exit',3.4));
+ const expensive=scanner.score(makeToken('expensive-exit',6.1));
+ assert.equal(acceptable.exitCapacityUsd,50,'a measured all-in loss below 5% is sufficient when Jupiter omits its separate impact field');
+ assert.equal(expensive.exitCapacityUsd,0,'a measured all-in loss above 5% must remain ineligible');
+});
+
 test('Helius pool sampling refreshes eight ranked pools per scan with a bounded twelve-transaction batch',async()=>{
  const scanner=make();
  scanner.lastAutoCreatorFundingAt=Date.now();
