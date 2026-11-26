@@ -253,6 +253,7 @@ test('scanner view shows the real publication diagnosis and configured Elite def
 
 
 test('publication diagnostics expose score, quality, freshness, missing factors, bot and outbox status',()=>{
+ const server=fs.readFileSync(path.join(root,'index.js'),'utf8');
  assert.match(js,/publicationDiscovery\.scorePass/);
  assert.match(js,/publicationDiscovery\.qualityPass/);
  assert.match(js,/publicationDiscovery\.qualifiedButStaleMarket/);
@@ -260,6 +261,11 @@ test('publication diagnostics expose score, quality, freshness, missing factors,
  assert.match(js,/publicationDiscovery\.qualifiedButMissingFactors/);
  assert.match(js,/publicationStatus\.botRunning/);
  assert.match(js,/publicationStatus\.outbox\?\.failed/);
+ assert.match(server,/securityPublicationReady/);
+ assert.match(server,/tradeCount:trade\.tradeCount/);
+ assert.match(server,/lastTradeAgeMinutes/);
+ assert.match(server,/topScoredTokens/);
+ assert.match(server,/holderSampleAccounts/);
 });
 
 
