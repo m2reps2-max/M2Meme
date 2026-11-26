@@ -508,9 +508,10 @@ test('alerts require fresh market data and the complete elite quality profile',a
  const makeToken=(mint,at,overrides={})=>({
   mint,symbol:mint.toUpperCase(),pairAddress:'pair-'+mint,liquidityUsd:20000,fdv:300000,
   volume:{h1:8000},txns:{h1:{buys:16,sells:4}},
+  marketObservedAt:new Date(at).toISOString(),marketFieldsObservedAt:{volume:new Date(at).toISOString(),txns:new Date(at).toISOString()},
   history:[{at}],security:{checkedAt:new Date(now-5*60_000).toISOString()},
   sellability:{status:'route_available',routeAvailable:true,requestedUsd:100,priceImpactPct:1,checkedAt:new Date(now-5*60_000).toISOString()},
-  tradeIntel:{checkedAt:new Date(now-5*60_000).toISOString(),lastTradeAt:new Date(now-5*60_000).toISOString(),tradeCount:30,uniqueBuyers:12,uniqueSellers:8,buyVolumeUsd:1200,sellVolumeUsd:700},
+  tradeIntel:{checkedAt:new Date(now-5*60_000).toISOString(),lastTradeAt:new Date(now-5*60_000).toISOString(),tradeCount:30,uniqueBuyers:12,uniqueSellers:8,buyVolumeUsd:1200,sellVolumeUsd:700,rpcConfirmedTradeCount:8,rpcConfirmedUniqueBuyers:12,rpcConfirmedUniqueSellers:8,rpcConfirmedBuyVolumeUsd:1200,rpcConfirmedSellVolumeUsd:700,rpcConfirmedVolumeCoverage:100,rpcConfirmedCheckedAt:new Date(now-5*60_000).toISOString(),rpcConfirmedLastTradeAt:new Date(now-5*60_000).toISOString()},
   analysis:{score:92,coverage:90,risk:'observations_only',securityComprehensive:true,hardBlocked:false,exitCapacityUsd:100,factors:{activity:90,momentum:82,market:90,liquidityQuality:90,executionQuality:85,security:95,demandQuality:78},flags:[]},
   ...overrides
  });
