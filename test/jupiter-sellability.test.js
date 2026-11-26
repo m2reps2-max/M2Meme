@@ -34,7 +34,7 @@ test('builds a $100 sell test amount and caps it at 0.5% of total supply', () =>
 test('rejects missing price, invalid decimals and unrepresentable amounts', () => {
   assert.equal(amountForUsd({ usd: 100, priceUsd: 0, decimals: 9 }), null);
   assert.equal(amountForUsd({ usd: 100, priceUsd: 1, decimals: 19 }), null);
-  assert.equal(amountForUsd({ usd: 100, priceUsd: 1e-12, decimals: 9 }), null);
+  assert.equal(amountForUsd({ usd: 100, priceUsd: 1e-30, decimals: 9 }), null);
 });
 
 test('parses a read-only route and converts Jupiter decimal price impact into percent', () => {
@@ -96,4 +96,12 @@ test('maps Jupiter no-route responses separately from rate limits and server fai
     () => fetchJupiterSellQuote(mint, '1000', { fetchImpl: async () => response({ error: 'rate limited' }, 429) }),
     /Jupiter HTTP 429/
   );
+});
+
+test('builds accurate sell-test amounts for very low memecoin prices without precision underflow',()=>{
+  const amount=amountForUsd({usd:100,priceUsd:1e-12,decimals:9});
+  assert.equal(amount.amountRaw,'100000000000000000000000');
+  assert.equal(amount.inputAmountUsd,100);
+  const capped=amountForUsd({usd:100,priceUsd:1e-12,decimals:9,supplyUi:'100000000000000000000'});
+  assert.equal(capped.inputAmountUsd,100);
 });
