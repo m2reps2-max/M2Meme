@@ -1,6 +1,6 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict');
-const {extractPoolSwapEvents,summarizePoolSwapEvents}=require('../lib/solana-pool-trades');
+const {extractPoolSwapEvents,summarizePoolSwapEvents,preserveRpcTradeEvidence}=require('../lib/solana-pool-trades');
 const mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH',wallet='Ccdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
 test('verified pool swap attributes mint balance delta to a transaction signer',()=>{
  const tx={slot:10,blockTime:1795720000,transaction:{message:{accountKeys:[{pubkey:wallet,signer:true}],instructions:[{program:'jupiter',parsed:{type:'route'}}]}},meta:{err:null,preTokenBalances:[],postTokenBalances:[{mint,owner:wallet,uiTokenAmount:{uiAmountString:'25',amount:'25000000',decimals:6}}]}};
@@ -12,6 +12,12 @@ test('unverified transfers and non-signing token owners are not counted as pool 
  assert.deepEqual(extractPoolSwapEvents(tx,mint,{signature:'sig2'}),[]);
  const swap={...tx,transaction:{message:{accountKeys:[{pubkey:wallet,signer:true}],instructions:[{program:'jupiter',parsed:{type:'route'}}]}},meta:{...tx.meta,postTokenBalances:[{mint,owner:'Dddefghijkmnopqrstuvwxyz123456789ABCDEFGH',uiTokenAmount:{uiAmountString:'25',amount:'25000000',decimals:6}}]}};
  assert.deepEqual(extractPoolSwapEvents(swap,mint,{signature:'sig3'}),[]);
+});
+test('Gecko refresh preserves previously verified RPC evidence',()=>{
+ const gecko={checkedAt:new Date().toISOString(),tradeCount:300,observedTrades:[]};
+ const previous={rpcConfirmedTradeCount:8,rpcConfirmedUniqueBuyers:6,rpcConfirmedCheckedAt:'2026-11-26T20:00:00Z',rpcConfirmedLastTradeAt:'2026-11-26T20:00:00Z',uniqueBuyers:1};
+ const merged=preserveRpcTradeEvidence(gecko,previous);
+ assert.equal(merged.tradeCount,300);assert.equal(merged.rpcConfirmedTradeCount,8);assert.equal(merged.rpcConfirmedUniqueBuyers,6);
 });
 test('confirmed swap summary counts unique wallets once and leaves unknown USD volume null',()=>{
  const base=Date.now()-3000;
