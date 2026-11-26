@@ -202,6 +202,39 @@ test('Helius pool sampling refreshes five ranked pools per scan with a bounded s
  assert.ok(inspected.every(row=>row.options.persist===false&&row.options.maxTransactions===6));
 });
 
+test('Jupiter refresh prioritizes stale checked tokens over newly discovered unquoted tokens',()=>{
+ const scanner=make(),now=Date.now();
+ const makeToken=(mint,firstSeenAt,checkedAt)=>({
+  mint,pairAddress:'pool-'+mint,firstSeenAt:new Date(firstSeenAt).toISOString(),liquidityUsd:12000,
+  ...(checkedAt?{sellability:{status:'route_available',checkedAt:new Date(checkedAt).toISOString()}}:{}),
+  analysis:{score:75,hardBlocked:false,risk:'medium',securityPublicationReady:true,securityComprehensive:true}
+ });
+ const stale=makeToken('stale-quote',now-60*60_000,now-15*60_000);
+ const newcomers=Array.from({length:20},(_,i)=>makeToken('new-quote-'+i,now-60_000,null));
+ scanner.state.tokens=Object.fromEntries([stale,...newcomers].map(token=>[token.mint,token]));
+ const selected=scanner.jupiterRefreshCandidates(20);
+ assert.equal(selected[0].mint,'stale-quote');
+ assert.ok(selected.some(token=>token.mint==='stale-quote'));
+});
+
+test('Helius pool refresh does not let never-inspected new tokens starve stale checked candidates',async()=>{
+ const scanner=make(),now=Date.now();
+ scanner.lastAutoCreatorFundingAt=now;
+ scanner.state.scannerSettings={minScore:80};
+ const stale={mint:'stale-rpc',pairAddress:'pool-stale',firstSeenAt:new Date(now-60*60_000).toISOString(),liquidityUsd:30000,
+  poolRpcTradeState:{lastAttemptAt:new Date(now-15*60_000).toISOString()},
+  analysis:{score:75,hardBlocked:false,risk:'medium'}};
+ const newcomers=Array.from({length:8},(_,i)=>({mint:'new-rpc-'+i,pairAddress:'pool-new-'+i,
+  firstSeenAt:new Date(now-60_000).toISOString(),liquidityUsd:20000-i*100,
+  analysis:{score:75,hardBlocked:false,risk:'medium'}}));
+ scanner.state.tokens=Object.fromEntries([stale,...newcomers].map(token=>[token.mint,token]));
+ const inspected=[];
+ scanner.inspectPoolRpcTradeIntel=async token=>{inspected.push(token.mint);return null;};
+ await scanner.refreshCandidateIntelligence();
+ assert.equal(inspected[0],'stale-rpc');
+ assert.equal(inspected.length,5);
+});
+
 test('Jupiter refresh queue follows the configured score floor without changing publication thresholds',()=>{
  const scanner=make();
  scanner.state.scannerSettings={minScore:75};
