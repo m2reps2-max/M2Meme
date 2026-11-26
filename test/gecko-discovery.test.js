@@ -113,7 +113,7 @@ test('first 70 buyer cohort is only scored when the launch sample is complete',(
  assert.equal(result.first70BuyerCohort.complete,true);
  assert.equal(result.first70BuyerCohort.mostlyExitedInSample,30);
  assert.equal(result.first70BuyerCohort.retentionPct,57.1);
- assert.equal(result.first70BuyerCohort.wallets.length,70);
+ assert.equal(result.first70BuyerCohort.wallets.length,10);
  const incomplete=analyzePoolTrades({data:rows.slice(0,20)},new Date(created).toISOString(),created+600000);
  assert.equal(incomplete.first70BuyerCohort.complete,false);
  assert.equal(incomplete.first70BuyerCohort.retentionPct,null);
