@@ -107,6 +107,22 @@ function publicationDiagnosticsSnapshot(selection=scanner.selection()){
  const priceSource=scanner.state.sources?.jupiterPrice||null;
  const now=Date.now();
  const ageMinutes=value=>{const at=Date.parse(value||'');return Number.isFinite(at)&&at<=now?Number(((now-at)/60000).toFixed(1)):null;};
+ const topScoredTokens=Object.values(scanner.state.tokens).filter(token=>token?.analysis?.score!==null&&token?.analysis?.score!==undefined&&Number.isFinite(Number(token.analysis.score))).sort((a,b)=>Number(b.analysis.score)-Number(a.analysis.score)).slice(0,5).map(token=>{
+  const trade=token.tradeIntel||{};
+  const security=token.security?.data||{};
+  const history=Array.isArray(token.history)?token.history.at(-1):null;
+  const factors=token.analysis?.factors||{};
+  return {
+   mint:token.mint,symbol:token.symbol||null,score:token.analysis?.score??null,risk:token.analysis?.risk||null,hardBlocked:token.analysis?.hardBlocked===true,
+   securityPublicationReady:token.analysis?.securityPublicationReady===true,securityComprehensive:token.analysis?.securityComprehensive===true,
+   factors:{momentum:factors.momentum??null,security:factors.security??null,demandQuality:factors.demandQuality??null,executionQuality:factors.executionQuality??null},
+   market:{ageMinutes:ageMinutes(history?.at),liquidityUsd:token.liquidityUsd??null,volume1hUsd:token.volume?.h1??null,buys1h:token.txns?.h1?.buys??null,sells1h:token.txns?.h1?.sells??null},
+   securityEvidence:{ageMinutes:ageMinutes(token.security?.holderCheckedAt||token.security?.checkedAt),holderSampleAccounts:security.holderSampleAccounts??null,holderSampleCoveragePct:security.holderSampleCoveragePct??null,unknownOwnerAccounts:security.unknownOwnerAccounts??null,decimals:security.decimals??null},
+   trade:{ageMinutes:ageMinutes(trade.checkedAt),lastTradeAgeMinutes:ageMinutes(trade.lastTradeAt),tradeCount:trade.tradeCount??null,uniqueBuyers:trade.uniqueBuyers??null,buyVolumeUsd:trade.buyVolumeUsd??null,sellVolumeUsd:trade.sellVolumeUsd??null},
+   sellability:{status:token.sellability?.status||null,ageMinutes:ageMinutes(token.sellability?.checkedAt),routeAvailable:token.sellability?.routeAvailable??null,inputAmountUsd:token.sellability?.inputAmountUsd??null,reason:token.sellability?.reason||null},
+   priceUsd:token.jupiterPrice?.priceUsd??token.priceUsd??null,priceSource:token.jupiterPrice?.priceUsd>0?'Jupiter':token.priceUsd>0?'DexScreener':null
+  };
+ });
  const candidates=[...(selection.best||[]),...(selection.observe||[])].slice(0,5).map(row=>{
   const token=scanner.state.tokens[row.mint]||{};
   const trade=token.tradeIntel||{};
@@ -127,7 +143,7 @@ function publicationDiagnosticsSnapshot(selection=scanner.selection()){
   at:new Date(now).toISOString(),
   scanner:{running:scanner.scanning===true,lastScanAt:scanner.state.lastScanAt||null,lastScanAttemptAt:scanner.lastScanAttemptAt||null,lastScanCompletedAt:scanner.state.lastScanCompletedAt||null,lastScanFailed:Boolean(scanner.state.lastScanError),lastScanSkipReason:scanner.lastScanSkipReason||null},
   selection:{considered:selection.considered||0,linked:selection.eligible||0,best:selection.best?.length||0,observe:selection.observe?.length||0,early:selection.early?.length||0},
-  candidates,diagnostics:selection.diagnostics||{},qualityGate:selection.qualityGate||{},
+  candidates,topScoredTokens,diagnostics:selection.diagnostics||{},qualityGate:selection.qualityGate||{},
   telegram:{botConfigured:Boolean(bot),channelsConfigured:scanner.state.telegramChannelsConfigured===true,channelCount:channels.length,enabledChannels:channels.filter(row=>row.enabled!==false).length,outboxQueued:outbox.filter(row=>row.status==='queued').length,outboxFailed:outbox.filter(row=>row.status==='failed').length},
   jupiterSellability:source?{ok:source.ok===true,at:source.at||null,checked:Number(source.checked)||0,status:source.status||null,reason:source.reason||null,priceUsd:source.priceUsd??null,decimals:source.decimals??null,error:source.error||null,mode:source.mode||null}:null,
   jupiterPrice:priceSource?{ok:priceSource.ok===true,at:priceSource.at||null,checked:Number(priceSource.checked)||0,priced:Number(priceSource.priced)||0,error:priceSource.error||null,mode:priceSource.mode||null}:null
