@@ -102,11 +102,11 @@ test('weak buyer ratio and insufficient transaction count block opportunity publ
 
 
 test('fresh Gecko samples require distinct buyers and avoid strong net-sell flow',()=>{
- const weak=eliteCandidate({tradeIntel:{checkedAt:new Date().toISOString(),tradeCount:30,uniqueBuyers:3,buyVolumeUsd:1000,sellVolumeUsd:1500}});
+ const weak=eliteCandidate({tradeIntel:{checkedAt:new Date().toISOString(),tradeCount:30,uniqueBuyers:3,buyVolumeUsd:1000,sellVolumeUsd:1500,rpcConfirmedTradeCount:8,rpcConfirmedUniqueBuyers:3,rpcConfirmedBuyVolumeUsd:1000,rpcConfirmedSellVolumeUsd:1500,rpcConfirmedVolumeCoverage:100,rpcConfirmedCheckedAt:new Date().toISOString(),rpcConfirmedLastTradeAt:new Date().toISOString()}});
  const weakResult=qualifyOpportunity(weak,{});
  assert.ok(weakResult.reasons.includes('Moins de cinq acheteurs distincts dans l’échantillon récent'));
  assert.ok(weakResult.reasons.includes('Flux vendeur dominant dans l’échantillon récent'));
- const broad=eliteCandidate({tradeIntel:{checkedAt:new Date().toISOString(),tradeCount:30,uniqueBuyers:12,buyVolumeUsd:1500,sellVolumeUsd:1000}});
+ const broad=eliteCandidate({tradeIntel:{checkedAt:new Date().toISOString(),tradeCount:30,uniqueBuyers:12,buyVolumeUsd:1500,sellVolumeUsd:1000,rpcConfirmedTradeCount:8,rpcConfirmedUniqueBuyers:12,rpcConfirmedBuyVolumeUsd:1500,rpcConfirmedSellVolumeUsd:1000,rpcConfirmedVolumeCoverage:100,rpcConfirmedCheckedAt:new Date().toISOString(),rpcConfirmedLastTradeAt:new Date().toISOString()}});
  assert.equal(qualifyOpportunity(broad,{}).eligible,true);
 });
 
