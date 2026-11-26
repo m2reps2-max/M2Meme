@@ -633,7 +633,7 @@ test('le suivi wallet surveille les nouvelles signatures au lieu de paginer uniq
  assert.equal(scanner.state.walletActivity[address].processedSignatures,1);
  assert.ok(calls.every(options=>!Object.hasOwn(options,'before')));
 });
-test('le suivi wallet met en file les signatures récentes excédant vingt transactions par cycle',async()=>{
+test('le suivi wallet borne le traitement à huit transactions par portefeuille et par cycle',async()=>{
  const scanner=make(),address='BacklogWallet111111111111111111111111111111';
  scanner.state.wallets=[{address,label:'Backlog'}];
  const calls=[];
@@ -650,11 +650,37 @@ test('le suivi wallet met en file les signatures récentes excédant vingt trans
  scanner.scoreAll=()=>{};
  await scanner.refreshWallets();
  await scanner.refreshWallets();
- assert.equal(scanner.state.walletActivity[address].processedSignatures,20);
- assert.equal(scanner.state.walletActivity[address].pendingSignatures,10);
+ assert.equal(scanner.state.walletActivity[address].processedSignatures,8);
+ assert.equal(scanner.state.walletActivity[address].pendingSignatures,22);
  await scanner.refreshWallets();
- assert.equal(scanner.state.walletActivity[address].processedSignatures,10);
- assert.equal(scanner.state.walletActivity[address].pendingSignatures,0);
+ assert.equal(scanner.state.walletActivity[address].processedSignatures,8);
+ assert.equal(scanner.state.walletActivity[address].pendingSignatures,14);
+});
+
+test('wallet refresh has a strict global cap of 160 transaction reads across twenty monitored wallets',async()=>{
+ const scanner=make();
+ const alphabet='123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+ const addresses=Array.from({length:20},(_,i)=>'A'.repeat(40)+alphabet[i]);
+ const mints=Array.from({length:5},(_,i)=>'B'.repeat(40)+alphabet[i]);
+ scanner.state.wallets=addresses.slice(0,10).map((address,i)=>({address,label:'Manual '+i}));
+ scanner.state.autoWallets=addresses.slice(10,15).map((address,i)=>({address,label:'Auto '+i}));
+ scanner.state.tokens=Object.fromEntries(addresses.slice(15).map((address,i)=>[mints[i],{mint:mints[i],creator:address,creatorObservedAtLaunch:true}]));
+ let transactionReads=0;
+ scanner.rpc=async(method,params)=>{
+  if(method==='getSignaturesForAddress')return Array.from({length:50},(_,i)=>({signature:'wallet-signature-'+params[0]+'-'+i}));
+  if(method==='getTransaction'){
+   transactionReads++;
+   return {slot:1,transaction:{message:{accountKeys:[params[0]]}},meta:{preBalances:[100],postBalances:[100],preTokenBalances:[],postTokenBalances:[],fee:0}};
+  }
+  throw new Error('unexpected RPC '+method);
+ };
+ scanner.save=()=>{};scanner.scoreAll=()=>{};
+ await scanner.refreshWallets();
+ assert.equal(transactionReads,160);
+ assert.equal(Object.keys(scanner.state.walletActivity).length,20);
+ assert.ok(Object.values(scanner.state.walletActivity).every(row=>row.processedSignatures===8));
+ assert.equal(scanner.state.sources.walletMonitoring.processed,160);
+ assert.equal(scanner.state.sources.walletMonitoring.pausedByMemory,false);
 });
 
 test('la santé distingue serveur actif et sources de données dégradées',()=>{
