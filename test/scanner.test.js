@@ -1,6 +1,39 @@
 'use strict';
 const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const os=require('node:os');const path=require('node:path');const {MemeScanner}=require('../lib/scanner');
 function make(){const dir=fs.mkdtempSync(path.join(os.tmpdir(),'meme-radar-test-'));return new MemeScanner({dataFile:path.join(dir,'store.json')});}
+test('market snapshots never timestamp stale merged volume or transaction counts as fresh',()=>{
+ const scanner=make(),mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
+ const oldAt=new Date(Date.now()-60*60_000).toISOString();
+ scanner.state.tokens[mint]={mint,volume:{h1:9000,h24:50000},txns:{h1:{buys:80,sells:20}},marketFieldsObservedAt:{volume:oldAt,txns:oldAt}};
+ scanner.pair({chainId:'solana',baseToken:{address:mint,name:'Snapshot test',symbol:'SNAP'},pairAddress:'PoolSnapshot111111111111111111111111111111',priceUsd:'0.01',liquidity:{usd:12000},volume:{},txns:{}});
+ const token=scanner.state.tokens[mint],snapshot=token.history.at(-1);
+ assert.equal(token.volume.h1,9000);assert.equal(token.txns.h1.buys,80);
+ assert.equal(snapshot.volume1h,null);assert.equal(snapshot.buys1h,null);
+ assert.equal(snapshot.fieldObservedAt.volume,null);assert.equal(snapshot.fieldObservedAt.txns,null);
+ assert.equal(token.marketFieldsObservedAt.volume,oldAt);assert.equal(token.marketFieldsObservedAt.txns,oldAt);
+ assert.ok(token.marketFieldsObservedAt.priceUsd);
+});
+test('pool RPC trade inspection records only confirmed signer-owned token swaps and deduplicates signatures',async()=>{
+ const scanner=make(),mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH',pool='Bcdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
+ const wallet='Ccdefghijkmnopqrstuvwxyz123456789ABCDEFGH',signature='rpc-pool-swap-1';
+ scanner.state.tokens[mint]={mint,geckoPoolAddress:pool,pairAddress:pool,liquidityUsd:12000,priceUsd:.01,analysis:{score:70}};
+ const tx={slot:123,blockTime:Math.floor(Date.now()/1000),transaction:{message:{accountKeys:[{pubkey:wallet,signer:true}],instructions:[{program:'jupiter',parsed:{type:'route'}}]}},meta:{err:null,preTokenBalances:[],postTokenBalances:[{mint,owner:wallet,uiTokenAmount:{uiAmountString:'250',amount:'250000000',decimals:6}}],innerInstructions:[],logMessages:[]}};
+ scanner.rpc=async(method)=>method==='getSignaturesForAddress'?[{signature,slot:123,blockTime:tx.blockTime}]:method==='getTransaction'?tx:null;
+ const first=await scanner.inspectPoolRpcTradeIntel(scanner.state.tokens[mint],{maxTransactions:4});
+ assert.equal(first.tradeCount,1);assert.equal(first.uniqueBuyers,1);assert.equal(first.buys,1);
+ assert.equal(scanner.state.tokens[mint].rpcTradeEvents[0].wallet,wallet);
+ scanner.state.tokens[mint].poolRpcTradeState.lastAttemptAt=new Date(Date.now()-60000).toISOString();
+ const second=await scanner.inspectPoolRpcTradeIntel(scanner.state.tokens[mint],{maxTransactions:4});
+ assert.equal(second.tradeCount,1);assert.equal(second.uniqueBuyers,1);
+});
+test('social evidence missing is explicit and prevents complete readiness without changing coverage',()=>{
+ const scanner=make();
+ const base={txns:{h1:{buys:80,sells:20}},volume:{h1:12000,h24:90000},liquidityUsd:30000,fdv:300000,ageHours:1,
+  history:[{at:1,liquidityUsd:25000,priceUsd:.00001},{at:2,liquidityUsd:30000,priceUsd:.000012}],
+  security:{checkedAt:new Date().toISOString(),holderEvidenceComplete:true,holderSampleReviewed:true,data:{isInitialized:true,isToken2022:false,freezeAuthorityActive:false,mintAuthorityActive:false,ownerConcentrationAvailable:true,top10HolderPercent:30,holderSampleAccounts:20,unknownOwnerAccounts:0,top10AccountPercent:30,holderSampleCoveragePct:90}}};
+ const without=scanner.score(base),withSocial=scanner.score({...base,socialIntel:{available:true,mentions1h:8,mentions24h:20,uniqueAuthors24h:10,uniqueChannels24h:4,uniqueSources24h:3,sentimentScore:75,evidence:{sampledPosts24h:12,uniqueAuthors24h:10,uniqueChannels24h:4,uniqueSources24h:3,duplicateSharePct:0,weakMatchSharePct:0}}});
+ assert.equal(without.coverage,withSocial.coverage);assert.ok(without.missingFactors.includes('social'));assert.notEqual(without.readiness,'complete');
+});
 test('score ne compte que les facteurs réellement disponibles',()=>{const s=make();const a=s.score({txns:{h1:{buys:70,sells:30}},volume:{h1:25000,h24:120000},liquidityUsd:45000,ageHours:3});assert.equal(a.coverage,22);assert.ok(a.score>=0&&a.score<=100);assert.equal(a.confidence,'low');});
 test('une freeze authority active bloque le token',()=>{const s=make();const a=s.score({txns:{h1:{buys:20,sells:10}},volume:{h1:5000,h24:20000},liquidityUsd:10000,ageHours:2,security:{checkedAt:new Date().toISOString(),data:{freezeAuthorityActive:true,mintAuthorityActive:false,top10HolderPercent:30}}});assert.equal(a.hardBlocked,true);assert.equal(a.risk,'high');});
 test('les preuves sociales multi-auteurs sont un facteur pondéré et augmentent la couverture sans double bonus',()=>{
