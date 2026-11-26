@@ -5,11 +5,13 @@ const { scannerPublicationDiagnostics } = require('../lib/publication-diagnostic
 
 const NOW = Date.now();
 function makeToken(overrides = {}) {
+  const snapshotAt=overrides.history?.[0]?.at||new Date(NOW-8*60_000).toISOString();
   return {
     mint: 'mint-1', symbol: 'BAD',
     pairAddress: 'pool-1', liquidityUsd: 1200, fdv: 100000,
     volume: { h1: 200 }, txns: { h1: { buys: 2, sells: 8 } },
-    history: [{ at: new Date(NOW - 8 * 60_000).toISOString() }],
+    marketObservedAt:snapshotAt,marketFieldsObservedAt:{volume:snapshotAt,txns:snapshotAt},
+    history: [{ at: snapshotAt }],
     analysis: { score: 84, coverage: 70, risk: 'partial', hardBlocked: false, flags: [] },
     ...overrides
   };
@@ -107,7 +109,7 @@ test('diagnostics identify Telegram delivery configuration blockers', () => {
 });
 
 
-test('diagnostics count DexScreener-only candidates as publication eligible without Gecko trade IDs',()=>{
+test('DexScreener-only transaction snapshots do not replace verified RPC buyer evidence',()=>{
  const token=makeToken({
   liquidityUsd:20000,fdv:200000,volume:{h1:8000},txns:{h1:{buys:16,sells:4}},
   history:[{at:new Date(NOW-30_000).toISOString()}],
