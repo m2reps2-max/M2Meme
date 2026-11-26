@@ -111,8 +111,8 @@ test('pre-market, unknown-risk and blocked tokens are excluded while partial evi
 });
 
 test('stale market data cannot enter either shortlist even with a perfect score',()=>{
- const stale=token(1,{history:[{at:NOW-20*60_000,priceUsd:1}],analysis:{...token(1).analysis,score:99}});
- const missing=token(2,{history:[],analysis:{...token(2).analysis,score:99}});
+ const stale=token(1,{marketObservedAt:new Date(NOW-20*60_000).toISOString(),marketFieldsObservedAt:{volume:new Date(NOW-20*60_000).toISOString(),txns:new Date(NOW-20*60_000).toISOString()},history:[{at:NOW-20*60_000,priceUsd:1}],analysis:{...token(1).analysis,score:99}});
+ const missing=token(2,{marketObservedAt:null,marketFieldsObservedAt:{},history:[],analysis:{...token(2).analysis,score:99}});
  const result=buildSelection([stale,missing],NOW);
  assert.equal(result.best.length,0);
  assert.equal(result.observe.length,0);
