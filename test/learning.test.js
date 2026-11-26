@@ -151,7 +151,7 @@ test('a validated active-cache model takes priority over a validated cold-archiv
  const tokens={};
  for(let i=0;i<300;i++){
   const x=i%100,mint='active-'+String(i).padStart(4,'0');
-  tokens[mint]={mint,forecasts:[{at:Date.UTC(2026,0,1)+i*60000,criteriaVersion:3,legacyScore:100-x,launchPhase:['launch_discovery','early','momentum','established','mature'][i%5],score:100-x,liquidityUsd:100000,features:{activity:x,momentum:x*.8+(i%7),market:x*.7+(i%5),liquidityQuality:x*.6+(i%11),security:x*.5+(i%13),demandQuality:x*.9+(i%3),executionQuality:x*.4+(i%9)},outcomes:{'1h':{returnPct:(x-50)*1.5,exitLiquidityUsd:100000}}}]};
+  tokens[mint]={mint,liquidityUsd:100000,forecasts:[{at:Date.UTC(2026,0,1)+i*60000,criteriaVersion:3,legacyScore:100-x,launchPhase:['launch_discovery','early','momentum','established','mature'][i%5],launchAgeHours:i%24,score:100-x,liquidityUsd:100000,features:{activity:x,momentum:x*.8+(i%7),market:x*.7+(i%5),liquidityQuality:x*.6+(i%11),security:x*.5+(i%13),demandQuality:x*.9+(i%3),executionQuality:x*.4+(i%9)},outcomes:{'1h':{returnPct:(x-50)*1.5,exitLiquidityUsd:100000}}}]};
  }
  const archived={status:'validated',enabled:true,observations:500,trainingTokens:400,validationTokens:100,coefficients:{activity:.4,momentum:.3,market:.2,security:.1},means:{activity:50,momentum:50,market:50,security:50},stds:{activity:20,momentum:20,market:20,security:20},features:[],holdout:{selectedTokens:30,legacyComparisonSampleSize:100,upliftVsStaticPctPoints:8,upliftVsLegacyPctPoints:8,upliftVsRandomPctPoints:7}};
  const scanner={state:{tokens,archiveLearning:{adaptiveModel:archived},archiveLearningGeneratedAt:new Date().toISOString()}};
