@@ -118,6 +118,21 @@ test('trade intelligence rotates through the oldest unchecked pools instead of s
  assert.deepEqual(checked,['oldest','second-oldest']);
 });
 
+test('Jupiter refreshes high-quality live tokens even when strict Best/Observe selection excludes them',()=>{
+ const scanner=make(),now=Date.now();
+ const eligible={mint:'eligible-jupiter-token',pairAddress:'pool',liquidityUsd:24000,
+  marketObservedAt:new Date(now-2*60_000).toISOString(),
+  sellability:{status:'route_available',checkedAt:new Date(now-25*60_000).toISOString()},
+  analysis:{score:76,securityPublicationReady:true,securityComprehensive:true,hardBlocked:false,risk:'medium'}};
+ const noSecurity={...eligible,mint:'no-security',analysis:{...eligible.analysis,securityPublicationReady:false,securityComprehensive:false}};
+ const blocked={...eligible,mint:'blocked',analysis:{...eligible.analysis,hardBlocked:true}};
+ const lowScore={...eligible,mint:'low-score',analysis:{...eligible.analysis,score:67}};
+ const noPool={...eligible,mint:'no-pool',pairAddress:null};
+ scanner.state.tokens={eligible,noSecurity,blocked,lowScore,noPool};
+ scanner.selection=()=>({best:[],observe:[]});
+ const candidates=scanner.jupiterRefreshCandidates(20);
+ assert.deepEqual(candidates.map(token=>token.mint),['eligible-jupiter-token']);
+});
 test('une absence de route Jupiter est un avertissement, jamais un blocage honeypot automatique',async()=>{
  const scanner=make();
  const mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
