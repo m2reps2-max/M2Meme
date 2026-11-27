@@ -103,11 +103,15 @@ test('Helius pool RPC paginates behind a missing cursor instead of dropping the 
  await scanner.inspectPoolRpcTradeIntel(token,{maxTransactions:8});
  assert.equal(token.poolRpcTradeState.catchupBeforeSignature,'new-49');
  assert.equal(token.poolRpcTradeState.pending.length,42,'the complete first page is retained while the bounded batch is processed');
- for(let i=0;i<3;i++){
+ for(let i=0;i<6;i++){
   token.poolRpcTradeState.lastAttemptAt=new Date(Date.now()-60000).toISOString();
   await scanner.inspectPoolRpcTradeIntel(token,{maxTransactions:8});
  }
- assert.equal(signatureCalls.length,2,'the collector waits for its pending queue to drain before fetching another page');
+ assert.equal(signatureCalls.length,1,'the collector must not fetch a second page while signatures from the first page remain');
+ assert.equal(token.poolRpcTradeState.pending.length,0,'the first page must be fully processed before pagination continues');
+ token.poolRpcTradeState.lastAttemptAt=new Date(Date.now()-60000).toISOString();
+ await scanner.inspectPoolRpcTradeIntel(token,{maxTransactions:8});
+ assert.equal(signatureCalls.length,2,'the next page is fetched only after the pending queue is empty');
  assert.equal(signatureCalls[1].before,'new-49','the next request paginates backward from the oldest signature already fetched');
  assert.equal(token.poolRpcTradeState.catchupBeforeSignature,null,'the old cursor is found and catch-up completes');
  assert.equal(token.poolRpcTradeState.cursorSignature,'new-0','the head cursor advances only after the gap is fully traversed');
