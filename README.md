@@ -43,7 +43,7 @@ Ce connecteur utilise l'API web privée non documentée de X. Il peut casser, ê
 | Cohortes historiques gagnants / survivants / boom-bust | Bougies publiques GeckoTerminal, replay proxy journalier, rendements fixes à 1j/3j/7j après chaque signal, rendement final et drawdown | Rien |
 | Enrichissement automatique du meilleur candidat GeckoTerminal et d'un créateur observé à la fois | Quotas publics maîtrisés, une analyse de pool par cycle et un financement créateur toutes les 15 minutes au maximum | Rien |
 | Alertes Telegram | Telegram Bot API | Bot token + canaux configurés dans le dashboard (ancien chat ID migré) |
-| Dashboard et état actif | Express + JSON compact pour les 1 200 tokens chauds et les données opérationnelles | Variables d'accès + stockage persistant FadeHost |
+| Dashboard et état actif | Express + JSON compact pour les 7 000 tokens chauds et les données opérationnelles | Variables d'accès + stockage persistant FadeHost |
 | Archive froide des tokens | SQLite natif Node.js, jusqu'à 50 000 tokens archivés, chargement par lots | Aucune clé API ni dépendance native à compiler |
 
 **Limites importantes :**
@@ -77,7 +77,7 @@ Le seuil de score de la sélection principale démarre à 68/100. Il ne peut êt
 
 ## Base hybride à mémoire bornée
 
-Le scanner conserve un cache actif limité à 5 000 tokens par défaut dans `data/store.json` (`HOT_TOKEN_LIMIT` réglable entre 1 200 et 5 000). Les tokens qui sortent de ce cache sont archivés dans `data/tokens.archive.sqlite`, avec un historique et des prévisions compactés. L'archive est plafonnée à 50 000 entrées par défaut (`TOKEN_ARCHIVE_MAX` peut régler ce plafond entre 1 000 et 100 000). À chaque scan, jusqu'à 40 tokens archivés sont réintroduits temporairement pour une nouvelle vérification (`TOKEN_ARCHIVE_SCAN_BATCH`, maximum 50), avec un délai de revisite de 15 minutes. Lorsqu'un flux de découverte retrouve directement un mint archivé (PumpPortal, LaunchLab/Meteora ou autre source indexée), le token est immédiatement réveillé dans le cache actif et le compteur `archiveWakeups` indique la source; la vérification de marché reste plafonnée à 200 adresses par cycle. Les tokens actifs restent prioritaires, puis viennent les favoris, les découvertes récentes et le lot tournant d'archive.
+Le scanner conserve un cache actif limité à 7 000 tokens par défaut dans `data/store.json` (`HOT_TOKEN_LIMIT` réglable entre 1 200 et 8 000). Les tokens qui sortent de ce cache sont archivés dans `data/tokens.archive.sqlite`, avec un historique et des prévisions compactés. L'archive est plafonnée à 50 000 entrées par défaut (`TOKEN_ARCHIVE_MAX` peut régler ce plafond entre 1 000 et 100 000). À chaque scan, jusqu'à 50 tokens archivés sont réintroduits temporairement pour une nouvelle vérification (`TOKEN_ARCHIVE_SCAN_BATCH`, maximum 50), avec un délai de revisite de 15 minutes. Lorsqu'un flux de découverte retrouve directement un mint archivé (PumpPortal, LaunchLab/Meteora ou autre source indexée), le token est immédiatement réveillé dans le cache actif et le compteur `archiveWakeups` indique la source; la vérification de marché reste plafonnée à 200 adresses par cycle. Les tokens actifs restent prioritaires, puis viennent les favoris, les découvertes récentes et le lot tournant d'archive.
 
 SQLite utilise le module natif `node:sqlite` : le runtime doit être Node.js 22.5 ou ultérieur dans la branche 22, ou Node.js 26. Le fichier SQLite doit rester dans le dossier persistant `data` de l'hébergement. Si SQLite n'est pas disponible, le scanner désactive l'archive et conserve son ancien plafond actif au lieu de prétendre avoir étendu la base. La taille de la base et le nombre total conservé sont exposés dans l'aperçu du dashboard. Le compteur de réveils d'archive est exposé dans le diagnostic runtime. L'archive augmente la capacité de conservation, mais ne signifie pas que 50 000 tokens sont tous rescannés chaque minute : le traitement reste échelonné pour protéger la RAM et les quotas des API publiques.
 
@@ -276,7 +276,7 @@ un modèle d'archive n'est accepté que si son rapport date de moins de cinq jou
 Le calcul lourd reste dans GitHub Actions et seul le résumé compact est renvoyé au
 Dashboard. Le rapport JSON est conservé 30 jours. Il utilise le même secret `MEME_RADAR_ACTIONS_TOKEN`
 et les routes HTTPS authentifiées `GET/POST /internal/actions/archive-learning`.
-Cette analyse couvre l'archive froide, pas les 1 200 tokens actifs du fichier
+Cette analyse couvre l'archive froide, pas les 7 000 tokens actifs du fichier
 principal; elle ne modifie aucun seuil de sélection. Si le secret est absent côté
 GitHub, le workflow saute proprement l'analyse. S'il est absent côté FadeHost ou
 ne correspond pas, l'API refuse l'export/import sans modifier les données.
