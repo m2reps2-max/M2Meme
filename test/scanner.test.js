@@ -450,7 +450,8 @@ test('Jupiter refreshes high-quality live tokens even when strict Best/Observe s
  scanner.state.tokens={eligible,noSecurity,blocked,lowScore,noPool};
  scanner.selection=()=>({best:[],observe:[]});
  const candidates=scanner.jupiterRefreshCandidates(20);
- assert.deepEqual(candidates.map(token=>token.mint),['eligible-jupiter-token']);
+ assert.deepEqual(candidates.map(token=>token.mint),['eligible-jupiter-token','no-security']);
+ assert.ok(candidates.every(token=>token.analysis.hardBlocked!==true),'read-only quotes remain limited to non-blocked tokens');
 });
 test('une absence de route Jupiter est un avertissement, jamais un blocage honeypot automatique',async()=>{
  const scanner=make();
