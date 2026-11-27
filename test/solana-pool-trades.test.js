@@ -13,6 +13,22 @@ test('unverified transfers and non-signing token owners are not counted as pool 
  const swap={...tx,transaction:{message:{accountKeys:[{pubkey:wallet,signer:true}],instructions:[{program:'jupiter',parsed:{type:'route'}}]}},meta:{...tx.meta,postTokenBalances:[{mint,owner:'Dddefghijkmnopqrstuvwxyz123456789ABCDEFGH',uiTokenAmount:{uiAmountString:'25',amount:'25000000',decimals:6}}]}};
  assert.deepEqual(extractPoolSwapEvents(swap,mint,{signature:'sig3'}),[]);
 });
+test('pool RPC uses parsed transactions to retain token owners when a swap has multiple signers',()=>{
+ const tx={slot:20,blockTime:1795720000,
+  transaction:{message:{accountKeys:[{pubkey:wallet,signer:true},{pubkey:'FeePayer111111111111111111111111111111111',signer:true}],instructions:[{program:'jupiter',parsed:{type:'route'}}]}},
+  meta:{err:null,preTokenBalances:[{mint,owner:wallet,uiTokenAmount:{uiAmountString:'10',amount:'10000000',decimals:6}}],
+   postTokenBalances:[{mint,owner:wallet,uiTokenAmount:{uiAmountString:'35',amount:'35000000',decimals:6}}]}};
+ const rows=extractPoolSwapEvents(tx,mint,{signature:'multi-signer-parsed'});
+ assert.equal(rows.length,1);
+ assert.equal(rows[0].wallet,wallet);
+ assert.equal(rows[0].direction,'buy');
+ const compact={...tx,meta:{...tx.meta,
+  preTokenBalances:[{mint,uiTokenAmount:{uiAmountString:'10',amount:'10000000',decimals:6}}],
+  postTokenBalances:[{mint,uiTokenAmount:{uiAmountString:'35',amount:'35000000',decimals:6}}]}};
+ assert.deepEqual(extractPoolSwapEvents(compact,mint,{signature:'multi-signer-compact'}),[],
+  'without owner fields, a multi-signer transaction must not be attributed to an arbitrary signer');
+});
+
 test('Gecko refresh preserves previously verified RPC evidence',()=>{
  const gecko={checkedAt:new Date().toISOString(),tradeCount:300,observedTrades:[]};
  const previous={rpcConfirmedTradeCount:8,rpcConfirmedUniqueBuyers:6,rpcConfirmedCheckedAt:'2026-11-26T20:00:00Z',rpcConfirmedLastTradeAt:'2026-11-26T20:00:00Z',uniqueBuyers:1};
