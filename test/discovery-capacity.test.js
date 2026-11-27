@@ -4,6 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   DEFAULT_HOT_TOKEN_LIMIT,
+  MAX_HOT_TOKEN_LIMIT,
   DEGRADED_HOT_TOKEN_LIMIT,
   DEFAULT_ARCHIVE_SCAN_BATCH,
   DEFAULT_ARCHIVE_MAX_TOKENS,
@@ -12,13 +13,14 @@ const {
   resolveArchiveScanBatch
 } = require('../lib/discovery-capacity');
 
-test('active token cache defaults to 7000 and remains bounded to 1200..8000', () => {
-  assert.equal(DEFAULT_HOT_TOKEN_LIMIT, 7000);
-  assert.equal(resolveHotTokenLimit(undefined), 7000);
-  assert.equal(resolveHotTokenLimit('6500'), 6500);
+test('active token cache defaults to 10000 and remains bounded to 1200..12000', () => {
+  assert.equal(DEFAULT_HOT_TOKEN_LIMIT, 10000);
+  assert.equal(resolveHotTokenLimit(undefined), 10000);
+  assert.equal(resolveHotTokenLimit('9500'), 9500);
   assert.equal(resolveHotTokenLimit('900'), 1200);
-  assert.equal(resolveHotTokenLimit('9000'), 8000);
-  assert.equal(resolveHotTokenLimit('invalid'), 7000);
+  assert.equal(resolveHotTokenLimit('13000'), 12000);
+  assert.equal(MAX_HOT_TOKEN_LIMIT, 12000);
+  assert.equal(resolveHotTokenLimit('invalid'), 10000);
   assert.equal(DEGRADED_HOT_TOKEN_LIMIT, 1200);
 });
 
