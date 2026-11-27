@@ -1140,7 +1140,7 @@ test('security memory guard does not consume the one-minute retry window',async(
  scanner.state.tokens=Object.fromEntries(Array.from({length:4},(_,i)=>['security-'+i,{mint:'security-'+i,pairAddress:'pair-'+i,liquidityUsd:10000}]));
  const original=process.memoryUsage;
  try{
-  process.memoryUsage=()=>({heapUsed:61*1048576,external:5*1048576,rss:701*1048576});
+  process.memoryUsage=()=>({heapUsed:61*1048576,external:5*1048576,rss:761*1048576});
   await scanner.securityLeaders();
   assert.equal(scanner.lastSecurity,0);
  }finally{process.memoryUsage=original;}
@@ -1326,7 +1326,7 @@ test('runtime memory diagnostics expose the current budget and last scanner guar
  scanner.state.sources.scannerMemory={ok:false,at:'2026-11-26T22:00:00.000Z',reason:'Scan différé',heapMiB:470,externalMiB:10,rssMiB:450,maxHeapMiB:460,maxExternalMiB:120,maxRssMiB:800};
  const memory=scanner.status().runtimeMemory;
  assert.equal(memory.scannerGuard.ok,false);
- assert.equal(memory.scannerGuard.heapMiB,430);
+ assert.equal(memory.scannerGuard.heapMiB,470);
  assert.equal(memory.scannerGuard.maxHeapMiB,460);
  assert.ok(Number.isFinite(memory.current.rssMiB));
  assert.ok(Number.isFinite(memory.current.heapMiB));
