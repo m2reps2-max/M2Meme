@@ -308,7 +308,7 @@ test('Helius pool RPC follows the DexScreener market pair and resets a cursor fr
  assert.ok(token.poolRpcTradeState.poolAddressChangedAt);
  assert.deepEqual(token.rpcTradeEvents,[],'confirmed events from the old pool must not leak into the new pool');
  assert.equal(token.poolRpcTradeIntel.poolAddress,pairAddress);
- assert.equal(token.tradeIntel.rpcConfirmedTradeCount,undefined,'old pool proof must be cleared');
+ assert.equal(token.tradeIntel.rpcConfirmedTradeCount,0,'the new pool starts with zero confirmed swaps, not the previous pool proof');
  assert.equal(token.tradeIntel.tradeCount,20,'Gecko market sample remains intact');
 });
 
