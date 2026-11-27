@@ -59,6 +59,14 @@ test('uses bounded exponential retry delays', () => {
   assert.equal(retryDelay(20), 60 * 60 * 1000);
 });
 
+test('only validated opportunity alerts are publishable from the Telegram outbox', () => {
+  const { isPublishableTelegramOutboxEntry } = require('../lib/telegram-outbox');
+  assert.equal(isPublishableTelegramOutboxEntry({ alertId: '2026-01-01:Mint:opportunity' }), true);
+  assert.equal(isPublishableTelegramOutboxEntry({ alertId: '2026-01-01:Mint:watch' }), false);
+  assert.equal(isPublishableTelegramOutboxEntry({ alertId: '2026-01-01:Mint:danger' }), false);
+  assert.equal(isPublishableTelegramOutboxEntry({ alertId: 'legacy-alert-id' }), false);
+});
+
 test('requeues transient failures and permanently stops after the retry budget', () => {
   const entry = createTelegramOutboxEntry({ alertId: 'a', chatId: 'chat', message: 'Hello' });
   entry.attempts = 2;
