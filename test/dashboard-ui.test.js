@@ -289,3 +289,13 @@ test('home narrative panel exposes observed community acceleration and independe
  assert.match(js,/x\.trend/);
  assert.match(js,/mentions publiques vérifiées/);
 });
+
+test('home does not label a stopped scanner as active or unknown memory as zero',()=>{
+ const start=js.indexOf('function renderOverview(){');
+ const end=js.indexOf('\\nfunction renderScanner',start);
+ const source=js.slice(start,end);
+ assert.match(source,/runtime\.running===true\?'Scanner actif':'Scanner arrêté'/);
+ assert.match(source,/runtime\.running!==true\?'bad'/);
+ assert.match(source,/memory\.rssMiB!==null&&memory\.rssMiB!==undefined/);
+ assert.match(source,/memory\.heapMiB!==null&&memory\.heapMiB!==undefined/);
+});
