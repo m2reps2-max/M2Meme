@@ -1397,3 +1397,10 @@ test('un mint côté quote sans priceNative ne reçoit pas le prix du base token
  assert.equal(scanner.state.tokens[mint].priceUsd,undefined);
 });
 
+test('les diagnostics RPC affichent les limites réellement utilisées par le scanner',()=>{
+ const scanner=make();
+ const mode=scanner.status().poolTradeRpc.mode;
+ assert.match(mode,/10 pools par scan/);
+ assert.match(mode,/16 transactions maximum par pool/);
+ assert.match(mode,/160 lectures séquentielles/);
+});
