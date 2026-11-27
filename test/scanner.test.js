@@ -456,7 +456,7 @@ test('Jupiter refreshes high-quality live tokens even when strict Best/Observe s
 test('une absence de route Jupiter est un avertissement, jamais un blocage honeypot automatique',async()=>{
  const scanner=make();
  const mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
- const token={mint,pairAddress:'PairAddress',liquidityUsd:20000,priceUsd:0.001,jupiterPrice:{priceUsd:0.001,decimals:9},analysis:{score:72,securityComprehensive:true,hardBlocked:false}};
+ const token={mint,pairAddress:'PairAddress',liquidityUsd:20000,priceUsd:0.001,jupiterPrice:{priceUsd:0.001,decimals:9},analysis:{score:72,risk:'medium',hardBlocked:false}};
  scanner.state.tokens[mint]=token;
  const originalFetch=global.fetch;
  global.fetch=async()=>({ok:false,status:400,headers:{get:()=>null},text:async()=>JSON.stringify({error:'No routes found',errorCode:'NO_ROUTES_FOUND'})});
