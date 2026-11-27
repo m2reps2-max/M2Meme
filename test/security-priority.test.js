@@ -55,3 +55,16 @@ test('security refresh becomes eligible before the 15-minute publication evidenc
  assert.equal(MIN_SECURITY_REFRESH_AGE_MS,10*60_000);
  assert.deepEqual(rankSecurityCandidates([nineMinutesOld,twelveMinutesOld],now,5).map(x=>x.mint),['twelve-minutes']);
 });
+
+
+test('safe near-threshold candidates outrank higher-scoring blocked or unknown-risk tokens for scarce refresh slots',()=>{
+ const now=150_000_000;
+ const age=new Date(now-2*60*60*1000).toISOString();
+ const viable={mint:'viable-near-threshold',pairAddress:'pool-viable',analysis:{score:75,risk:'medium'},security:{checkedAt:age}};
+ const unknown={mint:'unknown-higher-score',pairAddress:'pool-unknown',analysis:{score:95,risk:'unknown'},security:{checkedAt:age}};
+ const highRisk={mint:'high-risk-higher-score',pairAddress:'pool-high-risk',analysis:{score:99,risk:'high'},security:{checkedAt:age}};
+ const blocked={mint:'hard-blocked-higher-score',pairAddress:'pool-blocked',analysis:{score:100,risk:'medium',hardBlocked:true},security:{checkedAt:age}};
+ assert.deepEqual(rankSecurityCandidates([unknown,highRisk,blocked,viable],now,4).map(token=>token.mint),[
+  'viable-near-threshold','unknown-higher-score','high-risk-higher-score','hard-blocked-higher-score'
+ ]);
+});
