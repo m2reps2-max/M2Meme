@@ -74,6 +74,19 @@ test('formats a curated best-memecoin post with market details and terminal link
 });
 
 
+test('formats watch alerts as unvalidated observations without a buy recommendation',()=>{
+  const message=formatTelegramAlert({
+    name:'Watch Token',symbol:'WATCH',mint:'So11111111111111111111111111111111111111112',
+    liquidityUsd:6000,fdv:50000,volume:{h1:1000},txns:{h1:{buys:8,sells:4}},ageMinutes:12,
+    analysis:{score:73,coverage:60,flags:[]},
+    opportunityQualification:{reasons:['Sécurité dynamique incomplète','Acheteurs RPC non vérifiés']}
+  },'watch');
+  assert.match(message,/CANDIDAT À SURVEILLER — NON VALIDÉ/);
+  assert.match(message,/Sécurité dynamique incomplète/);
+  assert.match(message,/Observation uniquement/);
+  assert.doesNotMatch(message,/MEMECOIN RETENUE|PROMETTEUSE/);
+});
+
 test('does not invent a positive reason when observed market evidence is missing', () => {
   const { buildSelectionReason } = require('../lib/telegram-channels');
   const reason = buildSelectionReason({ analysis: { score: 88, coverage: 90, factors: { momentum: 95, liquidityQuality: 99 } } });
