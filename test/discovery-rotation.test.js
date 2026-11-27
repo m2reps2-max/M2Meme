@@ -79,7 +79,7 @@ test('market refresh allocation reserves room for fresh launches after follow-up
     limit: 360
   });
   assert.equal(rows.length, 360);
-  assert.equal(new Set(rows).size, 320);
+  assert.equal(new Set(rows).size, 360);
   assert.equal(rows[0], 'perf-0');
   assert.equal(rows[60], 'launch-0');
   assert.equal(rows[260], 'fresh-0');
