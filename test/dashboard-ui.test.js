@@ -33,10 +33,13 @@ test('home exposes real scanner cycle, market refresh, memory and rejection diag
  const start=js.indexOf('function renderOverview(){');
  const end=js.indexOf('\nfunction renderScanner',start);
  const source=js.slice(start,end);
- for(const field of ['scannerRuntime','dexMarket','runtimeMemory','lastScanCompletedDurationMs','requestedAddresses','snapshots','rssMiB','bestRejectedIncompleteSecurity','bestRejectedStaleTransactions'])assert.ok(source.includes(field),field);
+ for(const field of ['scannerRuntime','dexMarket','runtimeMemory','poolTradeRpc','solanaRpc','uniqueBuyersByPool','confirmedSwapsByPoolSum','lastScanCompletedDurationMs','requestedAddresses','snapshots','rssMiB','bestRejectedIncompleteSecurity','bestRejectedStaleTransactions'])assert.ok(source.includes(field),field);
  assert.match(source,/État réel du scanner/);
  assert.match(source,/Pourquoi les candidats sont écartés/);
  assert.match(source,/RAM RSS/);
+ assert.match(source,/Acheteurs distincts/);
+ assert.match(source,/Swaps RPC confirmés/);
+ assert.match(source,/RPC Solana \/ Helius/);
 });
 test('home shows only essential stats and keeps advanced modules out of sight',()=>{
  const start=js.indexOf('function renderOverview(){');
