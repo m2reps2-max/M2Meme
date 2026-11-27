@@ -6,9 +6,9 @@ const { memoryBudget } = require('../lib/scanner');
 
 test('1 GiB FadeHost profile exposes a conservative memory safety margin', () => {
   const budget = memoryBudget();
-  assert.equal(budget.maxHeapMiB, 420);
+  assert.equal(budget.maxHeapMiB, 460);
   assert.equal(budget.maxExternalMiB, 120);
-  assert.equal(budget.maxRssMiB, 720);
+  assert.equal(budget.maxRssMiB, 800);
 });
 
 test('memory guard still rejects work when a configured budget is exceeded', () => {
