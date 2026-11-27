@@ -312,6 +312,18 @@ test('Helius pool RPC follows the DexScreener market pair and resets a cursor fr
  assert.equal(token.tradeIntel.tradeCount,20,'Gecko market sample remains intact');
 });
 
+test('Solana RPC caps full transaction payloads at 1 MiB without restricting signature pages',async()=>{
+ const scanner=make();
+ scanner.rpcEndpoints=['https://rpc.test'];
+ scanner.rpcProviderBackoff=new Map();
+ const originalFetch=global.fetch;
+ global.fetch=async()=>({ok:true,status:200,headers:{get:name=>name.toLowerCase()==='content-length'?'1153434':null},text:async()=>JSON.stringify({result:null})});
+ try{
+  await assert.rejects(()=>scanner.rpc('getTransaction',[]),/trop volumineuse/i);
+  assert.equal(await scanner.rpc('getSignaturesForAddress',[]),null,'the normal 2 MiB RPC limit still allows larger signature pages');
+ }finally{global.fetch=originalFetch;}
+});
+
 test('Helius pool sampling refreshes eight ranked pools per scan with a bounded twelve-transaction batch',async()=>{
  const scanner=make();
  scanner.lastAutoCreatorFundingAt=Date.now();
