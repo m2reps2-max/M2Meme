@@ -29,6 +29,15 @@ test('Plus menu exposes only results, alerts and settings',()=>{
  assert.doesNotMatch(source,/walletGraph|smartIntel|creators|historical|quality|social/);
 });
 
+test('home exposes real scanner cycle, market refresh, memory and rejection diagnostics',()=>{
+ const start=js.indexOf('function renderOverview(){');
+ const end=js.indexOf('\\nfunction renderScanner',start);
+ const source=js.slice(start,end);
+ for(const field of ['scannerRuntime','dexMarket','runtimeMemory','lastScanCompletedDurationMs','requestedAddresses','snapshots','rssMiB','bestRejectedIncompleteSecurity','bestRejectedStaleTransactions'])assert.ok(source.includes(field),field);
+ assert.match(source,/État réel du scanner/);
+ assert.match(source,/Pourquoi les candidats sont écartés/);
+ assert.match(source,/RAM RSS/);
+});
 test('home shows only essential stats and keeps advanced modules out of sight',()=>{
  const start=js.indexOf('function renderOverview(){');
  const end=js.indexOf('\nfunction renderScanner',start);
