@@ -350,13 +350,13 @@ test('Jupiter refresh queue follows the configured score floor without changing 
  scanner.state.scannerSettings.minScore=90;
  assert.deepEqual(scanner.jupiterRefreshCandidates(),[]);
 });
-test('Jupiter retries a route whose price impact is unknown before the normal ten-minute cache expires',async()=>{
+test('Jupiter retries a route with neither price impact nor all-in loss after a short cooldown',async()=>{
  const scanner=make(),mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
  scanner.state.scannerSettings={minScore:75};
  const token={mint,pairAddress:'PoolAddress',liquidityUsd:22000,priceUsd:0.001,
   jupiterPrice:{priceUsd:0.001,decimals:9,checkedAt:new Date().toISOString()},
   security:{data:{supply:'1000000000',decimals:9}},
-  sellability:{status:'route_available',routeAvailable:true,requestedUsd:50,inputAmountUsd:50,priceImpactPct:null,checkedAt:new Date(Date.now()-2*60_000).toISOString()},
+  sellability:{status:'route_available',routeAvailable:true,requestedUsd:50,inputAmountUsd:50,priceImpactPct:null,checkedAt:new Date(Date.now()-4*60_000).toISOString()},
   analysis:{score:67,securityPublicationReady:true,securityComprehensive:true,hardBlocked:false,risk:'observations_only'}};
  scanner.state.tokens[mint]=token;
  const originalFetch=global.fetch;let calls=0;
@@ -369,6 +369,32 @@ test('Jupiter retries a route whose price impact is unknown before the normal te
   assert.equal(token.sellability.priceImpactPct,1);
  }finally{global.fetch=originalFetch;}
 });
+test('Jupiter keeps a route cached when all-in execution loss is measured without priceImpactPct',async()=>{
+ const scanner=make(),mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
+ const token={mint,pairAddress:'PoolAddress',liquidityUsd:22000,priceUsd:0.001,
+  jupiterPrice:{priceUsd:0.001,decimals:9,checkedAt:new Date().toISOString()},
+  security:{data:{supply:'1000000000',decimals:9}},
+  sellability:{status:'route_available',routeAvailable:true,requestedUsd:50,inputAmountUsd:50,priceImpactPct:null,effectiveLossPct:3.4,checkedAt:new Date(Date.now()-2*60_000).toISOString()},
+  analysis:{score:76,securityPublicationReady:true,securityComprehensive:true,hardBlocked:false,risk:'medium'}};
+ const originalFetch=global.fetch;let calls=0;
+ global.fetch=async()=>{calls++;return {ok:true,status:200,headers:{get:()=>null},text:async()=>JSON.stringify({router:'metis',outAmount:'48300000',routePlan:[{swapInfo:{label:'Raydium'}}]})};};
+ try{
+  const result=await scanner.refreshSellabilityQuotes([token]);
+  assert.equal(result.skipped,true);
+  assert.equal(calls,0,'a measured all-in loss is sufficient; do not hammer Jupiter for a missing optional impact field');
+ }finally{global.fetch=originalFetch;}
+});
+
+test('Jupiter refresh window prioritizes score before quote age',()=>{
+ const scanner=make(),now=Date.now();
+ const makeToken=(mint,score,ageMinutes)=>({mint,pairAddress:'pool-'+mint,liquidityUsd:22000,
+  sellability:{status:'route_available',checkedAt:new Date(now-ageMinutes*60_000).toISOString()},
+  analysis:{score,securityPublicationReady:true,securityComprehensive:true,hardBlocked:false,risk:'medium'}});
+ const low=makeToken('low-score',65,40),high=makeToken('high-score',76,20);
+ scanner.state.tokens={low,high};
+ assert.deepEqual(scanner.jupiterRefreshCandidates(20).map(token=>token.mint),['high-score','low-score']);
+});
+
 test('Jupiter refreshes high-quality live tokens even when strict Best/Observe selection excludes them',()=>{
  const scanner=make(),now=Date.now();
  const eligible={mint:'eligible-jupiter-token',pairAddress:'pool',liquidityUsd:24000,
