@@ -21,6 +21,13 @@ function token(i,overrides={}){
  };
 }
 
+test('best shortlist accepts an independently sufficient fresh RPC-only demand sample',()=>{
+ const candidate=token('rpc-only',{tradeIntel:{tradeCount:0,checkedAt:null,rpcConfirmedTradeCount:24,rpcConfirmedUniqueBuyers:8,rpcConfirmedVolumeCoverage:100,rpcConfirmedBuyVolumeUsd:1400,rpcConfirmedSellVolumeUsd:900,rpcConfirmedCheckedAt:new Date(NOW-3*60_000).toISOString(),rpcConfirmedLastTradeAt:new Date(NOW-4*60_000).toISOString()}});
+ const result=buildSelection([candidate],NOW);
+ assert.equal(result.best.length,1);
+ assert.equal(result.best[0].mint,'mint-rpc-only');
+});
+
 test('selection ranks the full input and returns no more than five best candidates',()=>{
  const items=Array.from({length:9},(_,i)=>token(i,{analysis:{...token(i).analysis,score:88+i}}));
  const result=buildSelection(items,NOW);
