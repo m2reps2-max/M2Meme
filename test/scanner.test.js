@@ -286,6 +286,26 @@ test('Jupiter exit capacity uses measured all-in execution loss when priceImpact
  assert.equal(expensive.exitCapacityUsd,0,'a measured all-in loss above 5% must remain ineligible');
 });
 
+test('Helius pool RPC follows the DexScreener market pair and resets a cursor from the previous Gecko pool',async()=>{
+ const scanner=make();
+ const mint='C'.repeat(43),pairAddress='A'.repeat(43),geckoPoolAddress='B'.repeat(43);
+ const token={mint,pairAddress,geckoPoolAddress,liquidityUsd:12000,analysis:{score:70},
+  poolRpcTradeState:{poolAddress:geckoPoolAddress,poolAddressSource:'geckoterminal_pool',lastAttemptAt:new Date().toISOString(),
+   cursorSignature:'old-gecko-signature',pending:[{signature:'old-gecko-signature'}],processedSignatures:['old-gecko-done'],catchupBeforeSignature:'older-gecko',catchupHeadSignature:'head-gecko',gapDetected:true}};
+ scanner.state.tokens[mint]=token;
+ const requests=[];
+ scanner.rpc=async(method,params)=>{requests.push({method,params});if(method==='getSignaturesForAddress')return [];return null;};
+ await scanner.inspectPoolRpcTradeIntel(token,{maxTransactions:12});
+ assert.equal(requests[0].method,'getSignaturesForAddress');
+ assert.equal(requests[0].params[0],pairAddress,'the RPC sample must match the DexScreener market pair');
+ assert.equal(token.poolRpcTradeState.poolAddress,pairAddress);
+ assert.equal(token.poolRpcTradeState.poolAddressSource,'dexscreener_pair');
+ assert.equal(token.poolRpcTradeState.previousPoolAddress,geckoPoolAddress);
+ assert.equal(token.poolRpcTradeState.pending.length,0,'signatures from a different pool must not be mixed into this queue');
+ assert.equal(token.poolRpcTradeState.cursorSignature,null);
+ assert.ok(token.poolRpcTradeState.poolAddressChangedAt);
+});
+
 test('Helius pool sampling refreshes eight ranked pools per scan with a bounded twelve-transaction batch',async()=>{
  const scanner=make();
  scanner.lastAutoCreatorFundingAt=Date.now();
