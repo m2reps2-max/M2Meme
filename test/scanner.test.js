@@ -291,7 +291,9 @@ test('Helius pool RPC follows the DexScreener market pair and resets a cursor fr
  const mint='C'.repeat(43),pairAddress='A'.repeat(43),geckoPoolAddress='B'.repeat(43);
  const token={mint,pairAddress,geckoPoolAddress,liquidityUsd:12000,analysis:{score:70},
   poolRpcTradeState:{poolAddress:geckoPoolAddress,poolAddressSource:'geckoterminal_pool',lastAttemptAt:new Date().toISOString(),
-   cursorSignature:'old-gecko-signature',pending:[{signature:'old-gecko-signature'}],processedSignatures:['old-gecko-done'],catchupBeforeSignature:'older-gecko',catchupHeadSignature:'head-gecko',gapDetected:true}};
+   cursorSignature:'old-gecko-signature',pending:[{signature:'old-gecko-signature'}],processedSignatures:['old-gecko-done'],catchupBeforeSignature:'older-gecko',catchupHeadSignature:'head-gecko',gapDetected:true},
+  rpcTradeEvents:[{signature:'old-gecko-swap',wallet:'wallet',mint,at:new Date().toISOString(),direction:'buy',swapConfirmed:true}],
+  poolRpcTradeIntel:{tradeCount:1,uniqueBuyers:1},tradeIntel:{rpcConfirmedTradeCount:1,rpcConfirmedUniqueBuyers:1,tradeCount:20}};
  scanner.state.tokens[mint]=token;
  const requests=[];
  scanner.rpc=async(method,params)=>{requests.push({method,params});if(method==='getSignaturesForAddress')return [];return null;};
@@ -304,6 +306,10 @@ test('Helius pool RPC follows the DexScreener market pair and resets a cursor fr
  assert.equal(token.poolRpcTradeState.pending.length,0,'signatures from a different pool must not be mixed into this queue');
  assert.equal(token.poolRpcTradeState.cursorSignature,null);
  assert.ok(token.poolRpcTradeState.poolAddressChangedAt);
+ assert.deepEqual(token.rpcTradeEvents,[],'confirmed events from the old pool must not leak into the new pool');
+ assert.equal(token.poolRpcTradeIntel.poolAddress,pairAddress);
+ assert.equal(token.tradeIntel.rpcConfirmedTradeCount,undefined,'old pool proof must be cleared');
+ assert.equal(token.tradeIntel.tradeCount,20,'Gecko market sample remains intact');
 });
 
 test('Helius pool sampling refreshes eight ranked pools per scan with a bounded twelve-transaction batch',async()=>{
