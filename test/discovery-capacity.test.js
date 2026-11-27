@@ -12,23 +12,23 @@ const {
   resolveArchiveScanBatch
 } = require('../lib/discovery-capacity');
 
-test('active token cache defaults to 5000 and remains bounded to 1200..5000', () => {
-  assert.equal(DEFAULT_HOT_TOKEN_LIMIT, 5000);
-  assert.equal(resolveHotTokenLimit(undefined), 5000);
-  assert.equal(resolveHotTokenLimit('3500'), 3500);
+test('active token cache defaults to 7000 and remains bounded to 1200..8000', () => {
+  assert.equal(DEFAULT_HOT_TOKEN_LIMIT, 7000);
+  assert.equal(resolveHotTokenLimit(undefined), 7000);
+  assert.equal(resolveHotTokenLimit('6500'), 6500);
   assert.equal(resolveHotTokenLimit('900'), 1200);
-  assert.equal(resolveHotTokenLimit('9000'), 5000);
-  assert.equal(resolveHotTokenLimit('invalid'), 5000);
+  assert.equal(resolveHotTokenLimit('9000'), 8000);
+  assert.equal(resolveHotTokenLimit('invalid'), 7000);
   assert.equal(DEGRADED_HOT_TOKEN_LIMIT, 1200);
 });
 
-test('archive scan batch defaults to 40 and remains bounded to 20..50', () => {
-  assert.equal(DEFAULT_ARCHIVE_SCAN_BATCH, 40);
-  assert.equal(resolveArchiveScanBatch(undefined), 40);
+test('archive scan batch defaults to 50 and remains bounded to 20..50', () => {
+  assert.equal(DEFAULT_ARCHIVE_SCAN_BATCH, 50);
+  assert.equal(resolveArchiveScanBatch(undefined), 50);
   assert.equal(resolveArchiveScanBatch('50'), 50);
   assert.equal(resolveArchiveScanBatch('5'), 20);
   assert.equal(resolveArchiveScanBatch('500'), 50);
-  assert.equal(resolveArchiveScanBatch('invalid'), 40);
+  assert.equal(resolveArchiveScanBatch('invalid'), 50);
 });
 
 test('cold archive defaults to 50000 tokens and remains bounded to 100000', () => {

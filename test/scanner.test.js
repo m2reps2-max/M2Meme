@@ -256,7 +256,7 @@ test('trade intelligence rotates through the oldest unchecked pools instead of s
  assert.deepEqual(checked,['oldest','second-oldest']);
 });
 
-test('Helius pool scheduler prioritizes queued RPC backlogs ahead of idle higher-scoring pools',async()=>{
+test('Helius pool scheduler prioritizes queued RPC backlogs ahead of idle higher-scoring pools with a ten-pool batch',async()=>{
  const scanner=make(),now=Date.now();
  scanner.lastAutoCreatorFundingAt=now;
  scanner.state.scannerSettings={minScore:80};
@@ -275,7 +275,7 @@ test('Helius pool scheduler prioritizes queued RPC backlogs ahead of idle higher
  const inspected=[];
  scanner.inspectPoolRpcTradeIntel=async token=>{inspected.push(token.mint);return null;};
  await scanner.refreshCandidateIntelligence();
- assert.equal(inspected.length,8);
+ assert.equal(inspected.length,10);
  assert.equal(inspected[0],'backlog-large');
  assert.equal(inspected[1],'backlog-small');
 });
@@ -328,12 +328,12 @@ test('Solana RPC caps full transaction payloads at 1 MiB without restricting sig
  }finally{global.fetch=originalFetch;}
 });
 
-test('Helius pool sampling refreshes eight ranked pools per scan with a bounded twelve-transaction batch',async()=>{
+test('Helius pool sampling refreshes ten ranked pools per scan with a bounded sixteen-transaction batch',async()=>{
  const scanner=make();
  scanner.lastAutoCreatorFundingAt=Date.now();
  scanner.state.scannerSettings={minScore:80};
  scanner.state.tokens={};
- for(let i=0;i<8;i++){
+ for(let i=0;i<10;i++){
   const mint='rpc-pool-'+i;
   scanner.state.tokens[mint]={mint,pairAddress:'pool-'+i,liquidityUsd:10000-i*100,
    analysis:{score:75-i,hardBlocked:false,risk:'medium'}};
@@ -344,9 +344,9 @@ test('Helius pool sampling refreshes eight ranked pools per scan with a bounded 
   return null;
  };
  await scanner.refreshCandidateIntelligence();
- assert.equal(inspected.length,8);
- assert.deepEqual(inspected.map(row=>row.mint),['rpc-pool-0','rpc-pool-1','rpc-pool-2','rpc-pool-3','rpc-pool-4','rpc-pool-5','rpc-pool-6','rpc-pool-7']);
- assert.ok(inspected.every(row=>row.options.persist===false&&row.options.maxTransactions===12));
+ assert.equal(inspected.length,10);
+ assert.deepEqual(inspected.map(row=>row.mint),Array.from({length:10},(_,i)=>'rpc-pool-'+i));
+ assert.ok(inspected.every(row=>row.options.persist===false&&row.options.maxTransactions===16));
 });
 
 test('Jupiter refresh prioritizes stale checked tokens over newly discovered unquoted tokens',()=>{
@@ -379,7 +379,7 @@ test('Helius pool refresh does not let never-inspected new tokens starve stale c
  scanner.inspectPoolRpcTradeIntel=async token=>{inspected.push(token.mint);return null;};
  await scanner.refreshCandidateIntelligence();
  assert.equal(inspected[0],'stale-rpc');
- assert.equal(inspected.length,8);
+ assert.equal(inspected.length,9);
 });
 
 test('Jupiter refresh queue follows the configured score floor without changing publication thresholds',()=>{
@@ -1123,7 +1123,7 @@ test('a memory-deferred scan does not masquerade as a completed scan',async()=>{
  scanner.state.lastScanCompletedDurationMs=1234;
  const original=process.memoryUsage;
  try{
-  process.memoryUsage=()=>({heapUsed:61*1048576,external:5*1048576,rss:730*1048576});
+  process.memoryUsage=()=>({heapUsed:61*1048576,external:5*1048576,rss:810*1048576});
   const result=await scanner.scan();
   assert.equal(result.skipped,true);
   assert.equal(result.reason,'memory_budget');
@@ -1323,11 +1323,11 @@ test('le statut expose la pression mémoire et le mode dégradé de l’archive'
 
 test('runtime memory diagnostics expose the current budget and last scanner guard decision',()=>{
  const scanner=make();
- scanner.state.sources.scannerMemory={ok:false,at:'2026-11-26T22:00:00.000Z',reason:'Scan différé',heapMiB:430,externalMiB:10,rssMiB:450,maxHeapMiB:420,maxExternalMiB:120,maxRssMiB:720};
+ scanner.state.sources.scannerMemory={ok:false,at:'2026-11-26T22:00:00.000Z',reason:'Scan différé',heapMiB:470,externalMiB:10,rssMiB:450,maxHeapMiB:460,maxExternalMiB:120,maxRssMiB:800};
  const memory=scanner.status().runtimeMemory;
  assert.equal(memory.scannerGuard.ok,false);
  assert.equal(memory.scannerGuard.heapMiB,430);
- assert.equal(memory.scannerGuard.maxHeapMiB,420);
+ assert.equal(memory.scannerGuard.maxHeapMiB,460);
  assert.ok(Number.isFinite(memory.current.rssMiB));
  assert.ok(Number.isFinite(memory.current.heapMiB));
 });
