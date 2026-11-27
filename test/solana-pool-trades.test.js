@@ -38,10 +38,10 @@ test('verified DEX program IDs cover Raydium, Orca, Meteora and launchpad swaps'
   ['cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG','Swap'],
   ['dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN','Swap'],
   ['LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj','Swap'],
-  ['pAMMBay6oceH9fJKBRHGP5D4d4sWpmSwMn52FMfXEA','BuyExactQuoteIn']
+  ['pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA','BuyExactQuoteIn']
  ];
  for(const [programId,instruction] of cases){
-  assert.ok(KNOWN_SWAP_PROGRAM_IDS.has(programId)||programId==='pAMMBay6oceH9fJKBRHGP5D4d4sWpmSwMn52FMfXEA');
+  assert.ok(KNOWN_SWAP_PROGRAM_IDS.has(programId),programId+' must be in the verified DEX allowlist');
   const tx={transaction:{message:{accountKeys:[programId],instructions:[{programIdIndex:0}]}},meta:{logMessages:['Program log: Instruction: '+instruction]}};
   assert.equal(hasVerifiedSwapInstruction(tx),true,programId+' '+instruction);
  }
@@ -54,7 +54,7 @@ test('parsed PumpSwap buy/sell instructions count only under a recognized DEX pr
 });
 test('unknown programs and non-swap logs are never accepted as verified swaps',()=>{
  const unknown={transaction:{message:{accountKeys:['UnknownProgram111111111111111111111111111111'],instructions:[{programIdIndex:0}]}},meta:{logMessages:['Program log: Instruction: BuyExactQuoteIn']}};
- const knownButNotSwap={transaction:{message:{accountKeys:['pAMMBay6oceH9fJKBRHGP5D4d4sWpmSwMn52FMfXEA'],instructions:[{programIdIndex:0}]}},meta:{logMessages:['Program log: Instruction: Deposit'] }};
+ const knownButNotSwap={transaction:{message:{accountKeys:['pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA'],instructions:[{programIdIndex:0}]}},meta:{logMessages:['Program log: Instruction: Deposit'] }};
  assert.equal(hasVerifiedSwapInstruction(unknown),false);
  assert.equal(hasVerifiedSwapInstruction(knownButNotSwap),false);
 });
