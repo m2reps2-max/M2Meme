@@ -96,3 +96,29 @@ test('market refresh allocation deduplicates overlapping priority lanes', () => 
     limit: 10
   }), ['a', 'b', 'c', 'd', 'e']);
 });
+
+
+test('market refresh rotation covers the complete linked cache instead of only this scan discoveries', () => {
+  const { selectFreshDiscoveryBatch, buildMarketRefreshBatch } = require('../lib/discovery-rotation');
+  const cached = Array.from({ length: 1000 }, (_, index) => 'cached-' + String(index).padStart(4, '0'));
+  const priority = [
+    ...Array.from({ length: 40 }, (_, i) => 'perf-' + i),
+    ...Array.from({ length: 20 }, (_, i) => 'watch-' + i),
+    ...Array.from({ length: 20 }, (_, i) => 'launch-' + i),
+    ...Array.from({ length: 30 }, (_, i) => 'score-' + i),
+    ...Array.from({ length: 40 }, (_, i) => 'social-' + i)
+  ];
+  const first = selectFreshDiscoveryBatch(cached, priority, 0, 240);
+  const second = selectFreshDiscoveryBatch(cached, priority, first.nextCursor, 240);
+  assert.equal(first.items.length, 240);
+  assert.equal(second.items.length, 240);
+  assert.equal(first.items.some(mint => second.items.includes(mint)), false);
+  assert.equal(first.items.some(mint => priority.includes(mint)), false);
+  const firstCycle = buildMarketRefreshBatch({ telegramPerformance: priority.slice(0, 40), watchlist: priority.slice(40, 60), recentLaunches: priority.slice(60, 80), scoreFocus: priority.slice(80, 110), social: priority.slice(110), fresh: first.items, limit: 360 });
+  const secondCycle = buildMarketRefreshBatch({ telegramPerformance: priority.slice(0, 40), watchlist: priority.slice(40, 60), recentLaunches: priority.slice(60, 80), scoreFocus: priority.slice(80, 110), social: priority.slice(110), fresh: second.items, limit: 360 });
+  assert.equal(firstCycle.length, 360);
+  assert.equal(secondCycle.length, 360);
+  assert.equal(firstCycle.filter(mint => mint.startsWith('cached-')).length, 210);
+  assert.equal(secondCycle.filter(mint => mint.startsWith('cached-')).length, 210);
+  assert.equal(firstCycle.filter(mint => mint.startsWith('cached-')).some(mint => secondCycle.includes(mint)), false);
+});
