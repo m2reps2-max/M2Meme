@@ -1274,6 +1274,31 @@ test('les opportunités Telegram sont limitées aux cinq meilleurs candidats sé
 });
 
 
+test('publie les candidats frais à surveiller sans les présenter comme des opportunités validées',async()=>{
+ const scanner=make(),now=Date.now(),mint='So11111111111111111111111111111111111111112';
+ const sent=[];
+ scanner.activeAlertThreshold=()=>({threshold:80});
+ scanner.selection=()=>({best:[]});
+ scanner.earlyBuyerExitIntel=()=>({alert:false,wallets:0,soldSharePct:0});
+ scanner.bot={api:{sendMessage:async(chatId,message,options)=>{sent.push({chatId,message,options});return {message_id:321};}}};
+ scanner.state.telegramChannels=[{chatId:'-1001234567890',enabled:true,lastSentAt:null}];
+ scanner.state.tokens[mint]={
+  mint,name:'Watch Token',symbol:'WATCH',pairAddress:'pool-watch',liquidityUsd:6000,fdv:50000,
+  priceUsd:0.001,marketObservedAt:new Date(now).toISOString(),marketObservationSource:'dexscreener',
+  volume:{h1:1000},txns:{h1:{buys:8,sells:4}},history:[{at:now,priceUsd:0.001,liquidityUsd:6000}],
+  analysis:{score:73,coverage:60,risk:'medium',hardBlocked:false,flags:[],factors:{}}
+ };
+ scanner.refreshTelegramPerformance=async()=>({edited:0,pending:0});
+ await scanner.alerts();
+ assert.equal(scanner.state.tokens[mint].signalLevel,'watch');
+ assert.equal(scanner.state.alerts.find(row=>row.mint===mint)?.level,'watch');
+ assert.equal(sent.length,1);
+ assert.match(sent[0].message,/CANDIDAT À SURVEILLER/);
+ assert.match(sent[0].message,/NON VALIDÉ/);
+ assert.equal(sent[0].options.reply_markup,undefined,'a watch alert must not contain a buy button');
+ assert.equal(scanner.state.telegramOutbox.length,0);
+});
+
 test('une transaction multi-token ne partage pas artificiellement le même montant de cotation entre plusieurs actifs',async()=>{
  const scanner=make();
  const wallet='MultiAssetWallet111111111111111111111111111111';
