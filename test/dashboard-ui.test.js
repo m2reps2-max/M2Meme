@@ -31,7 +31,7 @@ test('Plus menu exposes only results, alerts and settings',()=>{
 
 test('home exposes real scanner cycle, market refresh, memory and rejection diagnostics',()=>{
  const start=js.indexOf('function renderOverview(){');
- const end=js.indexOf('\\nfunction renderScanner',start);
+ const end=js.indexOf('\nfunction renderScanner',start);
  const source=js.slice(start,end);
  for(const field of ['scannerRuntime','dexMarket','runtimeMemory','lastScanCompletedDurationMs','requestedAddresses','snapshots','rssMiB','bestRejectedIncompleteSecurity','bestRejectedStaleTransactions'])assert.ok(source.includes(field),field);
  assert.match(source,/État réel du scanner/);
