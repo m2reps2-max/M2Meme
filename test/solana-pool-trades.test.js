@@ -1,6 +1,7 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict');
 const {extractPoolSwapEvents,summarizePoolSwapEvents,preserveRpcTradeEvidence}=require('../lib/solana-pool-trades');
+const {hasVerifiedSwapInstruction,KNOWN_SWAP_PROGRAM_IDS}=require('../lib/wallet-transaction-evidence');
 const mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH',wallet='Ccdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
 test('verified pool swap attributes mint balance delta to a transaction signer',()=>{
  const tx={slot:10,blockTime:1795720000,transaction:{message:{accountKeys:[{pubkey:wallet,signer:true}],instructions:[{program:'jupiter',parsed:{type:'route'}}]}},meta:{err:null,preTokenBalances:[],postTokenBalances:[{mint,owner:wallet,uiTokenAmount:{uiAmountString:'25',amount:'25000000',decimals:6}}]}};
@@ -28,7 +29,35 @@ test('pool RPC uses parsed transactions to retain token owners when a swap has m
  assert.deepEqual(extractPoolSwapEvents(compact,mint,{signature:'multi-signer-compact'}),[],
   'without owner fields, a multi-signer transaction must not be attributed to an arbitrary signer');
 });
-
+test('verified DEX program IDs cover Raydium, Orca, Meteora and launchpad swaps',()=>{
+ const cases=[
+  ['CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C','Swap'],
+  ['CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK','Swap'],
+  ['whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc','Swap'],
+  ['LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo','Swap'],
+  ['cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG','Swap'],
+  ['dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN','Swap'],
+  ['LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj','Swap'],
+  ['pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA','BuyExactQuoteIn']
+ ];
+ for(const [programId,instruction] of cases){
+  assert.ok(KNOWN_SWAP_PROGRAM_IDS.has(programId),programId+' must be in the verified DEX allowlist');
+  const tx={transaction:{message:{accountKeys:[programId],instructions:[{programIdIndex:0}]}},meta:{logMessages:['Program log: Instruction: '+instruction]}};
+  assert.equal(hasVerifiedSwapInstruction(tx),true,programId+' '+instruction);
+ }
+});
+test('parsed PumpSwap buy/sell instructions count only under a recognized DEX program',()=>{
+ const valid={transaction:{message:{instructions:[{program:'pump_swap',parsed:{type:'buy'}}]}},meta:{logMessages:[]}};
+ const invalid={transaction:{message:{instructions:[{program:'unknown_program',parsed:{type:'buy'}}]}},meta:{logMessages:[]}};
+ assert.equal(hasVerifiedSwapInstruction(valid),true);
+ assert.equal(hasVerifiedSwapInstruction(invalid),false);
+});
+test('unknown programs and non-swap logs are never accepted as verified swaps',()=>{
+ const unknown={transaction:{message:{accountKeys:['UnknownProgram111111111111111111111111111111'],instructions:[{programIdIndex:0}]}},meta:{logMessages:['Program log: Instruction: BuyExactQuoteIn']}};
+ const knownButNotSwap={transaction:{message:{accountKeys:['pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA'],instructions:[{programIdIndex:0}]}},meta:{logMessages:['Program log: Instruction: Deposit'] }};
+ assert.equal(hasVerifiedSwapInstruction(unknown),false);
+ assert.equal(hasVerifiedSwapInstruction(knownButNotSwap),false);
+});
 test('Gecko refresh preserves previously verified RPC evidence',()=>{
  const gecko={checkedAt:new Date().toISOString(),tradeCount:300,observedTrades:[]};
  const previous={rpcConfirmedTradeCount:8,rpcConfirmedUniqueBuyers:6,rpcConfirmedCheckedAt:'2026-11-26T20:00:00Z',rpcConfirmedLastTradeAt:'2026-11-26T20:00:00Z',uniqueBuyers:1};
