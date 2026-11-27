@@ -72,17 +72,18 @@ test('market refresh allocation reserves room for fresh launches after follow-up
     watchlist: Array.from({ length: 20 }, (_, i) => 'watch-' + i),
     recentLaunches: Array.from({ length: 20 }, (_, i) => 'launch-' + i),
     scoreFocus: Array.from({ length: 30 }, (_, i) => 'score-' + i),
+    social: Array.from({ length: 40 }, (_, i) => 'social-' + i),
     archived: Array.from({ length: 50 }, (_, i) => 'archive-' + i),
-    tracked: Array.from({ length: 80 }, (_, i) => 'tracked-' + i),
-    fresh: Array.from({ length: 180 }, (_, i) => 'fresh-' + i),
-    limit: 320
+    tracked: Array.from({ length: 60 }, (_, i) => 'tracked-' + i),
+    fresh: Array.from({ length: 240 }, (_, i) => 'fresh-' + i),
+    limit: 360
   });
-  assert.equal(rows.length, 320);
+  assert.equal(rows.length, 360);
   assert.equal(new Set(rows).size, 320);
   assert.equal(rows[0], 'perf-0');
-  assert.equal(rows[80], 'launch-0');
-  assert.equal(rows[240], 'fresh-0');
-  assert.equal(rows.at(-1), 'fresh-79');
+  assert.equal(rows[60], 'launch-0');
+  assert.equal(rows[260], 'fresh-0');
+  assert.equal(rows.at(-1), 'fresh-99');
 });
 
 test('market refresh allocation deduplicates overlapping priority lanes', () => {
