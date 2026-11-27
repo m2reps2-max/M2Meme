@@ -142,3 +142,7 @@ footer{color:#7787a2;border-color:#26344b}
 .settings-save .footnote{max-width:520px;margin:0}
 @media(max-width:850px){.settings-fields{grid-template-columns:1fr 1fr}}
 @media(max-width:560px){.settings-fields{grid-template-columns:1fr}.settings-save{align-items:stretch;flex-direction:column}.settings-save .primary{width:100%}.settings-toggles{flex-direction:column;gap:13px}}
+
+
+/* Compact scanner diagnostics on the dashboard home. */
+.scanner-health-card{margin-top:20px}.scanner-health-line{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-top:1px solid var(--line);font-size:13px}.scanner-health-line span{color:var(--muted);text-align:right}.diagnostic-blockers{margin-top:16px}.diagnostic-blockers>b{font-size:13px}.diagnostic-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px}.diagnostic-chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:999px;padding:5px 10px;color:var(--muted);font-size:11px}.diagnostic-chip b{color:var(--text)}.error-text{color:#ff8b8b}
