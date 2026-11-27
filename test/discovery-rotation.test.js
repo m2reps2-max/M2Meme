@@ -63,3 +63,35 @@ test('score focus adapts its floor to the dashboard minimum and remains capped a
   assert.equal(selectScoreFocusCandidates(candidates, 70).length, 30);
   assert.equal(selectScoreFocusCandidates(candidates, 70).at(-1).analysis.score, 66);
 });
+
+
+test('market refresh allocation reserves room for fresh launches after follow-up lanes', () => {
+  const { buildMarketRefreshBatch } = require('../lib/discovery-rotation');
+  const rows = buildMarketRefreshBatch({
+    telegramPerformance: Array.from({ length: 40 }, (_, i) => 'perf-' + i),
+    watchlist: Array.from({ length: 20 }, (_, i) => 'watch-' + i),
+    recentLaunches: Array.from({ length: 20 }, (_, i) => 'launch-' + i),
+    scoreFocus: Array.from({ length: 30 }, (_, i) => 'score-' + i),
+    archived: Array.from({ length: 50 }, (_, i) => 'archive-' + i),
+    tracked: Array.from({ length: 80 }, (_, i) => 'tracked-' + i),
+    fresh: Array.from({ length: 180 }, (_, i) => 'fresh-' + i),
+    limit: 320
+  });
+  assert.equal(rows.length, 320);
+  assert.equal(new Set(rows).size, 320);
+  assert.equal(rows[0], 'perf-0');
+  assert.equal(rows[80], 'launch-0');
+  assert.equal(rows[240], 'fresh-0');
+  assert.equal(rows.at(-1), 'fresh-79');
+});
+
+test('market refresh allocation deduplicates overlapping priority lanes', () => {
+  const { buildMarketRefreshBatch } = require('../lib/discovery-rotation');
+  assert.deepEqual(buildMarketRefreshBatch({
+    telegramPerformance: ['a', 'b'],
+    recentLaunches: ['b', 'c'],
+    tracked: ['c', 'd'],
+    fresh: ['d', 'e'],
+    limit: 10
+  }), ['a', 'b', 'c', 'd', 'e']);
+});
