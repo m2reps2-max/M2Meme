@@ -25,11 +25,11 @@ Ce connecteur utilise l'API web privée non documentée de X. Il peut casser, ê
 | Deuxième avis de sécurité (wallets liés, volume artificiel, historique du déployeur, risques Token-2022, liquidité) | GL1TCH public API, sans clé | Rien |
 | Concentration des 10 plus gros détenteurs, avec agrégation des comptes appartenant au même wallet (sur les 20 plus gros comptes renvoyés) | RPC public Solana (`getMultipleAccounts`) | Rien |
 | Recherche du premier financeur direct des wallets créateurs Pump.fun et détection de financeurs communs | RPC public Solana (`getSignaturesForAddress`, `getTransaction`) | Rien |
-| Suivi des wallets manuels, acheteurs précoces et créateurs Pump.fun observés | RPC public Solana : pagination persistante par curseur, jusqu’à 20 signatures par wallet et par cycle de surveillance de 10 minutes | Rien |
+| Suivi des wallets manuels, acheteurs précoces et créateurs Pump.fun observés | RPC Solana : récupération jusqu’à 1 000 signatures récentes par wallet, file persistante par curseur et traitement borné à 8 transactions par wallet et 160 au total par cycle; reprise différée si la mémoire est sous pression | Rien |
 | Surveillance des sorties des créateurs | Soldes SPL avant/après transaction + entrées SOL/USDC/USDT dans la même transaction | Rien |
 | Distinction vente probable / transfert | Sortie du token accompagnée d’une entrée de quote asset = swap-like; sortie seule = mouvement non confirmé | Rien |
 | Découverte automatique d'acheteurs précoces | Acheteurs ayant réalisé au moins 2 achats et 150 USD cumulés dans les 5 premières minutes du pool, uniquement si cette fenêtre est entièrement couverte et si le token a un score indicatif ≥60 et aucun blocage de risque critique | Rien |
-| Surveillance des acheteurs découverts | Jusqu'à 5 wallets automatiques, 3 transactions récentes chacun toutes les 10 minutes | Rien |
+| Surveillance des acheteurs découverts | Jusqu'à 5 wallets automatiques; worker commun borné à 8 transactions par wallet et 160 lectures au total par cycle, avec files persistantes et pause mémoire | Rien |
 | Liens de sites et réseaux sociaux | Métadonnées DexScreener | Rien |
 | Découverte de nouveaux pools sur plusieurs DEX Solana | GeckoTerminal Public API (`/networks/solana/new_pools`) | Rien |
 | Mentions et sentiment communautaire indicatif | Recherche publique Bluesky + relais Nostr NIP-50; Telegram public; X facultatif via SDK Node `x-agent-sdk` à session unique | X_AUTH_TOKEN + X_CT0 |
@@ -43,7 +43,7 @@ Ce connecteur utilise l'API web privée non documentée de X. Il peut casser, ê
 | Cohortes historiques gagnants / survivants / boom-bust | Bougies publiques GeckoTerminal, replay proxy journalier, rendements fixes à 1j/3j/7j après chaque signal, rendement final et drawdown | Rien |
 | Enrichissement automatique du meilleur candidat GeckoTerminal et d'un créateur observé à la fois | Quotas publics maîtrisés, une analyse de pool par cycle et un financement créateur toutes les 15 minutes au maximum | Rien |
 | Alertes Telegram | Telegram Bot API | Bot token + canaux configurés dans le dashboard (ancien chat ID migré) |
-| Dashboard et état actif | Express + JSON compact pour les 7 000 tokens chauds et les données opérationnelles | Variables d'accès + stockage persistant FadeHost |
+| Dashboard et état actif | Express + JSON compact pour les 10 000 tokens chauds et les données opérationnelles | Variables d'accès + stockage persistant FadeHost |
 | Archive froide des tokens | SQLite natif Node.js, jusqu'à 50 000 tokens archivés, chargement par lots | Aucune clé API ni dépendance native à compiler |
 
 **Limites importantes :**
@@ -276,7 +276,7 @@ un modèle d'archive n'est accepté que si son rapport date de moins de cinq jou
 Le calcul lourd reste dans GitHub Actions et seul le résumé compact est renvoyé au
 Dashboard. Le rapport JSON est conservé 30 jours. Il utilise le même secret `MEME_RADAR_ACTIONS_TOKEN`
 et les routes HTTPS authentifiées `GET/POST /internal/actions/archive-learning`.
-Cette analyse couvre l'archive froide, pas les 7 000 tokens actifs du fichier
+Cette analyse couvre l'archive froide, pas les 10 000 tokens actifs du fichier
 principal; elle ne modifie aucun seuil de sélection. Si le secret est absent côté
 GitHub, le workflow saute proprement l'analyse. S'il est absent côté FadeHost ou
 ne correspond pas, l'API refuse l'export/import sans modifier les données.
@@ -323,7 +323,7 @@ MEME RADAR ne télécharge pas de classement KOL externe et ne prétend pas conn
 
 - Les valeurs de marché conservent leur horodatage **par métrique et par période** : volume M5/H1/H24, transactions M5/H1/H24 et variations de prix M5/H1/H24. Une réponse partielle qui ne contient que H24 ne rafraîchit jamais les valeurs H1 ou M5 précédemment conservées.
 - Les anciennes valeurs peuvent rester visibles pour l'historique, mais elles sont neutralisées dans le scoring et les instantanés d'alerte dès que leur propre observation dépasse 15 minutes ou que son horodatage manque. Les champs inconnus restent `null`, jamais remplacés par un zéro artificiel.
-- Le contrôle RPC des swaps est borné : rotation sur les 30 pools les mieux classés, trois pools inspectés au maximum par scan, six transactions `getTransaction` au maximum par pool, file de signatures et historique d'événements plafonnés. Les swaps doivent être confirmés par une instruction de programme reconnue et attribués à un signataire qui possède réellement le delta de token.
+- Le contrôle RPC des swaps est borné : rotation sur les 30 pools les mieux classés, jusqu'à 10 pools inspectés par scan et 16 transactions `getTransaction` au maximum par pool (160 lectures au plus, séquentielles), avec file de signatures et historique d'événements plafonnés. Les swaps doivent être confirmés par une instruction de programme reconnue et attribués à un signataire qui possède réellement le delta de token.
 - Les signatures GeckoTerminal sont rapprochées des signatures RPC pour rattacher le volume USD observé. Les signatures sans wallet Gecko restent utilisables pour ce rapprochement, mais ne deviennent pas des acheteurs distincts sans preuve RPC.
 - La demande vérifiée nécessaire au classement « Best » exige un échantillon Gecko récent d'au moins 20 trades, au moins cinq swaps de pool confirmés par RPC, au moins cinq acheteurs distincts signataires, une couverture de volume USD d'au moins 80 % et un flux acheteur USD supérieur ou égal au flux vendeur. Les swaps et leur dernier horodatage doivent rester dans la fenêtre de 15 minutes.
 - Ces seuils servent uniquement à vérifier et qualifier les preuves : ils ne modifient ni le profil choisi dans le Dashboard, ni le score minimal de publication. Aucune transaction n'est signée ou envoyée.
