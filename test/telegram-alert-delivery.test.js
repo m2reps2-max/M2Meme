@@ -51,3 +51,12 @@ test('disabled channels and invalid alerts never enter the outbox',()=>{
  assert.equal(queueAlertForChannels({alert:{},channels,outbox,message:'opportunity'}),0);
  assert.equal(outbox.length,0);
 });
+
+test('watch and danger alerts are rejected before entering the Telegram outbox',()=>{
+ for(const level of ['watch','danger']){
+  const outbox=[];
+  const alert=makeAlert({level});
+  assert.equal(queueAlertForChannels({alert,channels,outbox,message:'must not publish'}),0);
+  assert.equal(outbox.length,0);
+ }
+});
