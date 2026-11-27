@@ -73,3 +73,23 @@ test('token security metadata reports the RPC provider actually used',async()=>{
   assert.equal(result.rpcEndpoint,'mainnet.helius-rpc.com');
  }finally{global.fetch=original;}
 });
+
+
+test('non-JSON HTTP 429 responses trigger the full provider cooldown and fall back',async()=>{
+ const original=global.fetch;
+ const calls=[];
+ global.fetch=async(url)=>{
+  calls.push(String(url));
+  if(String(url).includes('primary.example'))return {ok:false,status:429,statusText:'Too Many Requests',headers:{get:()=>null},text:async()=>'rate limit exceeded'};
+  return {ok:true,status:200,statusText:'OK',headers:{get:()=>null},text:async()=>JSON.stringify({jsonrpc:'2.0',result:{value:7}})};
+ };
+ try{
+  const scanner={rpcEndpoints:['https://primary.example','https://fallback.example'],rpcProviderIndex:0,rpcProviderBackoff:new Map(),state:{sources:{}}};
+  const result=await MemeScanner.prototype.rpc.call(scanner,'getSlot',[]);
+  assert.deepEqual(result,{value:7});
+  assert.equal(calls.length,2);
+  assert.equal(scanner.state.sources.solanaRpc.endpoint,'fallback.example');
+  assert.ok(scanner.rpcProviderBackoff.get('https://primary.example')>=Date.now()+59000);
+  assert.match(scanner.state.sources.solanaRpcProviders['primary.example'].error,/HTTP 429/);
+ }finally{global.fetch=original;}
+});
