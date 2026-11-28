@@ -13,7 +13,7 @@ function make(options = {}) {
   return new MemeScanner({ dataFile: path.join(dir, 'store.json'), ...options });
 }
 
-function enqueue(scanner, { alertId = 'alert-1', chatId = '-1001234567890', message = 'Alerte de test' } = {}) {
+function enqueue(scanner, { alertId = 'opportunity', chatId = '-1001234567890', message = 'Alerte de test' } = {}) {
   const mint = '8TbnsLM72WoHKmVyDqRqEkEuNRGFgA4zbRXQYv6Gpump';
   const at = new Date().toISOString();
   const level = alertId;
@@ -110,6 +110,20 @@ test('Telegram API failure is persisted as a retryable message and survives rest
   assert.equal(restored.state.telegramOutbox[0].id, pending.id);
 });
 
+test('drops legacy watch and danger messages without contacting Telegram', async () => {
+  const scanner = make();
+  const calls = [];
+  scanner.bot = { api: { sendMessage: async (...args) => { calls.push(args); return { message_id: 99 }; } } };
+  enqueue(scanner, { alertId: 'watch', message: '👀 CANDIDAT À SURVEILLER — NON VALIDÉ' });
+  enqueue(scanner, { alertId: 'danger', chatId: '-1009999999999', message: '🚨 RISQUE DÉTECTÉ' });
+
+  const result = await scanner.drainTelegramOutbox();
+
+  assert.deepEqual(result, { sent: 0, failed: 0, pending: 0, discarded: 2 });
+  assert.equal(calls.length, 0, 'legacy watch and danger messages must never reach Telegram');
+  assert.equal(scanner.state.telegramOutbox.length, 0);
+});
+
 test('outbox does not contact Telegram if claiming the message cannot be persisted', async () => {
   const scanner = make();
   let calls = 0;
@@ -134,7 +148,7 @@ test('delivers Phantom button as Telegram inline keyboard and persists it on ret
   const replyMarkup={inline_keyboard:[[{text:'👻 Acheter sur Phantom',url:'https://phantom.com/tokens/solana/'+mint}]]};
   const calls=[];
   scanner.bot={api:{sendMessage:async(...args)=>{calls.push(args);return {message_id:43};}}};
-  enqueue(scanner,{alertId:'phantom',message:'Nouveau token'});
+  enqueue(scanner,{alertId:'opportunity',message:'Nouveau token'});
   scanner.state.telegramOutbox[0].replyMarkup=replyMarkup;
   const result=await scanner.drainTelegramOutbox();
   assert.equal(result.sent,1);
