@@ -198,6 +198,25 @@ test('qualified candidates with stale security are visible with the exact blocke
 });
 
 
+test('diagnostics expose Telegram outbox levels and exact delivery errors',()=>{
+ const instance=scanner([makeToken()],{
+  bot:{isRunning:()=>true},
+  state:{
+   ...scanner([makeToken()]).state,
+   telegramChannels:[{chatId:'-1001234567890',label:'Canal principal',enabled:true,lastError:'Forbidden: bot is not an administrator'}],
+   telegramOutbox:[{id:'entry-1',alertId:'2026-11-28:mint-1:opportunity',chatId:'-1001234567890',status:'queued',attempts:3,createdAt:'2026-11-28T09:00:00.000Z',nextAttemptAt:'2026-11-28T09:05:00.000Z',lastError:'429 Too Many Requests'}]
+  }
+ });
+ const result=scannerPublicationDiagnostics.call(instance);
+ assert.deepEqual(result.publication.outboxByLevel,{opportunity:1});
+ assert.equal(result.publication.recentOutbox[0].level,'opportunity');
+ assert.equal(result.publication.recentOutbox[0].attempts,3);
+ assert.equal(result.publication.deliveryErrors[0].source,'outbox');
+ assert.equal(result.publication.deliveryErrors[0].lastError,'429 Too Many Requests');
+ assert.equal(result.publication.deliveryErrors[1].source,'channel');
+ assert.match(result.publication.deliveryErrors[1].lastError,/Forbidden/);
+});
+
 test('diagnostics expose a production build fingerprint and the actual configured score threshold',()=>{
  const result=scannerPublicationDiagnostics.call(scanner([makeToken()]));
  assert.equal(result.buildFingerprint,'m2meme-diagnostics-v3-20261125');
