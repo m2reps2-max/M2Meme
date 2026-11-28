@@ -464,6 +464,20 @@ test('Jupiter refresh window prioritizes score before quote age',()=>{
  scanner.state.tokens={low,high};
  assert.deepEqual(scanner.jupiterRefreshCandidates(20).map(token=>token.mint),['high-score','low-score']);
 });
+test('default Jupiter quote rotation is limited to five top candidates',()=>{
+ const scanner=make(),now=Date.now();
+ scanner.state.scannerSettings={minScore:75};
+ const tokens=Array.from({length:9},(_,i)=>({
+  mint:'quote-rotation-'+i,pairAddress:'pool-'+i,liquidityUsd:22000,
+  sellability:{status:'route_available',checkedAt:new Date(now-(i+1)*60_000).toISOString()},
+  analysis:{score:82-i,hardBlocked:false,risk:'medium'}
+ }));
+ scanner.state.tokens=Object.fromEntries(tokens.map(token=>[token.mint,token]));
+ const selected=scanner.jupiterRefreshCandidates();
+ assert.equal(selected.length,5,'one quote every other scan can refresh all five within the 10-minute evidence TTL');
+ assert.deepEqual(selected.map(token=>token.mint),tokens.slice(0,5).map(token=>token.mint));
+});
+
 
 test('Jupiter refreshes high-quality live tokens even when strict Best/Observe selection excludes them',()=>{
  const scanner=make(),now=Date.now();
