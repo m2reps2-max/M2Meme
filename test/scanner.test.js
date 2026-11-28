@@ -328,7 +328,7 @@ test('Solana RPC caps full transaction payloads at 1 MiB without restricting sig
  }finally{global.fetch=originalFetch;}
 });
 
-test('Helius pool sampling refreshes ten ranked pools per scan with a bounded sixteen-transaction batch',async()=>{
+test('Helius pool sampling refreshes ten ranked pools per scan with a bounded twenty-transaction batch',async()=>{
  const scanner=make();
  scanner.lastAutoCreatorFundingAt=Date.now();
  scanner.state.scannerSettings={minScore:80};
@@ -346,7 +346,7 @@ test('Helius pool sampling refreshes ten ranked pools per scan with a bounded si
  await scanner.refreshCandidateIntelligence();
  assert.equal(inspected.length,10);
  assert.deepEqual(inspected.map(row=>row.mint),Array.from({length:10},(_,i)=>'rpc-pool-'+i));
- assert.ok(inspected.every(row=>row.options.persist===false&&row.options.maxTransactions===16));
+ assert.ok(inspected.every(row=>row.options.persist===false&&row.options.maxTransactions===20));
 });
 
 test('Jupiter refresh prioritizes stale checked tokens over newly discovered unquoted tokens',()=>{
