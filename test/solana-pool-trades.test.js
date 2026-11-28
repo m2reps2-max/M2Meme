@@ -178,3 +178,34 @@ test('RPC quote volume is not inferred when quote flow direction contradicts the
  const rows=extractPoolSwapEvents(tx,mint,{signature:'wrong-flow',quoteMint:usdc,quoteUsdPrice:1});
  assert.equal(rows.length,1);assert.equal(rows[0].direction,'buy');assert.equal(rows[0].volumeUsd,null);
 });
+
+test('verified PumpSwap inner native-SOL transfer prices a buy when no WSOL token balance delta exists',()=>{
+ const now=Math.floor(Date.now()/1000),wsol='So11111111111111111111111111111111111111112';
+ const pumpProgram='pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA',systemProgram='11111111111111111111111111111111';
+ const pool='PoolVault111111111111111111111111111111111';
+ const tx={blockTime:now,transaction:{message:{accountKeys:[{pubkey:wallet,signer:true}],instructions:[
+  {program:'pump_swap',programId:pumpProgram,parsed:{type:'buy'}}
+ ]}},meta:{err:null,preTokenBalances:[{mint,owner:wallet,uiTokenAmount:{uiAmountString:'0',amount:'0',decimals:6}}],
+  postTokenBalances:[{mint,owner:wallet,uiTokenAmount:{uiAmountString:'100',amount:'100000000',decimals:6}}],
+  innerInstructions:[
+   {index:0,instructions:[{program:'system',programId:systemProgram,parsed:{type:'transfer',info:{source:wallet,destination:pool,lamports:100000000}}}]},
+   {index:1,instructions:[{program:'system',programId:systemProgram,parsed:{type:'transfer',info:{source:wallet,destination:pool,lamports:900000000}}}]}
+  ]}};
+ const rows=extractPoolSwapEvents(tx,mint,{signature:'pump-native-buy',quoteMint:wsol,quoteUsdPrice:100});
+ assert.equal(rows.length,1);assert.equal(rows[0].direction,'buy');
+ assert.equal(rows[0].volumeUsd,10);assert.equal(rows[0].volumeSource,'rpc_native_sol_swap_transfer');
+});
+
+test('verified PumpSwap inner native-SOL transfer prices a sell from the signer-directed proceeds',()=>{
+ const now=Math.floor(Date.now()/1000),wsol='So11111111111111111111111111111111111111112';
+ const pumpProgram='pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA',systemProgram='11111111111111111111111111111111';
+ const pool='PoolVault111111111111111111111111111111111';
+ const tx={blockTime:now,transaction:{message:{accountKeys:[{pubkey:wallet,signer:true}],instructions:[
+  {program:'pump_swap',programId:pumpProgram,parsed:{type:'sell'}}
+ ]}},meta:{err:null,preTokenBalances:[{mint,owner:wallet,uiTokenAmount:{uiAmountString:'100',amount:'100000000',decimals:6}}],
+  postTokenBalances:[{mint,owner:wallet,uiTokenAmount:{uiAmountString:'0',amount:'0',decimals:6}}],
+  innerInstructions:[{index:0,instructions:[{program:'system',programId:systemProgram,parsed:{type:'transfer',info:{source:pool,destination:wallet,lamports:200000000}}}]}]}};
+ const rows=extractPoolSwapEvents(tx,mint,{signature:'pump-native-sell',quoteMint:wsol,quoteUsdPrice:100});
+ assert.equal(rows.length,1);assert.equal(rows[0].direction,'sell');
+ assert.equal(rows[0].volumeUsd,20);assert.equal(rows[0].volumeSource,'rpc_native_sol_swap_transfer');
+});
