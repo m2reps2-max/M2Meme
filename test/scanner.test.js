@@ -126,7 +126,8 @@ test('pool RPC drops expired queued signatures before processing the fresh deman
  const token={mint,geckoPoolAddress:pool,pairAddress:pool,liquidityUsd:12000,analysis:{score:70},
   poolRpcTradeState:{cursorSignature:'cursor',pending:[
    {signature:'expired-signature',blockTime:old,attempts:0},
-   {signature:'fresh-signature',blockTime:fresh,attempts:0}
+   {signature:'fresh-signature',blockTime:fresh,attempts:0},
+   {signature:'unknown-time-signature',blockTime:null,attempts:0}
   ],processedSignatures:[]}};
  scanner.state.tokens[mint]=token;
  const processed=[];
@@ -138,9 +139,9 @@ test('pool RPC drops expired queued signatures before processing the fresh deman
   }
   return null;
  };
- const result=await scanner.inspectPoolRpcTradeIntel(token,{maxTransactions:1});
- assert.deepEqual(processed,['fresh-signature']);
- assert.equal(result.processedLastBatch,1);
+ const result=await scanner.inspectPoolRpcTradeIntel(token,{maxTransactions:2});
+ assert.deepEqual(processed,['fresh-signature','unknown-time-signature']);
+ assert.equal(result.processedLastBatch,2);
  assert.equal(token.poolRpcTradeState.pending.length,0);
  assert.ok(!token.poolRpcTradeState.processedSignatures.includes('expired-signature'),'expired signatures are dropped, not counted as current evidence');
 });
