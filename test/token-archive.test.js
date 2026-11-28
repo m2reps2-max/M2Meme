@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { TokenArchive, compactToken } = require('../lib/token-archive');
+const { TokenArchive, compactToken, archiveStateTokens } = require('../lib/token-archive');
 
 let sqliteAvailable = true;
 try { require('node:sqlite'); } catch { sqliteAvailable = false; }
@@ -149,6 +149,27 @@ test('archive permanently switches to degraded mode after a SQLite write failure
     assert.equal(archive.db, null);
     assert.match(archive.lastError, /database|closed|not open/i);
     assert.equal(archive.selectForScan(10).length, 0);
+  } finally {
+    archive.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('startup migration archives every persisted token before the hot set is reduced', { skip: !sqliteAvailable }, () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'meme-radar-archive-migration-'));
+  const archive = new TokenArchive({ file: path.join(dir, 'tokens.sqlite'), maxTokens: 1000 });
+  try {
+    const persisted = Object.fromEntries(Array.from({ length: 10 }, (_, i) => {
+      const mint = 'MigrationMint' + String(i).padStart(28, '1');
+      return [mint, { mint, name: 'Token ' + i, updatedAt: new Date(Date.now() - i * 1000).toISOString(), history: [{ at: i }] }];
+    }));
+    assert.equal(archiveStateTokens(persisted, archive), 10);
+    assert.equal(archive.summary().tokens, 10);
+    assert.equal(archive.getMany(Object.keys(persisted)).length, 10);
+    const hotMints = Object.keys(persisted).slice(0, 2);
+    archive.removeMany(hotMints);
+    assert.equal(archive.summary().tokens, 8);
+    assert.equal(archive.getMany(Object.keys(persisted)).length, 8);
   } finally {
     archive.close();
     fs.rmSync(dir, { recursive: true, force: true });
