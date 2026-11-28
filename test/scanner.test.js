@@ -84,7 +84,7 @@ test('pool RPC trade inspection processes the full bounded eight-transaction bat
  assert.equal(scanner.state.tokens[mint].poolRpcTradeState.pending.length,0);
 });
 
-test('Helius pool RPC prioritizes the newest signatures and refreshes the head while backlog remains',async()=>{
+test('Helius pool RPC keeps only one fresh batch and refreshes the head on every visit',async()=>{
  const scanner=make(),mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH',pool='Bcdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
  const token={mint,geckoPoolAddress:pool,pairAddress:pool,liquidityUsd:12000,priceUsd:.01,analysis:{score:70},
   poolRpcTradeState:{cursorSignature:'old-cursor',pending:[],processedSignatures:[]}};
@@ -107,15 +107,15 @@ test('Helius pool RPC prioritizes the newest signatures and refreshes the head w
  await scanner.inspectPoolRpcTradeIntel(token,{maxTransactions:8});
  assert.equal(signatureCalls.length,1);
  assert.deepEqual(processed.slice(0,8),newest.slice(0,8).map(row=>row.signature),'the latest signatures must be processed first');
- assert.equal(token.poolRpcTradeState.pending.length,42);
+ assert.equal(token.poolRpcTradeState.pending.length,0,'older signatures beyond the current batch are dropped rather than queued');
  assert.equal(token.poolRpcTradeState.catchupBeforeSignature,null,'historical pagination is not allowed to block fresh evidence');
  assert.equal(token.poolRpcTradeState.cursorSignature,'new-0');
- assert.equal(token.poolRpcTradeState.gapDetected,true,'a missing cursor remains visible as a coverage gap');
+ assert.equal(token.poolRpcTradeState.gapDetected,true,'a missing cursor and dropped overflow remain visible as a coverage gap');
  token.poolRpcTradeState.lastAttemptAt=new Date(Date.now()-60000).toISOString();
  await scanner.inspectPoolRpcTradeIntel(token,{maxTransactions:8});
- assert.equal(signatureCalls.length,2,'the collector must refresh the newest signature page even while older work remains queued');
- assert.deepEqual(processed.slice(8,16),['new-head',...newest.slice(8,15).map(row=>row.signature)]);
- assert.equal(token.poolRpcTradeState.pending.length,35);
+ assert.equal(signatureCalls.length,2,'the collector must refresh the newest signature page on every visit');
+ assert.deepEqual(processed.slice(8),['new-head']);
+ assert.equal(token.poolRpcTradeState.pending.length,0,'the queue never grows beyond one processing batch');
  assert.equal(token.poolRpcTradeState.cursorSignature,'new-head');
  assert.equal(token.poolRpcTradeState.gapDetected,false,'a continuous current head clears the transient gap');
 });
