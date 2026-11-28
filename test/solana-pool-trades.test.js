@@ -1,6 +1,6 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict');
-const {extractPoolSwapEvents,summarizePoolSwapEvents,preserveRpcTradeEvidence}=require('../lib/solana-pool-trades');
+const {extractPoolSwapEvents,summarizePoolSwapEvents,resolvePoolQuoteAsset,preserveRpcTradeEvidence}=require('../lib/solana-pool-trades');
 const {hasVerifiedSwapInstruction,KNOWN_SWAP_PROGRAM_IDS}=require('../lib/wallet-transaction-evidence');
 const mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH',wallet='Ccdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
 test('verified pool swap attributes mint balance delta to a transaction signer',()=>{
@@ -122,4 +122,59 @@ test('confirmed swap summary counts unique wallets once and leaves unknown USD v
  assert.equal(summary.tradeCount,3);assert.equal(summary.uniqueBuyers,1);assert.equal(summary.uniqueSellers,1);assert.equal(summary.buyVolumeUsd,null);assert.equal(summary.volumeCoverage,0);
  const stale=summarizePoolSwapEvents([{wallet:'old',direction:'buy',at:new Date(Date.now()-16*60_000).toISOString(),volumeUsd:10}]);
  assert.equal(stale.tradeCount,0,'old RPC swaps must not keep demand fresh');
+});
+
+test('quote-asset resolver prices stablecoin and wrapped-SOL pool quotes without guessing unknown assets',()=>{
+ const wsol='So11111111111111111111111111111111111111112';
+ const usdc='EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+ const usdt='Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB';
+ assert.deepEqual(resolvePoolQuoteAsset({baseToken:{address:mint},quoteToken:{address:usdc},priceUsd:'0.01',priceNative:'0.01'},mint),{mint:usdc,usdPrice:1,source:'stablecoin_peg'});
+ assert.equal(resolvePoolQuoteAsset({baseToken:{address:mint},quoteToken:{address:usdt}},mint).usdPrice,1);
+ const native=resolvePoolQuoteAsset({baseToken:{address:mint},quoteToken:{address:wsol},priceUsd:'0.005',priceNative:'0.00005'},mint);
+ assert.equal(native.mint,wsol);assert.equal(native.usdPrice,100);
+ const quoteSide=resolvePoolQuoteAsset({baseToken:{address:wsol},quoteToken:{address:mint},priceUsd:'100',priceNative:'1'},mint);
+ assert.equal(quoteSide.mint,wsol);assert.equal(quoteSide.usdPrice,100);
+ const unknown=resolvePoolQuoteAsset({baseToken:{address:mint},quoteToken:{address:'UnknownQuote11111111111111111111111111111'},priceUsd:'0.01',priceNative:'1'},mint);
+ assert.equal(unknown.usdPrice,null,'unknown quote assets must not be assigned a fabricated USD price');
+});
+
+test('verified RPC buy volume is derived from the signer stablecoin balance delta',()=>{
+ const now=Math.floor(Date.now()/1000),usdc='EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+ const tx={slot:30,blockTime:now,transaction:{message:{accountKeys:[{pubkey:wallet,signer:true}],instructions:[{program:'jupiter',parsed:{type:'route'}}]}},
+  meta:{err:null,preTokenBalances:[
+   {mint,owner:wallet,uiTokenAmount:{uiAmountString:'10',amount:'10000000',decimals:6}},
+   {mint:usdc,owner:wallet,uiTokenAmount:{uiAmountString:'100',amount:'100000000',decimals:6}}
+  ],postTokenBalances:[
+   {mint,owner:wallet,uiTokenAmount:{uiAmountString:'35',amount:'35000000',decimals:6}},
+   {mint:usdc,owner:wallet,uiTokenAmount:{uiAmountString:'90',amount:'90000000',decimals:6}}
+  ]}};
+ const rows=extractPoolSwapEvents(tx,mint,{signature:'rpc-usdc-buy',quoteMint:usdc,quoteUsdPrice:1});
+ assert.equal(rows.length,1);assert.equal(rows[0].direction,'buy');
+ assert.equal(rows[0].volumeUsd,10);assert.equal(rows[0].volumeSource,'rpc_quote_balance_delta');
+ const summary=summarizePoolSwapEvents(rows,new Date(now*1000).toISOString());
+ assert.equal(summary.tradeCount,1);assert.equal(summary.volumeCoverage,100);assert.equal(summary.buyVolumeUsd,10);
+});
+
+test('verified RPC sell volume uses the opposite quote balance delta and wrapped-SOL USD price',()=>{
+ const now=Math.floor(Date.now()/1000),wsol='So11111111111111111111111111111111111111112';
+ const tx={slot:31,blockTime:now,transaction:{message:{accountKeys:[{pubkey:wallet,signer:true}],instructions:[{program:'jupiter',parsed:{type:'route'}}]}},
+  meta:{err:null,preTokenBalances:[
+   {mint,owner:wallet,uiTokenAmount:{uiAmountString:'35',amount:'35000000',decimals:6}},
+   {mint:wsol,owner:wallet,uiTokenAmount:{uiAmountString:'2',amount:'2000000000',decimals:9}}
+  ],postTokenBalances:[
+   {mint,owner:wallet,uiTokenAmount:{uiAmountString:'25',amount:'25000000',decimals:6}},
+   {mint:wsol,owner:wallet,uiTokenAmount:{uiAmountString:'2.1',amount:'2100000000',decimals:9}}
+  ]}};
+ const rows=extractPoolSwapEvents(tx,mint,{signature:'rpc-wsol-sell',quoteMint:wsol,quoteUsdPrice:100});
+ assert.equal(rows.length,1);assert.equal(rows[0].direction,'sell');
+ assert.equal(rows[0].volumeUsd,10);assert.equal(rows[0].volumeSource,'rpc_quote_balance_delta');
+});
+
+test('RPC quote volume is not inferred when quote flow direction contradicts the token swap',()=>{
+ const now=Math.floor(Date.now()/1000),usdc='EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+ const tx={blockTime:now,transaction:{message:{accountKeys:[{pubkey:wallet,signer:true}],instructions:[{program:'jupiter',parsed:{type:'route'}}]}},
+  meta:{err:null,preTokenBalances:[{mint,owner:wallet,uiTokenAmount:{uiAmountString:'1',amount:'1000000',decimals:6}},{mint:usdc,owner:wallet,uiTokenAmount:{uiAmountString:'10',amount:'10000000',decimals:6}}],
+   postTokenBalances:[{mint,owner:wallet,uiTokenAmount:{uiAmountString:'2',amount:'2000000',decimals:6}},{mint:usdc,owner:wallet,uiTokenAmount:{uiAmountString:'20',amount:'20000000',decimals:6}}]}}
+ const rows=extractPoolSwapEvents(tx,mint,{signature:'wrong-flow',quoteMint:usdc,quoteUsdPrice:1});
+ assert.equal(rows.length,1);assert.equal(rows[0].direction,'buy');assert.equal(rows[0].volumeUsd,null);
 });
