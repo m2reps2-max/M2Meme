@@ -409,6 +409,25 @@ test('Helius pool refresh does not let never-inspected new tokens starve stale c
  assert.equal(inspected[0],'stale-rpc');
  assert.equal(inspected.length,9);
 });
+test('pool RPC refresh prioritizes the best-scoring candidate over a larger low-score backlog',async()=>{
+ const scanner=make(),now=Date.now();
+ scanner.lastAutoCreatorFundingAt=now;
+ scanner.state.scannerSettings={minScore:75};
+ const top={mint:'top-score-no-backlog',pairAddress:'pool-top',liquidityUsd:100000,
+  poolRpcTradeState:{pending:[],lastAttemptAt:new Date(now-12*60_000).toISOString()},
+  analysis:{score:82,hardBlocked:false,risk:'observations_only'}};
+ const backlog=Array.from({length:12},(_,i)=>({mint:'lower-score-backlog-'+i,pairAddress:'pool-backlog-'+i,liquidityUsd:20000-i*100,
+  poolRpcTradeState:{pending:Array.from({length:20},(_,j)=>({signature:`pending-${i}-${j}` })),lastAttemptAt:new Date(now-12*60_000).toISOString()},
+  analysis:{score:70,hardBlocked:false,risk:'medium'}}));
+ scanner.state.tokens=Object.fromEntries([top,...backlog].map(token=>[token.mint,token]));
+ const inspected=[];
+ scanner.inspectPoolRpcTradeIntel=async token=>{inspected.push(token.mint);return null;};
+ await scanner.refreshCandidateIntelligence();
+ assert.equal(inspected.length,10);
+ assert.equal(inspected[0],'top-score-no-backlog','a strong candidate must not be starved by lower-scoring pools with queued signatures');
+ assert.ok(inspected.every(mint=>mint==='top-score-no-backlog'||mint.startsWith('lower-score-backlog-')));
+});
+
 
 test('Jupiter refresh queue follows the configured score floor without changing publication thresholds',()=>{
  const scanner=make();
