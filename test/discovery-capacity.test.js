@@ -13,15 +13,16 @@ const {
   resolveArchiveScanBatch
 } = require('../lib/discovery-capacity');
 
-test('active token cache defaults to 10000 and remains bounded to 1200..12000', () => {
-  assert.equal(DEFAULT_HOT_TOKEN_LIMIT, 10000);
-  assert.equal(resolveHotTokenLimit(undefined), 10000);
-  assert.equal(resolveHotTokenLimit('9500'), 9500);
+test('1 GiB hosts use a bounded hot set while the cold archive retains the 10k+ discovery universe', () => {
+  assert.equal(DEFAULT_HOT_TOKEN_LIMIT, 2000);
+  assert.equal(resolveHotTokenLimit(undefined), 2000);
+  assert.equal(resolveHotTokenLimit('9500'), 4000);
   assert.equal(resolveHotTokenLimit('900'), 1200);
-  assert.equal(resolveHotTokenLimit('13000'), 12000);
-  assert.equal(MAX_HOT_TOKEN_LIMIT, 12000);
-  assert.equal(resolveHotTokenLimit('invalid'), 10000);
+  assert.equal(resolveHotTokenLimit('3500'), 3500);
+  assert.equal(resolveHotTokenLimit('invalid'), 2000);
+  assert.equal(MAX_HOT_TOKEN_LIMIT, 4000);
   assert.equal(DEGRADED_HOT_TOKEN_LIMIT, 1200);
+  assert.equal(DEFAULT_ARCHIVE_MAX_TOKENS, 50000);
 });
 
 test('archive scan batch defaults to 50 and remains bounded to 20..50', () => {
