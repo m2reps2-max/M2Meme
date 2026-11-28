@@ -84,38 +84,65 @@ test('pool RPC trade inspection processes the full bounded eight-transaction bat
  assert.equal(scanner.state.tokens[mint].poolRpcTradeState.pending.length,0);
 });
 
-test('Helius pool RPC paginates behind a missing cursor instead of dropping the signature gap',async()=>{
+test('Helius pool RPC prioritizes the newest signatures and refreshes the head while backlog remains',async()=>{
  const scanner=make(),mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH',pool='Bcdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
  const token={mint,geckoPoolAddress:pool,pairAddress:pool,liquidityUsd:12000,priceUsd:.01,analysis:{score:70},
   poolRpcTradeState:{cursorSignature:'old-cursor',pending:[],processedSignatures:[]}};
  scanner.state.tokens[mint]=token;
- const newest=Array.from({length:50},(_,i)=>({signature:`new-${i}`,slot:500-i,blockTime:Math.floor(Date.now()/1000)}));
- const older=Array.from({length:49},(_,i)=>({signature:`older-${i}`,slot:450-i,blockTime:Math.floor(Date.now()/1000)})).concat([{signature:'old-cursor',slot:401,blockTime:Math.floor(Date.now()/1000)}]);
- const signatureCalls=[];
+ const now=Math.floor(Date.now()/1000);
+ const newest=Array.from({length:50},(_,i)=>({signature:`new-${i}`,slot:500-i,blockTime:now}));
+ const nextHead=[{signature:'new-head',slot:501,blockTime:now},...newest.slice(0,49)];
+ const signatureCalls=[],processed=[];
  scanner.rpc=async(method,params)=>{
   if(method==='getSignaturesForAddress'){
    signatureCalls.push(params[1]);
-   return params[1].before?older:newest;
+   return signatureCalls.length===1?newest:nextHead;
   }
-  if(method==='getTransaction')return {slot:1,blockTime:Math.floor(Date.now()/1000),transaction:{message:{accountKeys:[],instructions:[]}},meta:{err:null,preTokenBalances:[],postTokenBalances:[],innerInstructions:[],logMessages:[]}};
+  if(method==='getTransaction'){
+   processed.push(params[0]);
+   return {slot:500,blockTime:now,transaction:{message:{accountKeys:[],instructions:[]}},meta:{err:null,preTokenBalances:[],postTokenBalances:[],innerInstructions:[],logMessages:[]}};
+  }
   return null;
  };
  await scanner.inspectPoolRpcTradeIntel(token,{maxTransactions:8});
- assert.equal(token.poolRpcTradeState.catchupBeforeSignature,'new-49');
- assert.equal(token.poolRpcTradeState.pending.length,42,'the complete first page is retained while the bounded batch is processed');
- for(let i=0;i<6;i++){
-  token.poolRpcTradeState.lastAttemptAt=new Date(Date.now()-60000).toISOString();
-  await scanner.inspectPoolRpcTradeIntel(token,{maxTransactions:8});
- }
- assert.equal(signatureCalls.length,1,'the collector must not fetch a second page while signatures from the first page remain');
- assert.equal(token.poolRpcTradeState.pending.length,0,'the first page must be fully processed before pagination continues');
+ assert.equal(signatureCalls.length,1);
+ assert.deepEqual(processed.slice(0,8),newest.slice(0,8).map(row=>row.signature),'the latest signatures must be processed first');
+ assert.equal(token.poolRpcTradeState.pending.length,42);
+ assert.equal(token.poolRpcTradeState.catchupBeforeSignature,null,'historical pagination is not allowed to block fresh evidence');
+ assert.equal(token.poolRpcTradeState.cursorSignature,'new-0');
+ assert.equal(token.poolRpcTradeState.gapDetected,true,'a missing cursor remains visible as a coverage gap');
  token.poolRpcTradeState.lastAttemptAt=new Date(Date.now()-60000).toISOString();
  await scanner.inspectPoolRpcTradeIntel(token,{maxTransactions:8});
- assert.equal(signatureCalls.length,2,'the next page is fetched only after the pending queue is empty');
- assert.equal(signatureCalls[1].before,'new-49','the next request paginates backward from the oldest signature already fetched');
- assert.equal(token.poolRpcTradeState.catchupBeforeSignature,null,'the old cursor is found and catch-up completes');
- assert.equal(token.poolRpcTradeState.cursorSignature,'new-0','the head cursor advances only after the gap is fully traversed');
- assert.ok(token.poolRpcTradeState.pending.some(row=>row.signature==='older-0'));
+ assert.equal(signatureCalls.length,2,'the collector must refresh the newest signature page even while older work remains queued');
+ assert.deepEqual(processed.slice(8,16),['new-head',...newest.slice(8,15).map(row=>row.signature)]);
+ assert.equal(token.poolRpcTradeState.pending.length,35);
+ assert.equal(token.poolRpcTradeState.cursorSignature,'new-head');
+ assert.equal(token.poolRpcTradeState.gapDetected,false,'a continuous current head clears the transient gap');
+});
+
+test('pool RPC drops expired queued signatures before processing the fresh demand window',async()=>{
+ const scanner=make(),mint='Abcdefghijkmnopqrstuvwxyz123456789ABCDEFGH',pool='Bcdefghijkmnopqrstuvwxyz123456789ABCDEFGH';
+ const now=Math.floor(Date.now()/1000),old=now-20*60,fresh=now-60;
+ const token={mint,geckoPoolAddress:pool,pairAddress:pool,liquidityUsd:12000,analysis:{score:70},
+  poolRpcTradeState:{cursorSignature:'cursor',pending:[
+   {signature:'expired-signature',blockTime:old,attempts:0},
+   {signature:'fresh-signature',blockTime:fresh,attempts:0}
+  ],processedSignatures:[]}};
+ scanner.state.tokens[mint]=token;
+ const processed=[];
+ scanner.rpc=async(method,params)=>{
+  if(method==='getSignaturesForAddress')return [];
+  if(method==='getTransaction'){
+   processed.push(params[0]);
+   return {slot:1,blockTime:fresh,transaction:{message:{accountKeys:[],instructions:[]}},meta:{err:null,preTokenBalances:[],postTokenBalances:[],innerInstructions:[],logMessages:[]}};
+  }
+  return null;
+ };
+ const result=await scanner.inspectPoolRpcTradeIntel(token,{maxTransactions:1});
+ assert.deepEqual(processed,['fresh-signature']);
+ assert.equal(result.processedLastBatch,1);
+ assert.equal(token.poolRpcTradeState.pending.length,0);
+ assert.ok(!token.poolRpcTradeState.processedSignatures.includes('expired-signature'),'expired signatures are dropped, not counted as current evidence');
 });
 
 test('pool RPC trade inspection records only confirmed signer-owned token swaps and deduplicates signatures',async()=>{
