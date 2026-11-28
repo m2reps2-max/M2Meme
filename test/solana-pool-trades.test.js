@@ -46,6 +46,32 @@ test('verified DEX program IDs cover Raydium, Orca, Meteora and launchpad swaps'
   assert.equal(hasVerifiedSwapInstruction(tx),true,programId+' '+instruction);
  }
 });
+test('Pump.fun AMM parsed buy and sell variants are recognized without log-message fallback',()=>{
+ const programId='pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA';
+ for(const type of ['buy_exact_quote_in','sell_exact_base_in']){
+  const tx={transaction:{message:{accountKeys:[{pubkey:wallet,signer:true}],instructions:[{program:'pump_amm',programId,parsed:{type}}]}},meta:{logMessages:[]}};
+  assert.equal(hasVerifiedSwapInstruction(tx),true,type+' must be recognized from the parsed Pump.fun AMM instruction');
+ }
+ const unknown={transaction:{message:{instructions:[{program:'unknown_program',parsed:{type:'buy_exact_quote_in'}}]}},meta:{logMessages:[]}};
+ assert.equal(hasVerifiedSwapInstruction(unknown),false,'a buy-shaped instruction from an unknown program must not count as a verified DEX swap');
+});
+
+test('Pump.fun AMM buy_exact_quote_in produces a signer-owned confirmed token event without logs',()=>{
+ const now=Math.floor(Date.now()/1000);
+ const tx={
+  slot:474910548,blockTime:now,
+  transaction:{message:{accountKeys:[{pubkey:wallet,signer:true}],instructions:[{program:'pump_amm',programId:'pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA',parsed:{type:'buy_exact_quote_in'}}]}},
+  meta:{err:null,preTokenBalances:[{mint,owner:wallet,uiTokenAmount:{uiAmountString:'10',amount:'10000000',decimals:6}}],
+   postTokenBalances:[{mint,owner:wallet,uiTokenAmount:{uiAmountString:'17',amount:'17000000',decimals:6}}],logMessages:[]}
+ };
+ const rows=extractPoolSwapEvents(tx,mint,{signature:'pump-amm-buy'});
+ assert.equal(rows.length,1);
+ assert.equal(rows[0].wallet,wallet);
+ assert.equal(rows[0].direction,'buy');
+ assert.equal(rows[0].tokenAmount,7);
+ assert.equal(rows[0].source,'helius_pool_rpc');
+});
+
 test('parsed PumpSwap buy/sell instructions count only under a recognized DEX program',()=>{
  const valid={transaction:{message:{instructions:[{program:'pump_swap',parsed:{type:'buy'}}]}},meta:{logMessages:[]}};
  const invalid={transaction:{message:{instructions:[{program:'unknown_program',parsed:{type:'buy'}}]}},meta:{logMessages:[]}};
